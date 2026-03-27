@@ -1,6 +1,6 @@
 {
   "name": "smartlogbook",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Virtual Airline Management System - Express.js + PostgreSQL + Vercel",
   "main": "backend/server.js",
   "type": "module",
