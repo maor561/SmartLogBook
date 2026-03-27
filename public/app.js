@@ -588,7 +588,7 @@ const API = {
       return {
         ...f,
         date: normalizedDate,
-        id: parseInt(f.id) || 0,
+        id: f.id || f._id || '',
         distance: parseInt(f.distance) || 0,
         duration_mins: mins,
         durationMins: mins,
@@ -1452,8 +1452,8 @@ function updateHistory() {
           <div class="history-stat">⛽ ${(f.fuel||0).toLocaleString()}</div>
         </div>
         <div class="history-profit" style="color:${pc}">${ps}$${Math.abs(f.profit||0).toLocaleString()}</div>
-        <button class="btn btn-primary" onclick="openEditFlight(${f.id})">✏️ Edit</button>
-        <button class="btn btn-danger" onclick="deleteFlight(${f.id})">${L.deleteBtn}</button>
+        <button class="btn btn-primary" onclick="openEditFlight('${f.id}')">✏️ Edit</button>
+        <button class="btn btn-danger" onclick="deleteFlight('${f.id}')">${L.deleteBtn}</button>
       </div>
     `;
   }).join('');
