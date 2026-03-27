@@ -1,15 +1,16 @@
 import express from 'express';
-import pool from '../db.js';
+import { ObjectId } from 'mongodb';
+import getDb from '../db.js';
 
 const router = express.Router();
 
 // GET all flights
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM flights ORDER BY date DESC'
-    );
-    res.json({ flights: result.rows });
+    const db = await getDb();
+    const flights = await db.collection('flights').find({}).sort({ date: -1 }).toArray();
+    const mapped = flights.map(f => ({ ...f, id: f._id.toString() }));
+    res.json({ flights: mapped });
   } catch (err) {
     console.error('[Flights GET Error]', err);
     res.status(500).json({ error: err.message });
@@ -19,20 +20,22 @@ router.get('/', async (req, res) => {
 // POST - Add flight
 router.post('/', async (req, res) => {
   try {
+    const db = await getDb();
     const {
       date, origin, destination, originName, destName, aircraft,
       distance, duration, durationMins, passengers, fuel, payload, fpm, profit
     } = req.body;
 
-    const result = await pool.query(
-      `INSERT INTO flights
-       (date, origin, destination, origin_name, dest_name, aircraft, distance, duration, duration_mins, passengers, fuel, payload, fpm, profit)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-       RETURNING *`,
-      [date, origin, destination, originName, destName, aircraft, distance, duration, durationMins, passengers, fuel, payload, fpm, profit]
-    );
+    const result = await db.collection('flights').insertOne({
+      date, origin, destination,
+      origin_name: originName, dest_name: destName,
+      aircraft, distance, duration,
+      duration_mins: durationMins,
+      passengers, fuel, payload, fpm, profit,
+      created_at: new Date()
+    });
 
-    res.json({ id: result.rows[0].id });
+    res.json({ id: result.insertedId.toString() });
   } catch (err) {
     console.error('[Flights POST Error]', err);
     res.status(500).json({ error: err.message });
@@ -42,18 +45,16 @@ router.post('/', async (req, res) => {
 // PUT - Update flight
 router.put('/:id', async (req, res) => {
   try {
+    const db = await getDb();
     const { id } = req.params;
     const { date, passengers, fuel, payload, fpm, profit, durationMins } = req.body;
 
-    const result = await pool.query(
-      `UPDATE flights
-       SET date = $1, passengers = $2, fuel = $3, payload = $4, fpm = $5, profit = $6, duration_mins = $7, updated_at = NOW()
-       WHERE id = $8
-       RETURNING *`,
-      [date, passengers, fuel, payload, fpm, profit, durationMins, id]
+    const result = await db.collection('flights').findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: { date, passengers, fuel, payload, fpm, profit, duration_mins: durationMins, updated_at: new Date() } }
     );
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: 'Flight not found' });
     }
 
@@ -67,11 +68,12 @@ router.put('/:id', async (req, res) => {
 // DELETE flight
 router.delete('/:id', async (req, res) => {
   try {
+    const db = await getDb();
     const { id } = req.params;
 
-    const result = await pool.query('DELETE FROM flights WHERE id = $1', [id]);
+    const result = await db.collection('flights').deleteOne({ _id: new ObjectId(id) });
 
-    if (result.rowCount === 0) {
+    if (result.deletedCount === 0) {
       return res.status(404).json({ error: 'Flight not found' });
     }
 

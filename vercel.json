@@ -1,19 +1,6 @@
 {
   "version": 2,
-  "env": {
-    "NODE_ENV": "production",
-    "POSTGRES_URL": "@postgres_url"
-  },
-  "builds": [
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/backend/server.js"
-    }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.js" }
   ]
 }

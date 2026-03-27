@@ -1,23 +1,17 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+const client = new MongoClient(process.env.MONGODB_URI);
+let db;
 
-pool.on('error', (err) => {
-  console.error('[Database Error]', err);
-});
+export async function getDb() {
+  if (!db) {
+    await client.connect();
+    db = client.db('smartlogbook');
+  }
+  return db;
+}
 
-pool.on('connect', () => {
-  console.log('[Database] Connected to PostgreSQL');
-});
-
-export default pool;
+export default getDb;
