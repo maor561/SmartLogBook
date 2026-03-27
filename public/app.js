@@ -875,7 +875,7 @@ async function loadFromSimbrief() {
   btn.innerHTML = `<span class="loader"></span> Loading...`;
 
   try {
-    const res = await fetch(`/api/simbrief.php?userid=${encodeURIComponent(userId)}`);
+    const res = await fetch(`/api/simbrief?userid=${encodeURIComponent(userId)}`);
     if (!res.ok) throw new Error('SimBrief fetch failed');
     const data = await res.json();
 
