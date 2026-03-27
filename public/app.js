@@ -2665,14 +2665,22 @@ async function renderMissions() {
   if (activeMissionsGrid) activeMissionsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-secondary)">⏳ טוען משימות...</div>';
 
   try {
-    const res = await fetch('/api/missions');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.missions && data.missions.length > 0) {
-        MISSIONS_FROM_API = data.missions;
+    const [missionsRes, completedRes] = await Promise.all([
+      fetch('/api/missions'),
+      fetch('/api/missions/completed')
+    ]);
+    if (missionsRes.ok) {
+      const data = await missionsRes.json();
+      if (data.missions && data.missions.length > 0) MISSIONS_FROM_API = data.missions;
+    }
+    if (completedRes.ok) {
+      const data = await completedRes.json();
+      if (data.completed && data.completed.length > 0) {
+        completedMissions = data.completed;
+        localStorage.setItem('airliner_completed_missions', JSON.stringify(completedMissions));
       }
     }
-  } catch (e) { /* fallback to MISSIONS */ }
+  } catch (e) { /* fallback to localStorage */ }
 
   const source = MISSIONS_FROM_API.length > 0 ? MISSIONS_FROM_API : MISSIONS;
 
@@ -2727,7 +2735,8 @@ function renderMissionCard(mission, isCompleted) {
 }
 
 function scheduleMissionFlight(missionId, origin, destination) {
-  const mission = MISSIONS.find(m => m.id === missionId);
+  const source = MISSIONS_FROM_API.length > 0 ? MISSIONS_FROM_API : MISSIONS;
+  const mission = source.find(m => m.id === missionId);
   if (!mission) return;
 
   showToast(`📍 תזמן טיסה מ-${origin} ל-${destination} כדי להשלים את המשימה!`, 'info');
@@ -2739,7 +2748,15 @@ function completeMission(missionId) {
     completedMissions.push(missionId);
     localStorage.setItem('airliner_completed_missions', JSON.stringify(completedMissions));
 
-    const mission = MISSIONS.find(m => m.id === missionId);
+    // שמור ב-DB
+    fetch('/api/missions/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ missionId })
+    }).catch(() => {});
+
+    const source = MISSIONS_FROM_API.length > 0 ? MISSIONS_FROM_API : MISSIONS;
+    const mission = source.find(m => m.id === missionId);
     if (mission) {
       // Award cash bonus
       const currentBalance = parseFloat(localStorage.getItem('airliner_balance') || '0');
@@ -2761,7 +2778,8 @@ function checkMissionCompletion(flightData) {
   const origin = flightData.origin;
   const destination = flightData.destination;
 
-  const matchingMission = MISSIONS.find(m =>
+  const source = MISSIONS_FROM_API.length > 0 ? MISSIONS_FROM_API : MISSIONS;
+  const matchingMission = source.find(m =>
     !completedMissions.includes(m.id) &&
     m.origin === origin &&
     m.destination === destination

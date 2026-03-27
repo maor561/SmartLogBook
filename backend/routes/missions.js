@@ -68,4 +68,48 @@ router.post('/update', async (req, res) => {
   }
 });
 
+// GET completed mission IDs
+router.get('/completed', async (req, res) => {
+  try {
+    const db = await getDb();
+    const doc = await db.collection('user_progress').findOne({ key: 'completed_missions' });
+    res.json({ completed: doc?.ids || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /complete - שמור משימה שהושלמה
+router.post('/complete', async (req, res) => {
+  try {
+    const { missionId } = req.body;
+    if (!missionId) return res.status(400).json({ error: 'missionId required' });
+
+    const db = await getDb();
+    await db.collection('user_progress').updateOne(
+      { key: 'completed_missions' },
+      { $addToSet: { ids: missionId }, $set: { updated_at: new Date() } },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /complete/:missionId - בטל השלמת משימה
+router.delete('/complete/:missionId', async (req, res) => {
+  try {
+    const { missionId } = req.params;
+    const db = await getDb();
+    await db.collection('user_progress').updateOne(
+      { key: 'completed_missions' },
+      { $pull: { ids: missionId } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
