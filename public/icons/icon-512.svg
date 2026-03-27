@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="90" fill="#1e293b"/>
+  <g transform="translate(256, 220) rotate(-45)">
+    <path d="M0,-120 L24,-60 L100,-30 L24,0 L24,50 L60,76 L60,96 L16,72 L0,130 L-16,72 L-60,96 L-60,76 L-24,50 L-24,0 L-100,-30 L-24,-60 Z" fill="#3b82f6" stroke="#60a5fa" stroke-width="3"/>
+  </g>
+  <text x="256" y="440" font-family="Arial,sans-serif" font-size="48" font-weight="bold" fill="#94a3b8" text-anchor="middle">AirManager</text>
+</svg>

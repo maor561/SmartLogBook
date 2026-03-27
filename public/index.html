@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<meta name="description" content="מערכת ניהול חברת תעופה וירטואלית - Airline Manager">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Smart Logbook Airline</title>
+<!-- Manifest will be injected by JavaScript -->
+<link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/lib/leaflet.css"/>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <h1>✈️ <span id="headerTitle">מנהל חברת התעופה שלי</span></h1>
+    <p id="headerSubtitle">מערכת ניהול טיסות מתקדמת</p>
+  </div>
+  <div class="header-right">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button class="btn btn-icon" onclick="refreshData()" id="refreshBtn" title="Refresh data">🔄</button>
+      <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Toggle theme">🌙</button>
+      <div class="rank-badge" onclick="openRankModal()" id="rankBadge">סטודנט</div>
+    </div>
+    <div class="hours-display" id="hoursDisplay">0:00 שעות</div>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab-btn active" onclick="switchTab('dashboard')" data-tab="dashboard">
+    🏠 <span id="tabDashLabel">לוח בקרה</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('pricing')" data-tab="pricing">
+    📊 <span id="tabPricingLabel">ניתוח מחירים</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('settings')" data-tab="settings">
+    ⚙️ <span id="tabSettLabel">הגדרות</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('missions')" data-tab="missions">
+    🎖️ <span id="tabMissionsLabel">משימות</span>
+  </button>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- DASHBOARD TAB -->
+  <div class="tab-content active" id="dashboard">
+
+    <!-- Load + Export Row -->
+    <div class="load-area">
+      <button class="btn btn-primary" onclick="loadFromSimbrief()" id="loadBtn">
+        <span>✈️</span> <span id="loadBtnText">טען טיסה מ-SimBrief</span>
+      </button>
+      <div class="export-row">
+        <button class="btn btn-icon" onclick="exportExcel()">📊 <span id="exportBtnText">ייצוא Excel</span></button>
+        <button class="btn btn-icon" onclick="document.getElementById('importFile').click()">📥 <span id="importBtnText">ייבוא Excel</span></button>
+        <button class="btn btn-icon" onclick="openReportDialog()">📄 <span id="reportBtnText">דוח חודשי</span></button>
+        <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(this)">
+      </div>
+    </div>
+
+    <!-- Current Flight Panel -->
+    <div class="current-flight" id="currentFlightPanel" style="display:none">
+      <div class="route-header">
+        <div class="route-display">
+          <span id="cfOriginFlag"></span>
+          <span id="cfOrigin" class="route-icao"></span>
+          <span class="arrow">→</span>
+          <span id="cfDest" class="route-icao"></span>
+          <span id="cfDestFlag"></span>
+        </div>
+        <div class="route-names" id="cfNames"></div>
+      </div>
+      <div class="flight-info-grid" id="cfInfoGrid"></div>
+      <div class="financial-analysis">
+        <div class="financial-title">💰 <span id="finAnalysisTitle">ניתוח פיננסי</span></div>
+        <div id="finAnalysisContent"></div>
+      </div>
+      <div style="text-align:center;margin-top:16px">
+        <button class="btn btn-success" onclick="openConfirmModal()">
+          ✅ <span id="confirmBtnText">אשר סיום טיסה</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card" onclick="openChartModal('flights')">
+        <div class="stat-emoji">✈️</div>
+        <div class="stat-value" id="statFlights">0</div>
+        <div class="stat-label" id="statFlightsLabel">סה״כ טיסות</div>
+      </div>
+      <div class="stat-card" onclick="openChartModal('passengers')">
+        <div class="stat-emoji">👥</div>
+        <div class="stat-value" id="statPassengers">0</div>
+        <div class="stat-label" id="statPassengersLabel">נוסעים</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+          ממוצע: <span id="statPassengersAvgDisplay">0</span>
+        </div>
+      </div>
+      <div class="stat-card" onclick="openChartModal('distance')">
+        <div class="stat-emoji">🌍</div>
+        <div class="stat-value" id="statDistance">0</div>
+        <div class="stat-label" id="statDistanceLabel">מרחק (NM)</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+          ממוצע: <span id="statDistanceAvgDisplay">0</span>
+        </div>
+      </div>
+      <div class="stat-card" onclick="openChartModal('duration')">
+        <div class="stat-emoji">⏱️</div>
+        <div class="stat-value" id="statHours">0:00</div>
+        <div class="stat-label" id="statHoursLabel">שעות טיסה</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+          ממוצע: <span id="statHoursAvgDisplay">0:00</span>
+        </div>
+      </div>
+      <div class="stat-card" onclick="openChartModal('profit')">
+        <div class="stat-emoji">💰</div>
+        <div class="stat-value" id="statProfit">$0</div>
+        <div class="stat-label" id="statProfitLabel">רווח כולל</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+          ממוצע: <span id="statProfitAvgDisplay">$0</span>
+        </div>
+      </div>
+      <div class="stat-card" onclick="openChartModal('fuel')">
+        <div class="stat-emoji">⛽</div>
+        <div class="stat-value" id="statFuel">0</div>
+        <div class="stat-label" id="statFuelLabel">דלק (ק״ג)</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+          ממוצע: <span id="statFuelAvgDisplay">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Section -->
+    <div class="analytics-section" id="analyticsSection" style="display:none">
+      <div class="card">
+        <div class="card-title">📊 <span id="analyticsSectionTitle">ניתוח מתקדם</span></div>
+        <div class="analytics-grid" id="analyticsGrid"></div>
+      </div>
+    </div>
+
+    <!-- Goals Section -->
+    <div class="goals-section" id="goalsSection" style="display:none">
+      <div class="card">
+        <div class="card-title">🎯 <span id="goalsSectionTitle">מטרות</span></div>
+        <div class="goals-grid" id="goalsGrid"></div>
+      </div>
+    </div>
+
+    <!-- Favorites + Map -->
+    <div class="fav-map-row" id="favMapRow">
+      <div class="card">
+        <div class="card-title">⭐ <span id="favoritesTitle">שדות מועדפים</span></div>
+        <div class="favorites-grid" id="favoritesContent"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🗺️ <span id="mapTitle">מפת מסלולים</span></div>
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">📋 <span id="historyTitle">היסטוריית טיסות</span></div>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="empty-state">
+          <div class="icon">✈️</div>
+          <p id="emptyHistoryText">אין טיסות עדיין. טען טיסה מ-SimBrief להתחלה!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING ANALYTICS TAB -->
+  <div class="tab-content" id="pricing">
+    <div style="padding: 16px;">
+      <h2>📊 ניתוח מחירים דינמיים</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">צפה בשינויים בעלויות ובמדדים לאורך זמן</p>
+
+      <!-- Period Selector -->
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button class="btn btn-secondary" onclick="loadPricingHistory(7)" style="flex: 1;">7 ימים</button>
+        <button class="btn btn-secondary" onclick="loadPricingHistory(30)" style="flex: 1;">30 ימים</button>
+        <button class="btn btn-secondary" onclick="loadPricingHistory(90)" style="flex: 1;">90 ימים</button>
+      </div>
+
+      <!-- Charts Container - 2x2 Grid -->
+      <div id="pricingChartsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 100%;">
+        <!-- Fuel Cost Chart -->
+        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
+          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">⛽ עלות דלק</h3>
+          <canvas id="fuelCostChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
+        </div>
+
+        <!-- Cost Index Chart -->
+        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
+          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">📈 מדד עלויות</h3>
+          <canvas id="costIndexChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
+        </div>
+
+        <!-- Ticket Prices Chart -->
+        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
+          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">🎫 מחירי כרטיסים</h3>
+          <canvas id="ticketPricesChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
+        </div>
+
+        <!-- Landing Fees Chart -->
+        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
+          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">🛬 עמלות נחיתה</h3>
+          <canvas id="landingFeesChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="pricingLoadingState" style="text-align: center; padding: 32px; color: var(--text-secondary);">
+        <p>⏳ לא קיימת היסטוריית מחירים עדיין</p>
+        <p style="font-size: 0.9rem;">לחץ על "עדכן מחירים" בהגדרות כדי להתחיל</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="tab-content" id="settings">
+    <div class="settings-grid">
+      <div class="card">
+        <div class="card-title">🌐 <span id="generalSettTitle">הגדרות כלליות</span></div>
+        <div class="form-group">
+          <label id="langLabel">שפה / Language</label>
+          <select id="langSelect">
+            <option value="he">עברית</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label id="simbriefIdLabel">✈️ SimBrief User ID</label>
+          <input type="text" id="simbriefId" placeholder="e.g. 64403">
+        </div>
+        <div class="form-group">
+          <label id="reportEmailLabel">📧 אימייל לדוחות (לשימוש עתידי)</label>
+          <input type="email" id="reportEmail" placeholder="pilot@example.com">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💰 <span id="pricingSettTitle">הגדרות תמחור</span></div>
+        <div class="form-group">
+          <label id="ticketPriceBaseLabel">💺 כרטיס - טווח קצר &lt;500NM ($)</label>
+          <input type="number" id="pTicketBase" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="ticketPriceMediumLabel">💺 כרטיס - טווח בינוני 500-2000NM ($)</label>
+          <input type="number" id="pTicketMedium" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="ticketPriceLongLabel">💺 כרטיס - טווח ארוך &gt;2000NM ($)</label>
+          <input type="number" id="pTicketLong" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="cargoRateLabel">📦 מחיר מטען ($/ק״ג)</label>
+          <input type="number" id="pCargo" min="0" step="0.1">
+        </div>
+        <div class="form-group">
+          <label id="fuelCostLabel">⛽ עלות דלק ($/ק״ג)</label>
+          <input type="number" id="pFuel" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label id="crewCostLabel">👨‍✈️ עלות צוות ($/טיסה)</label>
+          <input type="number" id="pCrew" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="landingFeeSmallLabel">🛬 נחיתה - מטוס קטן ($)</label>
+          <input type="number" id="pLandingSmall" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="landingFeeMediumLabel">🛬 נחיתה - מטוס בינוני ($)</label>
+          <input type="number" id="pLandingMedium" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="landingFeeLargeLabel">🛬 נחיתה - מטוס גדול ($)</label>
+          <input type="number" id="pLandingLarge" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="maintenanceCostLabel">🔧 עלות תחזוקה ($/שעה)</label>
+          <input type="number" id="pMaint" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label id="landingPenaltyLabel">💥 קנס נחיתה קשה ($)</label>
+          <input type="number" id="pPenalty" min="0" step="1">
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" onclick="saveSettings()">
+            💾 <span id="saveBtnText">שמור הגדרות</span>
+          </button>
+          <button class="btn btn-secondary" onclick="resetSettings()">
+            🔄 <span id="resetBtnText">אפס לברירת מחדל</span>
+          </button>
+          <button class="btn btn-info" onclick="updateDynamicPricing()">
+            📊 עדכן מחירים דינמיים
+          </button>
+        </div>
+        <div id="pricingInfo" style="margin-top: 12px; padding: 10px; background: rgba(100,150,255,0.1); border-radius: 6px; display: none;">
+          <small>💡 <span id="pricingStatus">מחישוב דינמי של מחירים...</span></small>
+        </div>
+      </div>
+
+      <!-- Goals Settings Card -->
+      <div class="card">
+        <div class="card-title">🎯 <span id="goalsSettTitle">מטרות</span></div>
+        <div class="form-group">
+          <label id="goalFlightsLabel">✈️ יעד טיסות</label>
+          <input type="number" id="goalFlights" min="0" step="1" placeholder="100">
+        </div>
+        <div class="form-group">
+          <label id="goalHoursLabel">⏱️ יעד שעות טיסה</label>
+          <input type="number" id="goalHours" min="0" step="1" placeholder="500">
+        </div>
+        <div class="form-group">
+          <label id="goalProfitLabel">💰 יעד רווח ($)</label>
+          <input type="number" id="goalProfit" min="0" step="1000" placeholder="100000">
+        </div>
+        <div class="form-group">
+          <label id="goalPassengersLabel">👥 יעד נוסעים</label>
+          <input type="number" id="goalPassengers" min="0" step="100" placeholder="10000">
+        </div>
+        <div class="settings-actions">
+          <button class="btn btn-primary" onclick="saveGoals()">
+            💾 <span id="saveGoalsBtnText">שמור מטרות</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MISSIONS TAB -->
+  <div class="tab-content" id="missions">
+    <div style="padding: 16px;">
+      <h2>🎖️ <span id="missionsPageTitle">משימות מיוחדות</span></h2>
+      <p style="color: var(--text-secondary); margin-bottom: 24px;" id="missionsPageDesc">
+        השלם משימות מיוחדות בשם מדינת ישראל וקבל בונוסים כספיים ודרגות!
+      </p>
+
+      <!-- Active Missions Section -->
+      <div class="card">
+        <div class="card-title">📋 <span id="activeMissionsTitle">משימות פעילות</span></div>
+        <div class="missions-grid" id="activeMissionsGrid"></div>
+      </div>
+
+      <!-- Completed Missions Section -->
+      <div class="card">
+        <div class="card-title">✅ <span id="completedMissionsTitle">משימות שהושלמו</span></div>
+        <div class="missions-grid" id="completedMissionsGrid"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Confirm Flight -->
+<div class="modal-overlay" id="confirmModal" style="display:none" onclick="handleOverlayClick(event,'confirmModal')">
+  <div class="modal">
+    <div class="modal-title">🛬 <span id="confirmModalTitle">אישור טיסה</span></div>
+    <p class="modal-desc" id="confirmModalDesc">הזן את קצב הירידה בנחיתה</p>
+    <div class="form-group">
+      <label id="fpmLabel">קצב ירידה (FPM):</label>
+      <input type="number" id="fpmInput" placeholder="-145" oninput="updateFpmFeedback()">
+    </div>
+    <div class="fpm-feedback fpm-good" id="fpmFeedback">נחיתה טובה ✅</div>
+
+    <!-- Update pricing section -->
+    <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.08); border-radius: 6px; border-left: 3px solid #6366f1;">
+      <div style="font-size: 0.85rem; margin-bottom: 8px;">💡 <strong>עדכן מחירים בזמן אמת:</strong></div>
+      <button class="btn btn-info" onclick="updateFlightPricing()" style="width: 100%; font-size: 0.9rem;">
+        📊 טען מחירים דינמיים וחשב מחדש
+      </button>
+      <div id="flightPricingStatus" style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary); display: none;"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('confirmModal')" id="cancelBtn">ביטול</button>
+      <button class="btn btn-success" onclick="confirmFlight()">✅ <span id="confirmFlightBtnText">אשר</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Flight -->
+<div class="modal-overlay" id="editModal" style="display:none" onclick="handleOverlayClick(event,'editModal')">
+  <div class="modal">
+    <div class="modal-title">✏️ Edit Flight</div>
+    <div class="form-group">
+      <label>Landing Rate (FPM):</label>
+      <input type="number" id="editFpm" placeholder="-145">
+      <div class="fpm-feedback fpm-good" id="editFpmFeedback">Good Landing ✅</div>
+    </div>
+    <div class="form-group">
+      <label>Passengers:</label>
+      <input type="number" id="editPassengers" min="0" placeholder="100">
+    </div>
+    <div class="form-group">
+      <label>Fuel (kg):</label>
+      <input type="number" id="editFuel" min="0" placeholder="5000">
+    </div>
+    <div class="form-group">
+      <label>Payload/Cargo (kg):</label>
+      <input type="number" id="editPayload" min="0" placeholder="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn btn-success" onclick="saveFlightEdit()">✅ Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="modal-overlay" id="chartModal" style="display:none" onclick="handleOverlayClick(event,'chartModal')">
+  <div class="modal modal-wide">
+    <div class="modal-title" id="chartModalTitle">📊 גרף</div>
+    <div class="chart-period-toggle">
+      <button class="period-btn active" data-period="day" id="periodDay">יום</button>
+      <button class="period-btn" data-period="week" id="periodWeek">שבוע</button>
+      <button class="period-btn" data-period="month" id="periodMonth">חודש</button>
+    </div>
+    <div id="chartContainer"><canvas id="mainChart"></canvas></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('chartModal')" id="closeChartBtn">סגור</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rank -->
+<div class="modal-overlay" id="rankModal" style="display:none" onclick="handleOverlayClick(event,'rankModal')">
+  <div class="modal">
+    <div class="modal-title">🏆 <span id="rankModalTitle">דרגות טייס</span></div>
+    <div class="ranks-list" id="ranksList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('rankModal')" id="closeRankBtn">סגור</button>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal" style="display:none" onclick="handleOverlayClick(event,'reportModal')">
+  <div class="modal">
+    <div class="modal-title">📄 <span id="reportModalTitle">דוח חודשי</span></div>
+    <div class="form-group">
+      <label id="reportMonthLabel">בחר חודש:</label>
+      <select id="reportMonthSelect"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('reportModal')" id="cancelReportBtn">ביטול</button>
+      <button class="btn btn-primary" onclick="generateReport()">📄 <span id="generateReportBtnText">צור דוח</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Offline Banner -->
+<div id="offlineBanner" style="display:none; position:fixed; top:0; left:0; right:0; background:#ef4444; color:white; text-align:center; padding:8px; font-size:14px; z-index:10000; direction:rtl;">
+  ✈️ מצב לא מקוון - חלק מהפעולות לא זמינות
+</div>
+
+<!-- Install PWA Button -->
+<div id="installBanner" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--accent, #3b82f6); color:white; padding:12px 24px; border-radius:12px; font-size:14px; z-index:10000; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); direction:rtl;" onclick="installPWA()">
+  📲 התקן את האפליקציה במכשיר שלך
+  <span onclick="event.stopPropagation(); document.getElementById('installBanner').style.display='none';" style="margin-right:12px; cursor:pointer;">✕</span>
+</div>
+
+<script src="/lib/leaflet.js"></script>
+<script src="/lib/chart.min.js"></script>
+<script src="/lib/xlsx.full.min.js"></script>
+<script src="/js/app.js"></script>
+<script>
+// Fix: Ensure updateMap() is called after map initialization
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (typeof updateMap === 'function' && mapInstance) {
+      console.log('[Fix] Calling updateMap() to render routes on map');
+      updateMap();
+    }
+  }, 500);
+});
+</script>
+</body>
+</html>

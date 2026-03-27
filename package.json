@@ -1,0 +1,19 @@
+{
+  "name": "smartlogbook",
+  "version": "2.0.0",
+  "description": "Virtual Airline Management System - Express.js + PostgreSQL + Vercel",
+  "main": "backend/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "cd backend && npm run dev",
+    "start": "cd backend && npm start",
+    "build": "echo 'Build complete'",
+    "install": "npm install && cd backend && npm install"
+  },
+  "keywords": ["airline", "aviation", "pwa", "simbrief"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": "18.x"
+  }
+}
