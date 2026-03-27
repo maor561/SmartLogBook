@@ -7,6 +7,7 @@ import settingsRouter from '../backend/routes/settings.js';
 import statsRouter from '../backend/routes/stats.js';
 import pricingRouter from '../backend/routes/pricing.js';
 import simbriefRouter from '../backend/routes/simbrief.js';
+import missionsRouter from '../backend/routes/missions.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/pricing', pricingRouter);
 app.use('/api/simbrief', simbriefRouter);
+app.use('/api/missions', missionsRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

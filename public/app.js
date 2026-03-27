@@ -467,6 +467,7 @@ const MISSIONS = [
 ];
 
 let completedMissions = [];
+let MISSIONS_FROM_API = []; // loaded from /api/missions
 
 // ===== INPUT VALIDATION =====
 function validateFPM(fpm) {
@@ -2653,15 +2654,31 @@ function renderGoals() {
 }
 
 // ===== MISSIONS =====
-function renderMissions() {
+async function renderMissions() {
   const L = TRANSLATIONS[currentLang];
 
   // Load completed missions from localStorage
   completedMissions = JSON.parse(localStorage.getItem('airliner_completed_missions') || '[]');
 
+  // Fetch missions from API, fallback to hardcoded
+  const activeMissionsGrid = document.getElementById('activeMissionsGrid');
+  if (activeMissionsGrid) activeMissionsGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-secondary)">⏳ טוען משימות...</div>';
+
+  try {
+    const res = await fetch('/api/missions');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.missions && data.missions.length > 0) {
+        MISSIONS_FROM_API = data.missions;
+      }
+    }
+  } catch (e) { /* fallback to MISSIONS */ }
+
+  const source = MISSIONS_FROM_API.length > 0 ? MISSIONS_FROM_API : MISSIONS;
+
   // Get active and completed missions
-  const activeMissions = MISSIONS.filter(m => !completedMissions.includes(m.id));
-  const completed = MISSIONS.filter(m => completedMissions.includes(m.id));
+  const activeMissions = source.filter(m => !completedMissions.includes(m.id));
+  const completed = source.filter(m => completedMissions.includes(m.id));
 
   // Render active missions
   const activeMissionsGrid = document.getElementById('activeMissionsGrid');
