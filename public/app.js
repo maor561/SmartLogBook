@@ -2716,6 +2716,7 @@ function renderMissionCard(mission, isCompleted) {
       </div>
       <p class="mission-description">${mission.description}</p>
       <div class="mission-route">📍 ${mission.origin} ← ${mission.destination}</div>
+      ${mission.date ? `<div style="font-size:0.85rem;color:var(--accent);font-weight:600;margin:4px 0;">📅 ${new Date(mission.date + 'T12:00:00').toLocaleDateString('he-IL', {weekday:'long', year:'numeric', month:'long', day:'numeric'})}${mission.time ? ' · ⏰ ' + mission.time : ''}</div>` : ''}
       <div class="mission-event" style="font-size: 0.85rem; color: var(--text-secondary);">🌍 ${mission.event}</div>
       <div class="mission-rewards">
         <div class="reward-item">💰 ${mission.reward_cash.toLocaleString()} בונוס</div>
