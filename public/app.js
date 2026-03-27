@@ -2681,7 +2681,6 @@ async function renderMissions() {
   const completed = source.filter(m => completedMissions.includes(m.id));
 
   // Render active missions
-  const activeMissionsGrid = document.getElementById('activeMissionsGrid');
   if (activeMissionsGrid) {
     activeMissionsGrid.innerHTML = activeMissions.length === 0
       ? '<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--text-secondary);">✅ כל המשימות הושלמו!</div>'
