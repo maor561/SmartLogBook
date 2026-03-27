@@ -438,32 +438,32 @@ let currentChartPeriod = 'day';
 
 // ===== MISSIONS DATA =====
 const MISSIONS = [
-  // 🏆 Sports
-  {id: 'sports-1', category: 'sports', emoji: '🏆', title: 'Israel Soccer - UEFA Qualifier', description: 'Fly the national soccer team to Madrid for the UEFA qualifier match.', origin: 'LLBG', destination: 'LEMD', reward_cash: 5000, reward_badge: 'Diplomatic Hero', event: 'Spain vs Israel UEFA Match'},
-  {id: 'sports-2', category: 'sports', emoji: '🏆', title: 'Israel Volleyball - Paris Invitational', description: 'Bring the Israeli volleyball team to Paris for the invitational championship.', origin: 'LLBG', destination: 'LFPG', reward_cash: 4500, reward_badge: 'Sports Ambassador', event: 'Paris Volleyball Championship'},
-  {id: 'sports-3', category: 'sports', emoji: '🏆', title: 'Basketball Team - EuroBasket', description: 'Transport the Israeli basketball team to Rome for EuroBasket competition.', origin: 'LLBG', destination: 'LIRF', reward_cash: 5500, reward_badge: 'Team Coach', event: 'EuroBasket Tournament'},
-  {id: 'sports-4', category: 'sports', emoji: '🏆', title: 'Israeli Olympians - Tokyo', description: 'Fly Israeli athletes to Tokyo for the Olympic Games.', origin: 'LLBG', destination: 'RJTT', reward_cash: 8000, reward_badge: 'Olympic Champion', event: 'Tokyo Olympics'},
+  // 🏆 ספורט
+  {id: 'sports-1', category: 'sports', emoji: '🏆', title: 'נבחרת ישראל בכדורגל - מיון UEFA', description: 'טוס עם נבחרת ישראל למדריד למשחק המיון של UEFA.', origin: 'LLBG', destination: 'LEMD', reward_cash: 5000, reward_badge: 'גיבור דיפלומטי', event: 'ספרד נגד ישראל - מיון UEFA'},
+  {id: 'sports-2', category: 'sports', emoji: '🏆', title: 'נבחרת ישראל בכדורעף - הזמנה לפריז', description: 'טוס עם נבחרת ישראל בכדורעף לפריז לאליפות הזמנה.', origin: 'LLBG', destination: 'LFPG', reward_cash: 4500, reward_badge: 'שגריר ספורט', event: 'אליפות כדורעף פריז'},
+  {id: 'sports-3', category: 'sports', emoji: '🏆', title: 'קבוצת כדורסל - EuroBasket', description: 'טוס עם קבוצת הכדורסל הישראלית לרומא לתחרות EuroBasket.', origin: 'LLBG', destination: 'LIRF', reward_cash: 5500, reward_badge: 'מאמן הקבוצה', event: 'טורניר EuroBasket'},
+  {id: 'sports-4', category: 'sports', emoji: '🏆', title: 'אולימפיאדה - ספורטאים ישראלים לטוקיו', description: 'טוס עם הספורטאים הישראלים לטוקיו למשחקים האולימפיים.', origin: 'LLBG', destination: 'RJTT', reward_cash: 8000, reward_badge: 'אלוף אולימפי', event: 'אולימפיאדת טוקיו'},
 
-  // 🎤 Cultural
-  {id: 'culture-1', category: 'culture', emoji: '🎤', title: 'Eurovision Delegation - Stockholm', description: 'Transport the Eurovision delegation and equipment to Stockholm.', origin: 'LLBG', destination: 'ESSA', reward_cash: 3500, reward_badge: 'Culture Ambassador', event: 'Eurovision Song Contest'},
-  {id: 'culture-2', category: 'culture', emoji: '🎤', title: 'Israel Philharmonic Orchestra - Berlin', description: 'Fly the Israel Philharmonic Orchestra to Berlin for a concert tour.', origin: 'LLBG', destination: 'EDDB', reward_cash: 4000, reward_badge: 'Music Enthusiast', event: 'Berlin Concert Series'},
-  {id: 'culture-3', category: 'culture', emoji: '🎤', title: 'Theater Troupe - New York', description: 'Transport Israeli theater company to New York for Broadway performances.', origin: 'LLBG', destination: 'KJFK', reward_cash: 6000, reward_badge: 'Theater Patron', event: 'New York Theater Festival'},
+  // 🎤 תרבות
+  {id: 'culture-1', category: 'culture', emoji: '🎤', title: 'משלחת אירוויזיון - שטוקהולם', description: 'טוס עם משלחת האירוויזיון הישראלית לשטוקהולם.', origin: 'LLBG', destination: 'ESSA', reward_cash: 3500, reward_badge: 'שגריר תרבות', event: 'תחרות אירוויזיון'},
+  {id: 'culture-2', category: 'culture', emoji: '🎤', title: 'התזמורת הפילהרמונית - ברלין', description: 'טוס עם התזמורת הפילהרמונית הישראלית לברלין לסיבוב הופעות.', origin: 'LLBG', destination: 'EDDB', reward_cash: 4000, reward_badge: 'חובב מוזיקה', event: 'סדרת הופעות ברלין'},
+  {id: 'culture-3', category: 'culture', emoji: '🎤', title: 'להקת תיאטרון - ניו יורק', description: 'טוס עם להקת התיאטרון הישראלית לניו יורק להופעות בברודווי.', origin: 'LLBG', destination: 'KJFK', reward_cash: 6000, reward_badge: 'חסיד תיאטרון', event: 'פסטיבל תיאטרון ניו יורק'},
 
-  // 🤝 Diplomatic
-  {id: 'diplomatic-1', category: 'diplomatic', emoji: '🤝', title: 'Foreign Minister - UN Summit', description: 'Fly the Foreign Minister to New York for UN General Assembly.', origin: 'LLBG', destination: 'KJFK', reward_cash: 4500, reward_badge: 'Diplomat', event: 'UN General Assembly'},
-  {id: 'diplomatic-2', category: 'diplomatic', emoji: '🤝', title: 'Trade Delegation - Brussels', description: 'Transport business delegation for EU trade negotiations.', origin: 'LLBG', destination: 'EBBR', reward_cash: 3500, reward_badge: 'Trade Expert', event: 'EU Trade Summit'},
-  {id: 'diplomatic-3', category: 'diplomatic', emoji: '🤝', title: 'Peace Talks Delegation - Cairo', description: 'Fly diplomatic delegation for peace negotiations in Egypt.', origin: 'LLBG', destination: 'HECA', reward_cash: 5000, reward_badge: 'Peace Maker', event: 'Cairo Peace Talks'},
-  {id: 'diplomatic-4', category: 'diplomatic', emoji: '🤝', title: 'Tech Summit - Silicon Valley', description: 'Transport Israeli tech industry leaders to California conference.', origin: 'LLBG', destination: 'KSJC', reward_cash: 6500, reward_badge: 'Tech Pioneer', event: 'Silicon Valley Tech Conference'},
+  // 🤝 דיפלומטיה
+  {id: 'diplomatic-1', category: 'diplomatic', emoji: '🤝', title: 'שר החוץ - פסגת האו"ם', description: 'טוס עם שר החוץ לניו יורק לאסיפה הכללית של האו"ם.', origin: 'LLBG', destination: 'KJFK', reward_cash: 4500, reward_badge: 'דיפלומט', event: 'האסיפה הכללית של האו"ם'},
+  {id: 'diplomatic-2', category: 'diplomatic', emoji: '🤝', title: 'משלחת סחר - בריסל', description: 'טוס עם המשלחת העסקית למשא ומתן סחר עם האיחוד האירופי.', origin: 'LLBG', destination: 'EBBR', reward_cash: 3500, reward_badge: 'מומחה סחר', event: 'פסגת סחר האיחוד האירופי'},
+  {id: 'diplomatic-3', category: 'diplomatic', emoji: '🤝', title: 'משלחת שיחות שלום - קהיר', description: 'טוס עם המשלחת הדיפלומטית למשא ומתן שלום במצרים.', origin: 'LLBG', destination: 'HECA', reward_cash: 5000, reward_badge: 'עושה שלום', event: 'שיחות שלום קהיר'},
+  {id: 'diplomatic-4', category: 'diplomatic', emoji: '🤝', title: 'פסגת היי-טק - סיליקון ואלי', description: 'טוס עם מנהיגי ההיי-טק הישראלי לכנס בקליפורניה.', origin: 'LLBG', destination: 'KSJC', reward_cash: 6500, reward_badge: 'חלוץ טכנולוגיה', event: 'כנס הטכנולוגיה בסיליקון ואלי'},
 
-  // 🚨 Emergency
-  {id: 'emergency-1', category: 'emergency', emoji: '🚨', title: 'Medical Evacuation - Cyprus', description: 'Urgent evacuation of Israeli medical team to Cyprus for humanitarian aid.', origin: 'LLBG', destination: 'LCRA', reward_cash: 4000, reward_badge: 'Emergency Responder', event: 'Cyprus Medical Emergency'},
-  {id: 'emergency-2', category: 'emergency', emoji: '🚨', title: 'Humanitarian Aid - Turkey', description: 'Deliver emergency humanitarian aid following earthquake in Turkey.', origin: 'LLBG', destination: 'LTAC', reward_cash: 5500, reward_badge: 'Humanitarian Hero', event: 'Turkey Earthquake Relief'},
-  {id: 'emergency-3', category: 'emergency', emoji: '🚨', title: 'Citizens Evacuation - Sudan', description: 'Emergency evacuation of Israeli citizens from Sudan.', origin: 'LLBG', destination: 'HSSS', reward_cash: 4500, reward_badge: 'Lifesaver', event: 'Sudan Evacuation'},
+  // 🚨 חירום
+  {id: 'emergency-1', category: 'emergency', emoji: '🚨', title: 'פינוי רפואי - קפריסין', description: 'פינוי דחוף של צוות רפואי ישראלי לקפריסין לסיוע הומניטרי.', origin: 'LLBG', destination: 'LCRA', reward_cash: 4000, reward_badge: 'מגיב חירום', event: 'מצב חירום רפואי בקפריסין'},
+  {id: 'emergency-2', category: 'emergency', emoji: '🚨', title: 'סיוע הומניטרי - טורקיה', description: 'הבאת סיוע הומניטרי חירום לאחר רעידת האדמה בטורקיה.', origin: 'LLBG', destination: 'LTAC', reward_cash: 5500, reward_badge: 'גיבור הומניטרי', event: 'סיוע לרעידת האדמה בטורקיה'},
+  {id: 'emergency-3', category: 'emergency', emoji: '🚨', title: 'פינוי אזרחים - סודן', description: 'פינוי חירום של אזרחים ישראלים מסודן.', origin: 'LLBG', destination: 'HSSS', reward_cash: 4500, reward_badge: 'מציל חיים', event: 'פינוי סודן'},
 
-  // 👥 State
-  {id: 'state-1', category: 'state', emoji: '👥', title: 'PM State Visit - Washington', description: 'Fly Prime Minister for state visit to Washington, DC.', origin: 'LLBG', destination: 'KDCA', reward_cash: 7000, reward_badge: 'State Official', event: 'Washington State Visit'},
-  {id: 'state-2', category: 'state', emoji: '👥', title: 'Government Delegation - Paris', description: 'Transport government delegation for French-Israeli cooperation meetings.', origin: 'LLBG', destination: 'LFPG', reward_cash: 5000, reward_badge: 'Government Liaison', event: 'Paris Government Summit'},
-  {id: 'state-3', category: 'state', emoji: '👥', title: 'Cultural Exchange - Morocco', description: 'Fly cultural exchange delegation to Morocco.', origin: 'LLBG', destination: 'GMMC', reward_cash: 3500, reward_badge: 'Cultural Bridge', event: 'Morocco Cultural Exchange'},
+  // 👥 ממשלה
+  {id: 'state-1', category: 'state', emoji: '👥', title: 'ביקור ראש הממשלה - וושינגטון', description: 'טוס עם ראש הממשלה לביקור רשמי בוושינגטון.', origin: 'LLBG', destination: 'KDCA', reward_cash: 7000, reward_badge: 'נציג ממשלתי', event: 'ביקור מדינה בוושינגטון'},
+  {id: 'state-2', category: 'state', emoji: '👥', title: 'משלחת ממשלתית - פריז', description: 'טוס עם המשלחת הממשלתית לפגישות שיתוף פעולה ישראל-צרפת.', origin: 'LLBG', destination: 'LFPG', reward_cash: 5000, reward_badge: 'קישור ממשלתי', event: 'פסגה ממשלתית פריז'},
+  {id: 'state-3', category: 'state', emoji: '👥', title: 'חילופי תרבות - מרוקו', description: 'טוס עם משלחת חילופי תרבות למרוקו.', origin: 'LLBG', destination: 'GMMC', reward_cash: 3500, reward_badge: 'גשר תרבות', event: 'חילופי תרבות עם מרוקו'},
 ];
 
 let completedMissions = [];
@@ -2667,7 +2667,7 @@ function renderMissions() {
   const activeMissionsGrid = document.getElementById('activeMissionsGrid');
   if (activeMissionsGrid) {
     activeMissionsGrid.innerHTML = activeMissions.length === 0
-      ? '<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--text-secondary);">✅ All missions completed!</div>'
+      ? '<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--text-secondary);">✅ כל המשימות הושלמו!</div>'
       : activeMissions.map(mission => renderMissionCard(mission, false)).join('');
   }
 
@@ -2675,7 +2675,7 @@ function renderMissions() {
   const completedMissionsGrid = document.getElementById('completedMissionsGrid');
   if (completedMissionsGrid) {
     completedMissionsGrid.innerHTML = completed.length === 0
-      ? '<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--text-secondary);">No completed missions yet</div>'
+      ? '<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--text-secondary);">אין משימות שהושלמו עדיין</div>'
       : completed.map(mission => renderMissionCard(mission, true)).join('');
   }
 }
@@ -2692,19 +2692,19 @@ function renderMissionCard(mission, isCompleted) {
   const bgColor = categoryColors[mission.category] || '#6b7280';
 
   return `
-    <div class="mission-card" style="border-left: 4px solid ${bgColor};">
+    <div class="mission-card" dir="rtl" style="border-right: 4px solid ${bgColor}; text-align: right;">
       <div class="mission-header">
         <div class="mission-title">${mission.emoji} ${mission.title}</div>
-        ${isCompleted ? '<div style="color: #10b981; font-weight: bold;">✅ Completed</div>' : ''}
+        ${isCompleted ? '<div style="color: #10b981; font-weight: bold;">✅ הושלמה</div>' : ''}
       </div>
       <p class="mission-description">${mission.description}</p>
-      <div class="mission-route">📍 ${mission.origin} → ${mission.destination}</div>
+      <div class="mission-route">📍 ${mission.origin} ← ${mission.destination}</div>
       <div class="mission-event" style="font-size: 0.85rem; color: var(--text-secondary);">🌍 ${mission.event}</div>
       <div class="mission-rewards">
-        <div class="reward-item">💰 ${mission.reward_cash.toLocaleString()}</div>
+        <div class="reward-item">💰 ${mission.reward_cash.toLocaleString()} בונוס</div>
         <div class="reward-badge">⭐ ${mission.reward_badge}</div>
       </div>
-      ${!isCompleted ? `<button class="btn btn-primary" onclick="scheduleMissionFlight('${mission.id}', '${mission.origin}', '${mission.destination}')" style="width: 100%; margin-top: 12px;">📍 Fly to ${mission.destination}</button>` : ''}
+      ${!isCompleted ? `<button class="btn btn-primary" onclick="scheduleMissionFlight('${mission.id}', '${mission.origin}', '${mission.destination}')" style="width: 100%; margin-top: 12px;">✈️ טוס ל-${mission.destination}</button>` : ''}
     </div>
   `;
 }
@@ -2713,7 +2713,7 @@ function scheduleMissionFlight(missionId, origin, destination) {
   const mission = MISSIONS.find(m => m.id === missionId);
   if (!mission) return;
 
-  showToast(`📍 Navigate to schedule a flight from ${origin} to ${destination} to complete this mission!`, 'info');
+  showToast(`📍 תזמן טיסה מ-${origin} ל-${destination} כדי להשלים את המשימה!`, 'info');
   // In a real app, this would switch tabs or pre-fill the flight form
 }
 
@@ -2730,7 +2730,7 @@ function completeMission(missionId) {
       localStorage.setItem('airliner_balance', newBalance.toString());
 
       // Show toast
-      showToast(`🎉 Mission Completed! +${mission.reward_cash.toLocaleString()} 💰 Badge: ${mission.reward_badge}`, 'success');
+      showToast(`🎉 משימה הושלמה! +${mission.reward_cash.toLocaleString()} 💰 עיטור: ${mission.reward_badge}`, 'success');
 
       // Re-render missions and update UI
       renderMissions();
