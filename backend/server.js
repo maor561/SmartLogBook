@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ type: ['application/json', 'application/json; charset=utf-8', 'text/plain'] }));
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
