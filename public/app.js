@@ -2102,21 +2102,15 @@ let pricingCharts = {};
 // Helper function to format chart labels based on time period
 function formatChartLabel(dateStr, days) {
   const date = new Date(dateStr);
+  const dayMonth = date.toLocaleDateString('he-IL', {day: 'numeric', month: 'short'});
+  const time = date.toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'});
 
   if (days <= 7) {
-    // 7 days: show day + month + hour:minute (e.g., "14 מר' 14:30")
-    const dayMonth = date.toLocaleDateString('he-IL', {day: 'numeric', month: 'short'});
-    const time = date.toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'});
     return `${dayMonth} ${time}`;
   } else if (days <= 30) {
-    // 30 days: show day + month only (e.g., "14 מר'")
-    return date.toLocaleDateString('he-IL', {day: 'numeric', month: 'short'});
+    return `${dayMonth} ${time}`;
   } else {
-    // 90 days: show week number (e.g., "שבוע 1")
-    const onejan = new Date(date.getFullYear(), 0, 1);
-    const millisecsInDay = 86400000;
-    const weekNum = Math.ceil((((date - onejan) / millisecsInDay) + onejan.getDay() + 1) / 7);
-    return `שבוע ${weekNum}`;
+    return `${dayMonth}`;
   }
 }
 
