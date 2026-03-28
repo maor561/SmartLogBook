@@ -40,15 +40,28 @@ router.get('/history/debug/all', async (req, res) => {
 router.post('/update', async (req, res) => {
   try {
     const db = await getDb();
-    const update = {
-      fuelCost: 0.85,
-      costIndex: 50,
-      ticketPrice: 120,
-      landingFee: 45,
-      recorded_at: new Date()
+
+    // Get last record for realistic variation
+    const last = await db.collection('pricing_history')
+      .findOne({}, { sort: { recorded_at: -1 } });
+
+    const vary = (base, pct = 0.05) => {
+      const change = base * pct * (Math.random() * 2 - 1);
+      return Math.round((base + change) * 100) / 100;
     };
 
-    // Save to history
+    const update = {
+      fuel_cost:      vary(last?.fuel_cost || 0.85),
+      cost_index:     Math.round(vary(last?.cost_index || 50, 0.08)),
+      ticket_base:    Math.round(vary(last?.ticket_base || 95)),
+      ticket_medium:  Math.round(vary(last?.ticket_medium || 180)),
+      ticket_long:    Math.round(vary(last?.ticket_long || 320)),
+      landing_small:  Math.round(vary(last?.landing_small || 25)),
+      landing_medium: Math.round(vary(last?.landing_medium || 45)),
+      landing_large:  Math.round(vary(last?.landing_large || 85)),
+      recorded_at:    new Date()
+    };
+
     await db.collection('pricing_history').insertOne(update);
 
     res.json({
