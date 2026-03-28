@@ -864,6 +864,8 @@ function switchTab(tab) {
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   if (tab === 'dashboard') setTimeout(() => mapInstance && mapInstance.invalidateSize(), 150);
   if (tab === 'missions') renderMissions();
+  if (tab === 'pricing') loadPricingHistory(30);
+  if (tab === 'settings') loadGoalsForm();
 }
 
 // ===== SIMBRIEF LOAD =====
