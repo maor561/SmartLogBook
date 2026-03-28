@@ -69,6 +69,17 @@ router.post('/update', async (req, res) => {
   }
 });
 
+// DELETE /clear - נקה משימות אוטומטיות שברורות (זמני)
+router.delete('/clear', async (req, res) => {
+  try {
+    const db = await getDb();
+    const result = await db.collection('missions').deleteMany({ source: 'auto' });
+    res.json({ deleted: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET completed mission IDs
 router.get('/completed', async (req, res) => {
   try {
