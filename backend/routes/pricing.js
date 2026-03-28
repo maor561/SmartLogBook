@@ -16,7 +16,7 @@ router.get('/history', async (req, res) => {
       .sort({ recorded_at: -1 })
       .toArray();
 
-    res.json(history);
+    res.json({ history });
   } catch (err) {
     console.error('[Pricing History Error]', err);
     res.status(500).json({ error: err.message });
