@@ -10,6 +10,7 @@ import settingsRouter from './routes/settings.js';
 import statsRouter from './routes/stats.js';
 import pricingRouter from './routes/pricing.js';
 import simbriefRouter from './routes/simbrief.js';
+import missionsRouter from './routes/missions.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/pricing', pricingRouter);
 app.use('/api/simbrief', simbriefRouter);
+app.use('/api/missions', missionsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
