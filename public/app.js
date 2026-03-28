@@ -2125,7 +2125,7 @@ async function loadPricingHistory(days = 30) {
     const r = await fetch(`/api/pricing/history?days=${days}`);
     const data = await r.json();
 
-    if (!data || data.length === 0) {
+    if (!data || !data.history || data.history.length === 0) {
       loadingState.style.display = 'block';
       return;
     }

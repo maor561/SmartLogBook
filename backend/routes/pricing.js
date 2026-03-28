@@ -13,7 +13,7 @@ router.get('/history', async (req, res) => {
 
     const history = await db.collection('pricing_history')
       .find({ recorded_at: { $gte: since } })
-      .sort({ recorded_at: -1 })
+      .sort({ recorded_at: 1 })
       .toArray();
 
     console.log(`[Pricing History] Found ${history.length} records for last ${days} days`);
@@ -24,13 +24,43 @@ router.get('/history', async (req, res) => {
   }
 });
 
-// GET pricing history debug - all records
-router.get('/history/debug/all', async (req, res) => {
+// POST /history/seed - Generate sample historical data
+router.post('/history/seed', async (req, res) => {
   try {
     const db = await getDb();
-    const all = await db.collection('pricing_history').find({}).sort({ recorded_at: -1 }).limit(5).toArray();
-    const count = await db.collection('pricing_history').countDocuments();
-    res.json({ total: count, latest: all });
+
+    // Clear old data
+    await db.collection('pricing_history').deleteMany({});
+
+    const records = [];
+    const now = new Date();
+    let fuel = 0.82, ci = 48, tb = 90, tm = 170, tl = 310, ls = 22, lm = 42, ll = 80;
+
+    const vary = (val, pct = 0.03) => {
+      const change = val * pct * (Math.random() * 2 - 1);
+      return Math.round((val + change) * 100) / 100;
+    };
+
+    // Generate 90 days of daily data
+    for (let i = 90; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      date.setHours(12, 0, 0, 0);
+
+      fuel = vary(fuel); ci = Math.round(vary(ci, 0.04));
+      tb = Math.round(vary(tb)); tm = Math.round(vary(tm)); tl = Math.round(vary(tl));
+      ls = Math.round(vary(ls)); lm = Math.round(vary(lm)); ll = Math.round(vary(ll));
+
+      records.push({
+        fuel_cost: fuel, cost_index: ci,
+        ticket_base: tb, ticket_medium: tm, ticket_long: tl,
+        landing_small: ls, landing_medium: lm, landing_large: ll,
+        recorded_at: date
+      });
+    }
+
+    await db.collection('pricing_history').insertMany(records);
+    res.json({ success: true, inserted: records.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
