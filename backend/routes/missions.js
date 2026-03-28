@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
       .sort({ date: 1 })
       .toArray();
 
+    console.log(`[Missions GET] Found ${missions.length} missions from DB`);
     res.json({ missions: missions.map(m => ({ ...m, id: m._id.toString() })) });
   } catch (err) {
     console.error('[Missions GET Error]', err);
@@ -85,8 +86,11 @@ router.get('/completed', async (req, res) => {
   try {
     const db = await getDb();
     const doc = await db.collection('user_progress').findOne({ key: 'completed_missions' });
-    res.json({ completed: doc?.ids || [] });
+    const completed = doc?.ids || [];
+    console.log(`[Missions Completed GET] Found ${completed.length} completed missions`);
+    res.json({ completed });
   } catch (err) {
+    console.error('[Missions Completed GET Error]', err);
     res.status(500).json({ error: err.message });
   }
 });

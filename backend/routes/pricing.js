@@ -16,9 +16,22 @@ router.get('/history', async (req, res) => {
       .sort({ recorded_at: -1 })
       .toArray();
 
+    console.log(`[Pricing History] Found ${history.length} records for last ${days} days`);
     res.json({ history });
   } catch (err) {
     console.error('[Pricing History Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET pricing history debug - all records
+router.get('/history/debug/all', async (req, res) => {
+  try {
+    const db = await getDb();
+    const all = await db.collection('pricing_history').find({}).sort({ recorded_at: -1 }).limit(5).toArray();
+    const count = await db.collection('pricing_history').countDocuments();
+    res.json({ total: count, latest: all });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
