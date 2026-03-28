@@ -50,4 +50,41 @@ router.put('/:key', async (req, res) => {
   }
 });
 
+// POST /goals - Save user goals/targets
+router.post('/goals', async (req, res) => {
+  try {
+    const db = await getDb();
+    const goals = req.body;
+
+    await db.collection('user_progress').updateOne(
+      { key: 'goals' },
+      { $set: { ...goals, updated_at: new Date() } },
+      { upsert: true }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Goals POST Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /goals - Load user goals
+router.get('/goals', async (req, res) => {
+  try {
+    const db = await getDb();
+    const doc = await db.collection('user_progress').findOne({ key: 'goals' });
+
+    res.json({
+      flights: doc?.flights || 0,
+      hours: doc?.hours || 0,
+      profit: doc?.profit || 0,
+      passengers: doc?.passengers || 0
+    });
+  } catch (err) {
+    console.error('[Goals GET Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

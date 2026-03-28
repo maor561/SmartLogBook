@@ -2557,9 +2557,25 @@ async function importExcel(input) {
 }
 
 // ===== GOALS =====
-function loadGoalsForm() {
-  const goals = JSON.parse(localStorage.getItem('airliner_goals') || '{}');
+async function loadGoalsForm() {
   const el = (id) => document.getElementById(id);
+
+  // Try to load from API/DB first, fallback to localStorage
+  try {
+    const res = await fetch('/api/settings/goals');
+    if (res.ok) {
+      const goals = await res.json();
+      if (goals.flights)    el('goalFlights').value    = goals.flights;
+      if (goals.hours)      el('goalHours').value      = goals.hours;
+      if (goals.profit)     el('goalProfit').value     = goals.profit;
+      if (goals.passengers) el('goalPassengers').value = goals.passengers;
+      localStorage.setItem('airliner_goals', JSON.stringify(goals));
+      return;
+    }
+  } catch (e) { /* fallback */ }
+
+  // Fallback to localStorage
+  const goals = JSON.parse(localStorage.getItem('airliner_goals') || '{}');
   if (goals.flights)    el('goalFlights').value    = goals.flights;
   if (goals.hours)      el('goalHours').value      = goals.hours;
   if (goals.profit)     el('goalProfit').value     = goals.profit;
@@ -2596,13 +2612,32 @@ function saveGoals() {
     passengers: getNum('goalPassengers'),
   };
   localStorage.setItem('airliner_goals', JSON.stringify(goals));
+
+  // Save to DB
+  fetch('/api/settings/goals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(goals)
+  }).catch(() => {});
+
   renderGoals();
   showToast(L.goalsSaved, 'success');
 }
 
-function renderGoals() {
+async function renderGoals() {
   const L = TRANSLATIONS[currentLang];
-  const goals = JSON.parse(localStorage.getItem('airliner_goals') || '{}');
+
+  // Try to load from API/DB first
+  let goals = {};
+  try {
+    const res = await fetch('/api/settings/goals');
+    if (res.ok) goals = await res.json();
+  } catch (e) { /* fallback */ }
+
+  // If no data from API, use localStorage
+  if (!goals.flights && !goals.hours && !goals.profit && !goals.passengers) {
+    goals = JSON.parse(localStorage.getItem('airliner_goals') || '{}');
+  }
 
   const hasAnyGoal = goals.flights || goals.hours || goals.profit || goals.passengers;
   const section = document.getElementById('goalsSection');
