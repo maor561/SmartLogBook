@@ -923,7 +923,7 @@ async function loadFromSimbrief() {
       distance: parseInt(general.route_distance || general.gc_distance || 0),
       duration: `${hours}:${String(mins).padStart(2,'0')}`,
       durationMins: durationMins,
-      passengers: parseInt(general.passengers || 0),
+      passengers: parseInt(data.weights?.pax_count_actual || general.passengers || 0),
       fuel: fuelKg,
       payload: Math.round(payloadKg),
       originFlag: getFlag(origin.country_code),
