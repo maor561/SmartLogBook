@@ -39,10 +39,22 @@ router.get('/history/debug/all', async (req, res) => {
 // POST - Update dynamic pricing
 router.post('/update', async (req, res) => {
   try {
+    const db = await getDb();
+    const update = {
+      fuelCost: 0.85,
+      costIndex: 50,
+      ticketPrice: 120,
+      landingFee: 45,
+      recorded_at: new Date()
+    };
+
+    // Save to history
+    await db.collection('pricing_history').insertOne(update);
+
     res.json({
       success: true,
       message: 'Pricing updated',
-      update: { fuelCost: 0.85, costIndex: 50, timestamp: new Date().toISOString() }
+      update: { ...update, timestamp: update.recorded_at.toISOString() }
     });
   } catch (err) {
     console.error('[Pricing Update Error]', err);
