@@ -2675,7 +2675,7 @@ async function renderMissions() {
     }
     if (completedRes.ok) {
       const data = await completedRes.json();
-      if (data.completed && data.completed.length > 0) {
+      if (Array.isArray(data.completed)) {
         completedMissions = data.completed;
         localStorage.setItem('airliner_completed_missions', JSON.stringify(completedMissions));
       }
