@@ -435,6 +435,7 @@ let mapLayers = [];
 let chartInstance = null;
 let currentChartType = 'flights';
 let currentChartPeriod = 'day';
+let selectedPricingDays = 30;  // Track selected pricing period
 
 // ===== MISSIONS DATA =====
 const MISSIONS = [
@@ -864,7 +865,7 @@ function switchTab(tab) {
   document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   if (tab === 'dashboard') setTimeout(() => mapInstance && mapInstance.invalidateSize(), 150);
   if (tab === 'missions') renderMissions();
-  if (tab === 'pricing') loadPricingHistory(30);
+  if (tab === 'pricing') loadPricingHistory(selectedPricingDays);
   if (tab === 'settings') loadGoalsForm();
 }
 
@@ -1243,6 +1244,11 @@ function updateUI() {
   updateFavorites();
   updateMap();
   renderGoals();
+
+  // Refresh pricing charts if pricing tab is active
+  if (document.querySelector('[data-tab="pricing"].active')) {
+    loadPricingHistory(selectedPricingDays);
+  }
 }
 
 // ===== STATS =====
@@ -2115,6 +2121,7 @@ function formatChartLabel(dateStr, days) {
 }
 
 async function loadPricingHistory(days = 30) {
+  selectedPricingDays = days;  // Save selected period
   try {
     const container = document.getElementById('pricingChartsContainer');
     const loadingState = document.getElementById('pricingLoadingState');
@@ -2716,11 +2723,14 @@ async function renderMissions() {
   const source = MISSIONS_FROM_API.length > 0 ? MISSIONS_FROM_API : MISSIONS;
 
   // Get active and completed missions
+  // Merge API source with hardcoded MISSIONS for completed lookup (handles legacy IDs)
+  const mergedSource = [...source, ...MISSIONS.filter(m => !source.some(s => s.id === m.id))];
+
   const today = new Date().toISOString().split('T')[0];
   const activeMissions = source.filter(m =>
     !completedMissions.includes(m.id) && (!m.date || m.date >= today)
   );
-  const completed = source.filter(m => completedMissions.includes(m.id));
+  const completed = mergedSource.filter(m => completedMissions.includes(m.id));
 
   // Render active missions
   if (activeMissionsGrid) {
