@@ -2716,7 +2716,10 @@ async function renderMissions() {
   const source = MISSIONS_FROM_API.length > 0 ? MISSIONS_FROM_API : MISSIONS;
 
   // Get active and completed missions
-  const activeMissions = source.filter(m => !completedMissions.includes(m.id));
+  const today = new Date().toISOString().split('T')[0];
+  const activeMissions = source.filter(m =>
+    !completedMissions.includes(m.id) && (!m.date || m.date >= today)
+  );
   const completed = source.filter(m => completedMissions.includes(m.id));
 
   // Render active missions
