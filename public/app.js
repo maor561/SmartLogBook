@@ -664,7 +664,17 @@ const API = {
       'EKCH': [55.6161, 12.6560],  // Copenhagen, Denmark
       'UUDD': [55.4131, 37.9010],  // Moscow (Domodedovo), Russia
       'VECC': [28.5647, 77.1029],  // Delhi, India
-      'VIDP': [28.5562, 77.0992]   // Delhi (Indira Gandhi), India
+      'VIDP': [28.5562, 77.0992],  // Delhi (Indira Gandhi), India
+      'ESSA': [59.6519, 17.9481],  // Stockholm, Sweden
+      'EDDB': [52.3667, 13.5033],  // Berlin, Germany
+      'EBBR': [50.9010, 4.4846],   // Brussels, Belgium
+      'HECA': [30.1219, 31.4056],  // Cairo, Egypt
+      'LTAC': [39.9469, 32.8956],  // Ankara, Turkey
+      'HSSS': [15.5889, 32.5289],  // Khartoum, Sudan
+      'LCRA': [34.6025, 33.3822],  // Larnaca, Cyprus
+      'GMMC': [31.6086, -8.0172],  // Marrakech, Morocco
+      'KDCA': [38.8521, -77.0377], // Washington DC, USA
+      'KSJC': [37.3639, -121.9289] // San Jose, USA
     };
 
     // Convert string values from MySQL to numbers
@@ -1731,7 +1741,8 @@ function updateMap() {
   const bounds = [];
 
   flights.forEach(f => {
-    if (!f.originLat && !f.destLat) return;
+    // Skip if any coordinate is missing
+    if (!f.originLat || !f.originLon || !f.destLat || !f.destLon) return;
     const from = [f.originLat, f.originLon];
     const to = [f.destLat, f.destLon];
     const color = f.profit >= 0 ? '#10b981' : '#ef4444';
