@@ -35,20 +35,37 @@ router.get('/', async (req, res) => {
     const db = await getDb();
     const today = new Date().toISOString().split('T')[0];
 
-    // טען רשימת משימות שהושלמו
-    const progressDoc = await db.collection('user_progress').findOne({ key: 'completed_missions' });
-    const completedIds = progressDoc?.ids || [];
+    // אם DB לא זמין, החזר DEFAULT_MISSIONS
+    if (!db) {
+      console.log('[Missions GET] DB not available - using DEFAULT_MISSIONS fallback');
+      return res.json({ missions: DEFAULT_MISSIONS });
+    }
 
-    let missions = await db.collection('missions')
-      .find({
-        $or: [
-          { date: { $gte: today } },           // משימות עתידיות
-          { date: { $exists: false } },         // משימות ללא תאריך
-          { id: { $in: completedIds } }         // משימות שהושלמו (גם ישנות)
-        ]
-      })
-      .sort({ date: 1 })
-      .toArray();
+    // טען רשימת משימות שהושלמו
+    let completedIds = [];
+    try {
+      const progressDoc = await db.collection('user_progress').findOne({ key: 'completed_missions' });
+      completedIds = progressDoc?.ids || [];
+    } catch (err) {
+      console.warn('[Missions GET] Could not fetch completed missions:', err.message);
+    }
+
+    let missions = [];
+    try {
+      missions = await db.collection('missions')
+        .find({
+          $or: [
+            { date: { $gte: today } },           // משימות עתידיות
+            { date: { $exists: false } },         // משימות ללא תאריך
+            { id: { $in: completedIds } }         // משימות שהושלמו (גם ישנות)
+          ]
+        })
+        .sort({ date: 1 })
+        .toArray();
+    } catch (err) {
+      console.warn('[Missions GET] Could not fetch missions from DB:', err.message);
+      missions = [];
+    }
 
     // אם אין משימות או יש encoding issues, החזר DEFAULT_MISSIONS
     if (missions.length === 0) {
