@@ -72,12 +72,17 @@ router.get('/', async (req, res) => {
       missions = DEFAULT_MISSIONS;
       console.log('[Missions GET] MongoDB empty - using DEFAULT_MISSIONS fallback');
     } else {
-      // בדוק אם יש encoding issues ותקן
+      // בדוק אם יש encoding issues (תוים ???? או לא עברית) ותקן
       missions = missions.map(m => {
-        // אם הכותרת לא עברית (encoding issue), חפש החלפה מ-DEFAULT_MISSIONS
-        if (!isHebrew(m.title || '')) {
+        const hasEncodingIssue =
+          !isHebrew(m.title || '') ||
+          (m.title && m.title.includes('?')) ||
+          (m.description && m.description.includes('?'));
+
+        if (hasEncodingIssue) {
           const defaultMission = DEFAULT_MISSIONS.find(d => d.id === m.id);
           if (defaultMission) {
+            console.log(`[Missions GET] Fixed encoding for mission ${m.id}`);
             return { ...m, title: defaultMission.title, description: defaultMission.description, event: defaultMission.event, reward_badge: defaultMission.reward_badge };
           }
         }
