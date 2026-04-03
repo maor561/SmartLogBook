@@ -67,10 +67,10 @@ router.get('/', async (req, res) => {
       missions = [];
     }
 
-    // אם אין משימות או יש encoding issues, החזר DEFAULT_MISSIONS
+    // אם אין משימות - חזר empty array (עדכן משימות רק דרך automation/POST /update)
     if (missions.length === 0) {
-      missions = DEFAULT_MISSIONS;
-      console.log('[Missions GET] MongoDB empty - using DEFAULT_MISSIONS fallback');
+      console.log('[Missions GET] No missions in DB - waiting for automation');
+      // מחזיר array ריק - האוטומציה תוסיף משימות דרך POST /update
     } else {
       // בדוק אם יש encoding issues (תוים ???? או לא עברית) ותקן
       missions = missions.map(m => {

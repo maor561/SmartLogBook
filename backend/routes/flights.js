@@ -23,7 +23,8 @@ router.post('/', async (req, res) => {
     const db = await getDb();
     const {
       date, origin, destination, originName, destName, aircraft,
-      distance, duration, durationMins, passengers, fuel, payload, fpm, profit
+      distance, duration, durationMins, passengers, fuel, payload, fpm, profit,
+      originLat, originLon, destLat, destLon
     } = req.body;
 
     const result = await db.collection('flights').insertOne({
@@ -32,6 +33,7 @@ router.post('/', async (req, res) => {
       aircraft, distance, duration,
       duration_mins: durationMins,
       passengers, fuel, payload, fpm, profit,
+      originLat, originLon, destLat, destLon,
       created_at: new Date()
     });
 
