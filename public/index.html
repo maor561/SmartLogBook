@@ -16,6 +16,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="stylesheet" href="/lib/leaflet.css"/>
 <link rel="stylesheet" href="/css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -29,6 +30,8 @@
     <div style="display: flex; gap: 8px; align-items: center;">
       <button class="btn btn-icon" onclick="refreshData()" id="refreshBtn" title="Refresh data">🔄</button>
       <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Toggle theme">🌙</button>
+      <button class="btn btn-icon" onclick="openAchievementsGallery()" id="achievementsBtn" title="Achievements">🏆</button>
+      <button class="btn btn-icon" onclick="showRankHistory()" id="rankHistoryBtn" title="Rank History">📈</button>
       <div class="rank-badge" onclick="openRankModal()" id="rankBadge">סטודנט</div>
     </div>
     <div class="hours-display" id="hoursDisplay">0:00 שעות</div>
@@ -496,5 +499,24 @@ window.addEventListener('load', () => {
   }, 500);
 });
 </script>
+
+<!-- Notifications Container -->
+<div id="notificationsContainer" class="notifications-container"></div>
+
+<!-- Boarding Pass Modal -->
+<div class="modal-overlay" id="boardingPassModal" style="display:none" onclick="handleOverlayClick(event,'boardingPassModal')">
+  <div class="modal modal-wide">
+    <div class="modal-title">🎫 כרטיס טיסה</div>
+    <div id="boardingPassContainer" class="boarding-pass-card">
+      <!-- Rendered dynamically -->
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('boardingPassModal')">סגור</button>
+      <button class="btn btn-primary" onclick="downloadBoardingPass()">📥 Download PNG</button>
+      <button class="btn btn-info" onclick="shareBoardingPass()">📤 Share</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

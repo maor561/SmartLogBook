@@ -470,6 +470,106 @@ const MISSIONS = [
 let completedMissions = [];
 let MISSIONS_FROM_API = []; // loaded from /api/missions
 
+// ===== ACHIEVEMENTS =====
+let unlockedAchievements = [];
+
+const ACHIEVEMENTS_LIST = [
+  { id: 'flight_100', name: 'מאה טיסות', emoji: '✈️', condition: 'flights >= 100' },
+  { id: 'hours_500', name: '500 שעות טיסה', emoji: '⏱️', condition: 'totalHours >= 500' },
+  { id: 'profit_100k', name: '$100K רווח', emoji: '💰', condition: 'totalProfit >= 100000' },
+  { id: 'allContinents', name: 'כל היבשות', emoji: '🌍', condition: 'visitedContinents >= 6' },
+  { id: 'perfectLanding', name: '10 נחיתות מושלמות', emoji: '🎯', condition: 'perfectLandings >= 10' }
+];
+
+// ===== RANK HISTORY =====
+let rankHistory = [];
+
+function recordRankPromotion(newRank) {
+  const entry = {
+    rank: newRank,
+    date: new Date().toISOString(),
+    totalFlights: flights.length
+  };
+
+  rankHistory.push(entry);
+  localStorage.setItem('rankHistory', JSON.stringify(rankHistory));
+
+  // Show notification
+  showSmartNotification(
+    'rank',
+    '🎖️ קידום דרגה!',
+    `עליתם לדרגת: ${newRank}`,
+    5000
+  );
+}
+
+function loadRankHistory() {
+  const saved = localStorage.getItem('rankHistory');
+  if (saved) {
+    try {
+      rankHistory = JSON.parse(saved);
+    } catch (e) {
+      rankHistory = [];
+    }
+  }
+}
+
+function showRankHistory() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+
+  const timelineHtml = rankHistory.length === 0
+    ? '<div style="text-align: center; color: var(--text-secondary); padding: 20px;">טרם קיימות קידומי דרגה</div>'
+    : rankHistory.map((entry, idx) => {
+      const date = new Date(entry.date);
+      const dateStr = date.toLocaleDateString('he-IL');
+      return `
+        <div style="
+          display: flex;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid var(--border);
+        ">
+          <div style="
+            font-size: 28px;
+            margin-right: 16px;
+            background: rgba(139, 92, 246, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+          ">
+            🎖️
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; color: var(--text-primary);">${entry.rank}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">
+              ${dateStr} • ${entry.totalFlights} טיסות
+            </div>
+          </div>
+          ${idx === rankHistory.length - 1 ? '<div style="color: var(--green); font-weight: 700;">✨ נוכחי</div>' : ''}
+        </div>
+      `;
+    }).join('');
+
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-title">🎖️ היסטוריית דרגות</div>
+      <div style="max-height: 60vh; overflow-y: auto; padding: 16px;">
+        ${timelineHtml}
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">סגור</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
+}
+
 // ===== INPUT VALIDATION =====
 function validateFPM(fpm) {
   const num = parseInt(fpm);
@@ -772,6 +872,8 @@ async function init() {
     if (settings.reportEmail) document.getElementById('reportEmail').value = settings.reportEmail;
     loadPricingForm();
     loadGoalsForm();
+    loadAchievements();
+    loadRankHistory();
 
     updateUI();
     initMap();
@@ -1244,6 +1346,7 @@ function updateUI() {
   updateFavorites();
   updateMap();
   renderGoals();
+  checkAchievements();
 
   // Refresh pricing charts if pricing tab is active
   if (document.querySelector('[data-tab="pricing"].active')) {
@@ -1417,6 +1520,8 @@ function updateAnalytics() {
 }
 
 // ===== RANK =====
+let lastRankIndex = -1;
+
 function updateRank() {
   const mins = flights.reduce((s, f) => s + (f.durationMins || 0), 0);
   const totalH = mins / 60;
@@ -1426,6 +1531,12 @@ function updateRank() {
   for (let i = RANK_THRESHOLDS.length - 1; i >= 0; i--) {
     if (totalH >= RANK_THRESHOLDS[i]) { idx = i; break; }
   }
+
+  // Check if rank has changed (promotion)
+  if (lastRankIndex !== -1 && idx > lastRankIndex) {
+    recordRankPromotion(L.ranks[idx]);
+  }
+  lastRankIndex = idx;
 
   document.getElementById('rankBadge').textContent = L.ranks[idx];
   const hInt = Math.floor(mins / 60), mInt = Math.floor(mins % 60);
@@ -1461,6 +1572,7 @@ function updateHistory() {
           <div class="history-stat">⛽ ${(f.fuel||0).toLocaleString()}</div>
         </div>
         <div class="history-profit" style="color:${pc}">${ps}$${Math.abs(f.profit||0).toLocaleString()}</div>
+        <button class="btn btn-info" onclick="openBoardingPassModal('${f.id}')">🎫 Pass</button>
         <button class="btn btn-primary" onclick="openEditFlight('${f.id}')">✏️ Edit</button>
         <button class="btn btn-danger" onclick="deleteFlight('${f.id}')">${L.deleteBtn}</button>
       </div>
@@ -2867,6 +2979,325 @@ async function refreshData() {
     if (btn) btn.disabled = false;
   }
 }
+
+// Check for new achievements based on current progress
+function checkAchievements() {
+  if (!flights || flights.length === 0) return;
+
+  const totalFlights = flights.length;
+  const totalHours = flights.reduce((sum, f) => sum + (f.durationMins || 0), 0) / 60;
+  const totalProfit = flights.reduce((sum, f) => sum + (f.profit || 0), 0);
+  const perfectLandings = flights.filter(f => f.fpm && f.fpm >= -200 && f.fpm <= -150).length;
+
+  // Simple continent check (based on flight routes - simplified)
+  const destinations = new Set(flights.map(f => f.destination));
+  const visitedContinents = Math.min(6, Math.ceil(destinations.size / 3)); // Rough estimate
+
+  // Check each achievement
+  ACHIEVEMENTS_LIST.forEach(achievement => {
+    if (unlockedAchievements.includes(achievement.id)) return; // Already unlocked
+
+    let shouldUnlock = false;
+
+    if (achievement.id === 'flight_100' && totalFlights >= 100) {
+      shouldUnlock = true;
+    } else if (achievement.id === 'hours_500' && totalHours >= 500) {
+      shouldUnlock = true;
+    } else if (achievement.id === 'profit_100k' && totalProfit >= 100000) {
+      shouldUnlock = true;
+    } else if (achievement.id === 'perfectLanding' && perfectLandings >= 10) {
+      shouldUnlock = true;
+    } else if (achievement.id === 'allContinents' && visitedContinents >= 6) {
+      shouldUnlock = true;
+    }
+
+    if (shouldUnlock) {
+      unlockAchievement(achievement.id);
+    }
+  });
+}
+
+function unlockAchievement(achievementId) {
+  if (unlockedAchievements.includes(achievementId)) return;
+
+  unlockedAchievements.push(achievementId);
+  const achievement = ACHIEVEMENTS_LIST.find(a => a.id === achievementId);
+
+  if (achievement) {
+    // Show achievement notification
+    showSmartNotification(
+      'achievement',
+      `${achievement.emoji} הישג חדש!`,
+      achievement.name,
+      5000
+    );
+
+    // Save to localStorage
+    localStorage.setItem('unlockedAchievements', JSON.stringify(unlockedAchievements));
+  }
+}
+
+// Load achievements from localStorage on init
+function loadAchievements() {
+  const saved = localStorage.getItem('unlockedAchievements');
+  if (saved) {
+    try {
+      unlockedAchievements = JSON.parse(saved);
+    } catch (e) {
+      unlockedAchievements = [];
+    }
+  }
+}
+
+// Open achievements gallery
+function openAchievementsGallery() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-title">🏆 הישגים</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; max-height: 60vh; overflow-y: auto;">
+        ${ACHIEVEMENTS_LIST.map(achievement => {
+          const unlocked = unlockedAchievements.includes(achievement.id);
+          return `
+            <div style="
+              padding: 16px;
+              border-radius: 8px;
+              text-align: center;
+              background: ${unlocked ? 'rgba(59, 130, 246, 0.2)' : 'rgba(100, 116, 139, 0.2)'};
+              border: 2px solid ${unlocked ? 'var(--accent)' : 'var(--border)'};
+              opacity: ${unlocked ? '1' : '0.6'};
+              cursor: pointer;
+            ">
+              <div style="font-size: 32px; margin-bottom: 8px;">${achievement.emoji}</div>
+              <div style="font-weight: 700; font-size: 14px; color: var(--text-primary);">${achievement.name}</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                ${unlocked ? '✅ מטבוח' : '🔒 נעול'}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">סגור</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.remove();
+  };
+}
+
+// ===== SMART NOTIFICATIONS =====
+function showSmartNotification(type, title, message, duration = 4000) {
+  const container = document.getElementById('notificationsContainer');
+  const notificationId = `notif-${Date.now()}`;
+
+  // Map types to emoji and colors
+  const typeConfig = {
+    success: { icon: '✅', title: title || 'הצליח!' },
+    error: { icon: '❌', title: title || 'שגיאה' },
+    warning: { icon: '⚠️', title: title || 'אזהרה' },
+    info: { icon: 'ℹ️', title: title || 'מידע' },
+    achievement: { icon: '🏆', title: title || 'הישג חדש!' },
+    milestone: { icon: '🎉', title: title || 'ציון דרך!' },
+    rank: { icon: '🎖️', title: title || 'קידום דרגה!' }
+  };
+
+  const config = typeConfig[type] || typeConfig.info;
+
+  const notification = document.createElement('div');
+  notification.id = notificationId;
+  notification.className = `notification ${type}`;
+  notification.innerHTML = `
+    <div class="notification-icon">${config.icon}</div>
+    <div class="notification-content">
+      <div class="notification-title">${config.title}</div>
+      <div class="notification-message">${message}</div>
+    </div>
+    <button class="notification-close" onclick="closeNotification('${notificationId}')">✕</button>
+  `;
+
+  container.appendChild(notification);
+
+  // Auto-close after duration
+  if (duration > 0) {
+    setTimeout(() => closeNotification(notificationId), duration);
+  }
+}
+
+function closeNotification(notificationId) {
+  const notif = document.getElementById(notificationId);
+  if (!notif) return;
+
+  notif.classList.add('closing');
+  setTimeout(() => {
+    notif.remove();
+  }, 300);
+}
+
+// Convenience functions
+function showToastSuccess(message, title = null) {
+  showSmartNotification('success', title, message, 3000);
+}
+
+function showToastError(message, title = null) {
+  showSmartNotification('error', title, message, 4000);
+}
+
+function showToastWarning(message, title = null) {
+  showSmartNotification('warning', title, message, 4000);
+}
+
+function showToastInfo(message, title = null) {
+  showSmartNotification('info', title, message, 3000);
+}
+
+// ===== BOARDING PASS =====
+function openBoardingPassModal(flightId) {
+  const flight = flights.find(f => f.id === flightId);
+  if (!flight) return;
+
+  // Format date
+  const flightDate = new Date(flight.date);
+  const dateStr = flightDate.toLocaleDateString('he-IL', { month: '2-digit', day: '2-digit', year: '2-digit' });
+  const timeStr = flightDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  const confirmationNum = flightId.substring(0, 8).toUpperCase();
+
+  // Render boarding pass
+  const boardingPassHTML = `
+    <div class="boarding-pass-header">
+      <div class="boarding-pass-airline">✈️ SMART LOGBOOK</div>
+      <div class="boarding-pass-subtitle">BOARDING PASS</div>
+    </div>
+
+    <div class="boarding-pass-route">
+      <div style="text-align: center;">
+        <div class="boarding-pass-label">From</div>
+        <div class="boarding-pass-airport">${flight.origin}</div>
+      </div>
+      <div class="boarding-pass-arrow">→</div>
+      <div style="text-align: center;">
+        <div class="boarding-pass-label">To</div>
+        <div class="boarding-pass-airport">${flight.destination}</div>
+      </div>
+    </div>
+
+    <div class="boarding-pass-row">
+      <div class="boarding-pass-field">
+        <div class="boarding-pass-label">Confirmation</div>
+        <div class="boarding-pass-value">${confirmationNum}</div>
+      </div>
+      <div class="boarding-pass-field">
+        <div class="boarding-pass-label">Date</div>
+        <div class="boarding-pass-value">${dateStr}</div>
+      </div>
+    </div>
+
+    <div class="boarding-pass-row">
+      <div class="boarding-pass-field">
+        <div class="boarding-pass-label">Aircraft</div>
+        <div class="boarding-pass-value">${flight.aircraft}</div>
+      </div>
+      <div class="boarding-pass-field">
+        <div class="boarding-pass-label">Duration</div>
+        <div class="boarding-pass-value">${flight.duration}</div>
+      </div>
+    </div>
+
+    <div class="boarding-pass-details">
+      <div class="boarding-pass-info-grid">
+        <div class="boarding-pass-info-item">
+          <div class="boarding-pass-label">Passengers</div>
+          <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">${flight.passengers}</div>
+        </div>
+        <div class="boarding-pass-info-item">
+          <div class="boarding-pass-label">Profit</div>
+          <div style="font-size: 16px; font-weight: 700; color: var(--green);">$${flight.profit.toLocaleString()}</div>
+        </div>
+        <div class="boarding-pass-info-item">
+          <div class="boarding-pass-label">Distance</div>
+          <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">${flight.distance} NM</div>
+        </div>
+        <div class="boarding-pass-info-item">
+          <div class="boarding-pass-label">Fuel</div>
+          <div style="font-size: 16px; font-weight: 700; color: var(--text-primary);">${flight.fuel} kg</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="boarding-pass-barcode">
+      ║ ${confirmationNum} ║
+    </div>
+  `;
+
+  document.getElementById('boardingPassContainer').innerHTML = boardingPassHTML;
+  document.getElementById('boardingPassModal').style.display = 'flex';
+
+  // Store current flight for export
+  window.currentBoardingPassFlight = flight;
+}
+
+function downloadBoardingPass() {
+  if (!window.currentBoardingPassFlight) return;
+
+  const flight = window.currentBoardingPassFlight;
+  const boardingPassElement = document.getElementById('boardingPassContainer');
+
+  // Use html2canvas if available, otherwise fallback to Canvas API
+  if (typeof html2canvas !== 'undefined') {
+    html2canvas(boardingPassElement, {
+      backgroundColor: '#0f172a',
+      scale: 2
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `boarding-pass-${flight.id}.png`;
+      link.click();
+    });
+  } else {
+    // Fallback: simple alert
+    showToast('💾 להורדה, אנא השתמש בחץ ימני > Save as...', 'info');
+  }
+}
+
+function shareBoardingPass() {
+  if (!window.currentBoardingPassFlight) return;
+
+  const flight = window.currentBoardingPassFlight;
+  const shareText = `✈️ טסתי מ-${flight.origin} ל-${flight.destination} עם ${flight.aircraft}! 🎉 רווח: $${flight.profit.toLocaleString()}`;
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Smart Logbook Flight',
+      text: shareText
+    }).catch(err => console.log('Share failed:', err));
+  } else {
+    // Fallback: copy to clipboard
+    navigator.clipboard.writeText(shareText).then(() => {
+      showToast('✅ הטקסט הועתק ללוח', 'success');
+    });
+  }
+}
+
+// ===== AUTO-UPDATE PRICING =====
+async function updateDynamicPricing() {
+  try {
+    const response = await fetch('/api/pricing/update', { method: 'POST' });
+    const data = await response.json();
+    if (data.success && selectedPricingDays) {
+      loadPricingHistory(selectedPricingDays);
+    }
+  } catch (err) {
+    console.log('[Pricing Auto-Update] Skipped (DB not available)');
+  }
+}
+
+// Auto-update pricing every hour
+setInterval(updateDynamicPricing, 60 * 60 * 1000);
 
 // ===== START =====
 console.log('[Main] Starting init()...');

@@ -1106,6 +1106,253 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   text-align: center;
 }
 
+/* ===== NOTIFICATIONS ===== */
+.notifications-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.notification {
+  background: var(--bg-card);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 300px;
+  max-width: 400px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: slideInRight 0.3s ease-out;
+  transition: all 0.2s ease;
+}
+
+.notification:hover {
+  transform: translateX(-4px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.notification-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.notification-message {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.notification-close:hover {
+  opacity: 1;
+}
+
+.notification.success {
+  border-left-color: var(--green);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.notification.error {
+  border-left-color: var(--red);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.notification.warning {
+  border-left-color: var(--yellow);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.notification.info {
+  border-left-color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.notification.achievement {
+  border-left-color: var(--purple);
+  background: rgba(139, 92, 246, 0.1);
+  min-width: 350px;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+.notification.closing {
+  animation: slideOutRight 0.3s ease-out forwards;
+}
+
+@media (max-width: 768px) {
+  .notifications-container {
+    right: 10px;
+    left: 10px;
+  }
+  .notification {
+    min-width: auto;
+    max-width: none;
+  }
+}
+
+/* ===== BOARDING PASS CARD ===== */
+.boarding-pass-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 500px;
+  margin: 0 auto;
+  font-family: 'Courier New', monospace;
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
+}
+
+.boarding-pass-header {
+  text-align: center;
+  border-bottom: 2px dashed var(--accent);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.boarding-pass-airline {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.boarding-pass-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.boarding-pass-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.boarding-pass-field {
+  flex: 1;
+}
+
+.boarding-pass-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.boarding-pass-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+}
+
+.boarding-pass-route {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0;
+  padding: 16px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+}
+
+.boarding-pass-airport {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.boarding-pass-arrow {
+  color: var(--green);
+  font-size: 20px;
+  margin: 0 16px;
+}
+
+.boarding-pass-details {
+  border-top: 2px dashed var(--accent);
+  padding-top: 16px;
+  font-size: 13px;
+}
+
+.boarding-pass-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.boarding-pass-info-item {
+  padding: 8px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+}
+
+.boarding-pass-barcode {
+  text-align: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--accent);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  font-weight: 700;
+}
+
 /* Small mobile: 375px and below - Extra optimizations */
 @media (max-width: 375px) {
   .header { padding: 8px; }
@@ -1114,4 +1361,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   .tab-btn { padding: 10px; font-size: 0.7rem; }
   .card { padding: 10px; }
   .modal { padding: 12px; }
+  .boarding-pass-card { padding: 16px; }
+  .boarding-pass-value { font-size: 16px; }
+  .boarding-pass-airport { font-size: 18px; }
 }
