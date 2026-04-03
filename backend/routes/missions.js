@@ -3,6 +3,32 @@ import getDb from '../db.js';
 
 const router = express.Router();
 
+// Default missions - fallback לעברית נכונה (תמיד כ-backup)
+const DEFAULT_MISSIONS = [
+  {id: 'sports-1', category: 'sports', emoji: '🏆', title: 'נבחרת ישראל בכדורגל - מיון UEFA', description: 'טוס עם נבחרת ישראל למדריד למשחק המיון של UEFA.', origin: 'LLBG', destination: 'LEMD', reward_cash: 5000, reward_badge: 'גיבור דיפלומטי', event: 'ספרד נגד ישראל - מיון UEFA'},
+  {id: 'sports-2', category: 'sports', emoji: '🏆', title: 'נבחרת ישראל בכדורעף - הזמנה לפריז', description: 'טוס עם נבחרת ישראל בכדורעף לפריז לאליפות הזמנה.', origin: 'LLBG', destination: 'LFPG', reward_cash: 4500, reward_badge: 'שגריר ספורט', event: 'אליפות כדורעף פריז'},
+  {id: 'sports-3', category: 'sports', emoji: '🏆', title: 'קבוצת כדורסל - EuroBasket', description: 'טוס עם קבוצת הכדורסל הישראלית לרומא לתחרות EuroBasket.', origin: 'LLBG', destination: 'LIRF', reward_cash: 5500, reward_badge: 'מאמן הקבוצה', event: 'טורניר EuroBasket'},
+  {id: 'sports-4', category: 'sports', emoji: '🏆', title: 'אולימפיאדה - ספורטאים ישראלים לטוקיו', description: 'טוס עם הספורטאים הישראלים לטוקיו למשחקים האולימפיים.', origin: 'LLBG', destination: 'RJTT', reward_cash: 8000, reward_badge: 'אלוף אולימפי', event: 'אולימפיאדת טוקיו'},
+  {id: 'culture-1', category: 'culture', emoji: '🎤', title: 'משלחת אירוויזיון - שטוקהולם', description: 'טוס עם משלחת האירוויזיון הישראלית לשטוקהולם.', origin: 'LLBG', destination: 'ESSA', reward_cash: 3500, reward_badge: 'שגריר תרבות', event: 'תחרות אירוויזיון'},
+  {id: 'culture-2', category: 'culture', emoji: '🎤', title: 'התזמורת הפילהרמונית - ברלין', description: 'טוס עם התזמורת הפילהרמונית הישראלית לברלין לסיבוב הופעות.', origin: 'LLBG', destination: 'EDDB', reward_cash: 4000, reward_badge: 'חובב מוזיקה', event: 'סדרת הופעות ברלין'},
+  {id: 'culture-3', category: 'culture', emoji: '🎤', title: 'להקת תיאטרון - ניו יורק', description: 'טוס עם להקת התיאטרון הישראלית לניו יורק להופעות בברודווי.', origin: 'LLBG', destination: 'KJFK', reward_cash: 6000, reward_badge: 'חסיד תיאטרון', event: 'פסטיבל תיאטרון ניו יורק'},
+  {id: 'diplomatic-1', category: 'diplomatic', emoji: '🤝', title: 'שר החוץ - פסגת האו"ם', description: 'טוס עם שר החוץ לניו יורק לאסיפה הכללית של האו"ם.', origin: 'LLBG', destination: 'KJFK', reward_cash: 4500, reward_badge: 'דיפלומט', event: 'האסיפה הכללית של האו"ם'},
+  {id: 'diplomatic-2', category: 'diplomatic', emoji: '🤝', title: 'משלחת סחר - בריסל', description: 'טוס עם המשלחת העסקית למשא ומתן סחר עם האיחוד האירופי.', origin: 'LLBG', destination: 'EBBR', reward_cash: 3500, reward_badge: 'מומחה סחר', event: 'פסגת סחר האיחוד האירופי'},
+  {id: 'diplomatic-3', category: 'diplomatic', emoji: '🤝', title: 'משלחת שיחות שלום - קהיר', description: 'טוס עם המשלחת הדיפלומטית למשא ומתן שלום במצרים.', origin: 'LLBG', destination: 'HECA', reward_cash: 5000, reward_badge: 'עושה שלום', event: 'שיחות שלום קהיר'},
+  {id: 'diplomatic-4', category: 'diplomatic', emoji: '🤝', title: 'פסגת היי-טק - סיליקון ואלי', description: 'טוס עם מנהיגי ההיי-טק הישראלי לכנס בקליפורניה.', origin: 'LLBG', destination: 'KSJC', reward_cash: 6500, reward_badge: 'חלוץ טכנולוגיה', event: 'כנס הטכנולוגיה בסיליקון ואלי'},
+  {id: 'emergency-1', category: 'emergency', emoji: '🚨', title: 'פינוי רפואי - קפריסין', description: 'פינוי דחוף של צוות רפואי ישראלי לקפריסין לסיוע הומניטרי.', origin: 'LLBG', destination: 'LCRA', reward_cash: 4000, reward_badge: 'מגיב חירום', event: 'מצב חירום רפואי בקפריסין'},
+  {id: 'emergency-2', category: 'emergency', emoji: '🚨', title: 'סיוע הומניטרי - טורקיה', description: 'הבאת סיוע הומניטרי חירום לאחר רעידת האדמה בטורקיה.', origin: 'LLBG', destination: 'LTAC', reward_cash: 5500, reward_badge: 'גיבור הומניטרי', event: 'סיוע לרעידת האדמה בטורקיה'},
+  {id: 'emergency-3', category: 'emergency', emoji: '🚨', title: 'פינוי אזרחים - סודן', description: 'פינוי חירום של אזרחים ישראלים מסודן.', origin: 'LLBG', destination: 'HSSS', reward_cash: 4500, reward_badge: 'מציל חיים', event: 'פינוי סודן'},
+  {id: 'state-1', category: 'state', emoji: '👥', title: 'ביקור ראש הממשלה - וושינגטון', description: 'טוס עם ראש הממשלה לביקור רשמי בוושינגטון.', origin: 'LLBG', destination: 'KDCA', reward_cash: 7000, reward_badge: 'נציג ממשלתי', event: 'ביקור מדינה בוושינגטון'},
+  {id: 'state-2', category: 'state', emoji: '👥', title: 'משלחת ממשלתית - פריז', description: 'טוס עם המשלחת הממשלתית לפגישות שיתוף פעולה ישראל-צרפת.', origin: 'LLBG', destination: 'LFPG', reward_cash: 5000, reward_badge: 'קישור ממשלתי', event: 'פסגה ממשלתית פריז'},
+  {id: 'state-3', category: 'state', emoji: '👥', title: 'חילופי תרבות - מרוקו', description: 'טוס עם משלחת חילופי תרבות למרוקו.', origin: 'LLBG', destination: 'GMMC', reward_cash: 3500, reward_badge: 'גשר תרבות', event: 'חילופי תרבות עם מרוקו'},
+];
+
+// בדוק אם משימה מכילה רישומים מקודדים בעברית
+function isHebrew(str) {
+  return /[\u0590-\u05FF]/.test(str);
+}
+
 // GET - החזר משימות עתידיות + משימות שהושלמו
 router.get('/', async (req, res) => {
   try {
@@ -13,7 +39,7 @@ router.get('/', async (req, res) => {
     const progressDoc = await db.collection('user_progress').findOne({ key: 'completed_missions' });
     const completedIds = progressDoc?.ids || [];
 
-    const missions = await db.collection('missions')
+    let missions = await db.collection('missions')
       .find({
         $or: [
           { date: { $gte: today } },           // משימות עתידיות
@@ -24,13 +50,32 @@ router.get('/', async (req, res) => {
       .sort({ date: 1 })
       .toArray();
 
+    // אם אין משימות או יש encoding issues, החזר DEFAULT_MISSIONS
+    if (missions.length === 0) {
+      missions = DEFAULT_MISSIONS;
+      console.log('[Missions GET] MongoDB empty - using DEFAULT_MISSIONS fallback');
+    } else {
+      // בדוק אם יש encoding issues ותקן
+      missions = missions.map(m => {
+        // אם הכותרת לא עברית (encoding issue), חפש החלפה מ-DEFAULT_MISSIONS
+        if (!isHebrew(m.title || '')) {
+          const defaultMission = DEFAULT_MISSIONS.find(d => d.id === m.id);
+          if (defaultMission) {
+            return { ...m, title: defaultMission.title, description: defaultMission.description, event: defaultMission.event, reward_badge: defaultMission.reward_badge };
+          }
+        }
+        return m;
+      });
+    }
+
     console.log(`[Missions GET] Found ${missions.length} missions (${completedIds.length} completed tracked)`);
 
     // שמור ID סמנטי, fallback ל-_id
-    res.json({ missions: missions.map(m => ({ ...m, id: m.id || m._id.toString() })) });
+    res.json({ missions: missions.map(m => ({ ...m, id: m.id || m._id?.toString() || m.id })) });
   } catch (err) {
     console.error('[Missions GET Error]', err);
-    res.status(500).json({ error: err.message });
+    // fallback סופי - החזר DEFAULT_MISSIONS אם יש שגיאה
+    res.json({ missions: DEFAULT_MISSIONS });
   }
 });
 
