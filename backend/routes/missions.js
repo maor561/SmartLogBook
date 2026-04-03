@@ -194,6 +194,34 @@ router.delete('/complete/:missionId', async (req, res) => {
   }
 });
 
+// DELETE /cleanup-all - נקה את כל המשימות (שמור completed missions)
+router.delete('/cleanup-all', async (req, res) => {
+  try {
+    const secret = req.headers['x-cleanup-secret'];
+    const expected = process.env.MISSIONS_SECRET || 'SmartLogBook2026';
+    if (secret !== expected) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await getDb();
+    if (!db) {
+      return res.json({ cleaned: 0, message: 'DB not available' });
+    }
+
+    // מחק את כל המשימות (אבל שמור את completed_missions tracking)
+    const deleteResult = await db.collection('missions').deleteMany({});
+
+    console.log(`[Missions CLEANUP-ALL] Deleted ${deleteResult.deletedCount} missions`);
+    res.json({
+      cleaned_missions: deleteResult.deletedCount,
+      message: 'All missions deleted. Completed missions list preserved.'
+    });
+  } catch (err) {
+    console.error('[Missions CLEANUP-ALL Error]', err);
+    res.json({ cleaned: 0, error: err.message });
+  }
+});
+
 // DELETE /cleanup-corrupted - נקה משימות שהן עם encoding issues (?????)
 router.delete('/cleanup-corrupted', async (req, res) => {
   try {
