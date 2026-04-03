@@ -222,4 +222,45 @@ router.delete('/complete/:missionId', async (req, res) => {
   }
 });
 
+// DELETE /cleanup-corrupted - נקה משימות שהן עם encoding issues (?????)
+router.delete('/cleanup-corrupted', async (req, res) => {
+  try {
+    const secret = req.headers['x-cleanup-secret'];
+    const expected = process.env.MISSIONS_SECRET || 'SmartLogBook2026';
+    if (secret !== expected) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const db = await getDb();
+    if (!db) {
+      return res.json({ cleaned: 0, message: 'DB not available' });
+    }
+
+    // מצא משימות עם corruption (שמכילות ?)
+    const corrupted = await db.collection('missions')
+      .find({
+        $or: [
+          { title: { $regex: '\\?' } },
+          { description: { $regex: '\\?' } },
+          { event: { $regex: '\\?' } }
+        ]
+      })
+      .toArray();
+
+    const result = await db.collection('missions').deleteMany({
+      $or: [
+        { title: { $regex: '\\?' } },
+        { description: { $regex: '\\?' } },
+        { event: { $regex: '\\?' } }
+      ]
+    });
+
+    console.log(`[Missions CLEANUP] Deleted ${result.deletedCount} corrupted missions`);
+    res.json({ cleaned: result.deletedCount, message: 'Corrupted missions cleaned' });
+  } catch (err) {
+    console.error('[Missions CLEANUP Error]', err);
+    res.json({ cleaned: 0, error: err.message });
+  }
+});
+
 export default router;
