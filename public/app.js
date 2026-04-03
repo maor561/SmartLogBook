@@ -683,9 +683,11 @@ const API = {
         normalizedDate = normalizedDate.replace(' ', 'T') + 'Z';
       }
 
-      // Get coordinates from database or use random coordinates
-      const originCoords = airportCoords[f.origin] || [Math.random() * 180 - 90, Math.random() * 360 - 180];
-      const destCoords = airportCoords[f.destination] || [Math.random() * 180 - 90, Math.random() * 360 - 180];
+      // Get coordinates from database (saved from SimBrief) - use airportCoords only as fallback
+      const originLat = parseFloat(f.originLat) || parseFloat(airportCoords[f.origin]?.[0]) || null;
+      const originLon = parseFloat(f.originLon) || parseFloat(airportCoords[f.origin]?.[1]) || null;
+      const destLat = parseFloat(f.destLat) || parseFloat(airportCoords[f.destination]?.[0]) || null;
+      const destLon = parseFloat(f.destLon) || parseFloat(airportCoords[f.destination]?.[1]) || null;
 
       return {
         ...f,
@@ -699,10 +701,10 @@ const API = {
         payload: parseInt(f.payload) || 0,
         fpm: parseInt(f.fpm) || 0,
         profit: parseInt(f.profit) || 0,
-        originLat: originCoords[0],
-        originLon: originCoords[1],
-        destLat: destCoords[0],
-        destLon: destCoords[1]
+        originLat: originLat,
+        originLon: originLon,
+        destLat: destLat,
+        destLon: destLon
       };
     });
   },
