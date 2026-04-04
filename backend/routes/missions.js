@@ -14,10 +14,10 @@ router.get('/', async (req, res) => {
     const db = await getDb();
     const today = new Date().toISOString().split('T')[0];
 
-    // אם DB לא זמין, החזר DEFAULT_MISSIONS
+    // אם DB לא זמין, החזר []
     if (!db) {
-      console.log('[Missions GET] DB not available - using DEFAULT_MISSIONS fallback');
-      return res.json({ missions: DEFAULT_MISSIONS });
+      console.log('[Missions GET] DB not available - using [] fallback');
+      return res.json({ missions: [] });
     }
 
     // טען רשימת משימות שהושלמו
@@ -68,8 +68,8 @@ router.get('/', async (req, res) => {
     res.json({ missions: missions.map(m => ({ ...m, id: m.id || m._id?.toString() || m.id })) });
   } catch (err) {
     console.error('[Missions GET Error]', err);
-    // fallback סופי - החזר DEFAULT_MISSIONS אם יש שגיאה
-    res.json({ missions: DEFAULT_MISSIONS });
+    // fallback סופי - החזר [] אם יש שגיאה
+    res.json({ missions: [] });
   }
 });
 
