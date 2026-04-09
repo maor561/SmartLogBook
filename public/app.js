@@ -3172,6 +3172,8 @@ function renderAirlineRating() {
 
   // Rank
   const rankIdx = typeof currentRankIndex !== 'undefined' ? currentRankIndex : 0;
+  const rankNames = t('ranks') || ['סטודנט','טייס מתחיל','טייס','טייס בכיר','קברניט','קברניט בכיר','אגדי'];
+  const rankName = rankNames[rankIdx] || 'סטודנט';
 
   // Goals achievement
   let goalAchievement = 50; // default
@@ -3231,7 +3233,7 @@ function renderAirlineRating() {
       metrics: [
         { name: 'סה"כ טיסות', value: totalFlights, score: ratingScore(totalFlights, 5, 100) },
         { name: 'שעות טיסה', value: totalHours.toFixed(0), score: ratingScore(totalHours, 10, 500) },
-        { name: 'דרגת טייס', value: rankIdx, score: ratingScore(rankIdx, 0, 5) }
+        { name: 'דרגת טייס', value: rankName, score: ratingScore(rankIdx, 0, 5) }
       ]
     }
   ];
