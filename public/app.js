@@ -3196,7 +3196,7 @@ function renderAirlineRating() {
       emoji: '🛡️',
       weight: 0.25,
       metrics: [
-        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 100, 300) }
+        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: Math.max(1, Math.min(5, 5 - (avgFPM - 100) / 50)) }
       ]
     },
     {
