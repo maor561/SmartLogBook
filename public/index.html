@@ -389,10 +389,28 @@
       </div>
     </div>
 
+    <!-- Charts Row -->
+    <div class="rating-charts-row">
+      <div class="rating-chart-card">
+        <div class="card-title">🕸️ מפת ביצועים</div>
+        <canvas id="ratingRadarChart"></canvas>
+      </div>
+      <div class="rating-chart-card">
+        <div class="card-title">📊 ציון לפי קטגוריה</div>
+        <canvas id="ratingBarChart"></canvas>
+      </div>
+    </div>
+
     <!-- Category Cards -->
     <div class="rating-categories-grid" id="ratingCategoriesGrid"></div>
 
-    <!-- Detailed Metrics -->
+    <!-- Metrics Chart -->
+    <div class="rating-details-card">
+      <div class="card-title">📈 מדדים מפורטים</div>
+      <canvas id="ratingMetricsChart" style="max-height:300px"></canvas>
+    </div>
+
+    <!-- Detailed Metrics Table -->
     <div class="rating-details-card" id="ratingDetailsCard">
       <div class="card-title">📊 פירוט מדדים</div>
       <div id="ratingDetailsTable"></div>

@@ -3333,6 +3333,150 @@ function renderAirlineRating() {
       <span class="rating-tip-text">${tip.text}</span>
     </div>
   `).join('');
+
+  // === RENDER CHARTS ===
+  renderRatingCharts(categories);
+}
+
+// Chart instances for cleanup
+let ratingRadarChartInstance = null;
+let ratingBarChartInstance = null;
+let ratingMetricsChartInstance = null;
+
+function renderRatingCharts(categories) {
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  // Destroy previous instances
+  if (ratingRadarChartInstance) ratingRadarChartInstance.destroy();
+  if (ratingBarChartInstance) ratingBarChartInstance.destroy();
+  if (ratingMetricsChartInstance) ratingMetricsChartInstance.destroy();
+
+  // === 1. RADAR CHART ===
+  const radarCtx = document.getElementById('ratingRadarChart');
+  if (radarCtx) {
+    ratingRadarChartInstance = new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: categories.map(c => c.emoji + ' ' + c.name),
+        datasets: [{
+          label: 'ציון',
+          data: categories.map(c => c.score),
+          backgroundColor: 'rgba(59,130,246,0.2)',
+          borderColor: '#3b82f6',
+          borderWidth: 2,
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#fff',
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          r: {
+            min: 0,
+            max: 5,
+            ticks: { stepSize: 1, color: textColor, backdropColor: 'transparent', font: { size: 11 } },
+            grid: { color: gridColor },
+            angleLines: { color: gridColor },
+            pointLabels: { color: textColor, font: { size: 12, weight: '600' } }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.parsed.r.toFixed(1)} / 5.0`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // === 2. BAR CHART ===
+  const barCtx = document.getElementById('ratingBarChart');
+  if (barCtx) {
+    const colors = categories.map(c => barColor(c.score));
+    ratingBarChartInstance = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: categories.map(c => c.name),
+        datasets: [{
+          label: 'ציון',
+          data: categories.map(c => c.score),
+          backgroundColor: colors.map(c => c + '80'),
+          borderColor: colors,
+          borderWidth: 2,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        indexAxis: 'y',
+        scales: {
+          x: { min: 0, max: 5, ticks: { stepSize: 1, color: textColor }, grid: { color: gridColor } },
+          y: { ticks: { color: textColor, font: { size: 12, weight: '600' } }, grid: { display: false } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.parsed.x.toFixed(1)} / 5.0`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // === 3. METRICS CHART - all individual metrics ===
+  const metricsCtx = document.getElementById('ratingMetricsChart');
+  if (metricsCtx) {
+    const allMetrics = [];
+    categories.forEach(cat => {
+      cat.metrics.forEach(m => {
+        allMetrics.push({ name: m.name, score: m.score, cat: cat.name });
+      });
+    });
+
+    const metricColors = allMetrics.map(m => barColor(m.score));
+    ratingMetricsChartInstance = new Chart(metricsCtx, {
+      type: 'bar',
+      data: {
+        labels: allMetrics.map(m => m.name),
+        datasets: [{
+          label: 'ציון',
+          data: allMetrics.map(m => m.score),
+          backgroundColor: metricColors.map(c => c + '60'),
+          borderColor: metricColors,
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          y: { min: 0, max: 5, ticks: { stepSize: 1, color: textColor }, grid: { color: gridColor } },
+          x: { ticks: { color: textColor, font: { size: 10 }, maxRotation: 45 }, grid: { display: false } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: ctx => allMetrics[ctx[0].dataIndex].cat + ' > ' + ctx[0].label,
+              label: ctx => `${ctx.parsed.y.toFixed(1)} / 5.0`
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 // ===== SMART NOTIFICATIONS =====
