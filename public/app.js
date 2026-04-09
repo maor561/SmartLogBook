@@ -3143,22 +3143,20 @@ function renderAirlineRating() {
   const fuelPerNM = totalDist > 0 ? totalFuel / totalDist : 99;
   const profitPerHour = totalHours > 0 ? totalProfit / totalHours : 0;
 
-  // Landing quality: רכה 0-195, טובה 196-250, קשה קלות 251-300, גרועה 300+
-  let softLandings = 0, goodLandings = 0, slightlyHardLandings = 0, badLandings = 0, totalFPM = 0, fpmCount = 0;
+  // Landing quality: רכה (0-250), קשה קלות (251-300), גרועה (300+)
+  let softLandings = 0, slightlyHardLandings = 0, badLandings = 0, totalFPM = 0, fpmCount = 0;
   flights.forEach(f => {
     const fpm = f.fpm || 0;
     if (fpm !== 0) {
       const abs = Math.abs(fpm);
       totalFPM += abs;
       fpmCount++;
-      if (abs <= 195) softLandings++;
-      else if (abs <= 250) goodLandings++;
+      if (abs <= 250) softLandings++;
       else if (abs <= 300) slightlyHardLandings++;
       else badLandings++;
     }
   });
   const softPct = fpmCount > 0 ? (softLandings / fpmCount) * 100 : 0;
-  const goodPct = fpmCount > 0 ? (goodLandings / fpmCount) * 100 : 0;
   const slightlyHardPct = fpmCount > 0 ? (slightlyHardLandings / fpmCount) * 100 : 0;
   const badPct = fpmCount > 0 ? (badLandings / fpmCount) * 100 : 0;
   const avgFPM = fpmCount > 0 ? totalFPM / fpmCount : 200;
@@ -3198,10 +3196,10 @@ function renderAirlineRating() {
       emoji: '🛡️',
       weight: 0.25,
       metrics: [
-        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 100, 300) },
-        { name: 'נחיתות רכות (0-195)', value: `${softPct.toFixed(0)}%`, score: ratingScore(softPct, 10, 70) },
-        { name: 'נחיתות טובות (196-250)', value: `${goodPct.toFixed(0)}%`, score: ratingScore(softPct + goodPct, 30, 90) },
-        { name: 'נחיתות גרועות (300+)', value: `${badPct.toFixed(0)}%`, score: ratingScoreInverse(badPct, 0, 30) }
+        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 300, 100) },
+        { name: 'נחיתות רכות (0-250)', value: `${softPct.toFixed(0)}%`, score: ratingScore(softPct, 30, 90) },
+        { name: 'נחיתות קשות (251-300)', value: `${slightlyHardPct.toFixed(0)}%`, score: ratingScoreInverse(slightlyHardPct, 30, 0) },
+        { name: 'נחיתות גרועות (300+)', value: `${badPct.toFixed(0)}%`, score: ratingScoreInverse(badPct, 30, 0) }
       ]
     },
     {
@@ -3300,9 +3298,10 @@ function renderAirlineRating() {
 
   const tipMap = {
     'בטיחות': [
-      { cond: badPct > 15, text: 'צמצמו נחיתות גרועות (300+ FPM) - הקפידו על approach יציב ומהירות נכונה' },
-      { cond: softPct < 40, text: 'שפרו את איכות הנחיתות - כוונו ל-FPM מתחת ל-195 לנחיתה רכה' },
-      { cond: avgFPM > 250, text: 'ה-FPM הממוצע גבוה - נסו לרדת בצורה הדרגתית יותר ב-final approach' }
+      { cond: badPct > 10, text: 'צמצמו נחיתות גרועות (300+ FPM) - הקפידו על approach יציב ומהירות מדויקת' },
+      { cond: slightlyHardPct > 20, text: 'צמצמו נחיתות קשות (251-300 FPM) - חשבו לאט יותר ב-descent ל-final' },
+      { cond: softPct < 60, text: 'שפרו את איכות הנחיתות - כוונו ל-FPM מתחת ל-250 לנחיתה רכה' },
+      { cond: avgFPM > 250, text: 'ה-FPM הממוצע גבוה - נסו descent הדרגתי יותר ב-final approach' }
     ],
     'רווחיות': [
       { cond: avgProfit < 15000, text: 'העלו את הרווח הממוצע - שקלו הגדלת מחירי כרטיסים או בחירת מסלולים ארוכים יותר' },
