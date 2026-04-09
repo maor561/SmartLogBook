@@ -46,6 +46,7 @@ function extractFlightData(xmlData) {
   const fuelBlock        = extractBlock(xmlData, 'fuel');
   const weightsBlock     = extractBlock(xmlData, 'weights');
   const paramsBlock      = extractBlock(xmlData, 'params');
+  const weatherBlock     = extractBlock(xmlData, 'weather');
 
   return {
     origin: {
@@ -83,7 +84,21 @@ function extractFlightData(xmlData) {
       pax_weight:       extractValue(weightsBlock, 'pax_weight')
     },
     params: {
-      units: extractValue(paramsBlock, 'units')
+      units: extractValue(paramsBlock, 'units'),
+      costindex: parseInt(extractValue(paramsBlock, 'costindex') || '0')
+    },
+    weather: {
+      // Wind at destination (average)
+      wind_dir: extractValue(weatherBlock, 'wind_dir'),
+      wind_spd: parseInt(extractValue(weatherBlock, 'wind_spd') || '0'),
+      // Visibility (in statute miles)
+      visibility: parseInt(extractValue(weatherBlock, 'vis') || '10'),
+      // Ceiling (in feet)
+      ceiling: parseInt(extractValue(weatherBlock, 'ceil') || '5000'),
+      // Temperature
+      temp: extractValue(weatherBlock, 'temp'),
+      // General conditions
+      conditions: extractValue(weatherBlock, 'conditions') || 'CAVOK'
     }
   };
 }

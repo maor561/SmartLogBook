@@ -1017,6 +1017,11 @@ async function loadFromSimbrief() {
       passengers: parseInt(data.weights?.pax_count_actual || general.passengers || 0),
       fuel: fuelKg,
       payload: Math.round(payloadKg),
+      costIndex: data.params?.costindex || 0,
+      windSpeed: data.weather?.wind_spd || 0,
+      visibility: data.weather?.visibility || 10,
+      ceiling: data.weather?.ceiling || 5000,
+      weatherConditions: data.weather?.conditions || 'CAVOK',
       originFlag: getFlag(origin.country_code),
       destFlag: getFlag(destination.country_code),
     };
@@ -1301,6 +1306,11 @@ async function confirmFlight() {
     payload: d.payload,
     fpm: fpm,
     profit: fin.netProfit,
+    costIndex: d.costIndex || 0,
+    windSpeed: d.windSpeed || 0,
+    visibility: d.visibility || 10,
+    ceiling: d.ceiling || 5000,
+    weatherConditions: d.weatherConditions || 'CAVOK',
   };
 
   try {
@@ -3196,7 +3206,22 @@ function renderAirlineRating() {
       emoji: '🛡️',
       weight: 0.25,
       metrics: [
-        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: Math.max(1, Math.min(5, 5 - Math.max(0, avgFPM - 150) / 150 * 4)) }
+        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: Math.max(1, Math.min(5, 5 - Math.max(0, avgFPM - 150) / 150 * 4)) },
+        { name: 'Cost Index', value: flights.reduce((s, f) => s + (f.costIndex || 0), 0) / flights.length || 0 |0, score: ratingScoreInverse(flights.reduce((s, f) => s + (f.costIndex || 0), 0) / flights.length || 100, 80, 250) },
+        { name: 'מצב מזג אוויר', value: flights.reduce((s, f) => {
+          const w = f.windSpeed || 0;
+          const v = f.visibility || 10;
+          const c = f.ceiling || 5000;
+          return s + (w > 30 ? 1 : w > 20 ? 0.7 : 0.5) * (v < 3 ? 1 : v < 5 ? 0.7 : 0.3) * (c < 1000 ? 1 : c < 3000 ? 0.7 : 0.3);
+        }, 0) / Math.max(1, flights.length), score: (() => {
+          const avgWeatherRisk = flights.reduce((s, f) => {
+            const w = f.windSpeed || 0;
+            const v = f.visibility || 10;
+            const c = f.ceiling || 5000;
+            return s + (w > 30 ? 1 : w > 20 ? 0.7 : 0.5) * (v < 3 ? 1 : v < 5 ? 0.7 : 0.3) * (c < 1000 ? 1 : c < 3000 ? 0.7 : 0.3);
+          }, 0) / Math.max(1, flights.length);
+          return Math.max(1, 5 - avgWeatherRisk * 4);
+        })() }
       ]
     },
     {
@@ -3297,7 +3322,8 @@ function renderAirlineRating() {
     'בטיחות': [
       { cond: avgFPM > 300, text: 'ה-FPM הממוצע גבוה מדי (300+) - שפרו את איכות הנחיתות, יש לירוד בצורה הדרגתית יותר' },
       { cond: avgFPM > 150 && avgFPM <= 300, text: `ה-FPM הממוצע בטווח בינוני (${avgFPM.toFixed(0)}) - כוונו ל-150 ומטה לנחיתות אופטימליות` },
-      { cond: avgFPM <= 150, text: 'מעולה! נחיתות מושלמות עם FPM של 150 ומטה' }
+      { cond: flights.reduce((s, f) => s + (f.costIndex || 0), 0) / flights.length > 200, text: 'Cost Index גבוה - זה גורם לחץ בטיסה, נסו להקטין את ה-CI' },
+      { cond: flights.some(f => (f.windSpeed || 0) > 30 || (f.ceiling || 5000) < 1000), text: 'טיסות בתנאים קשים - רוח חזקה או ceiling נמוך דורשים בטיחות מוגברת' }
     ],
     'רווחיות': [
       { cond: avgProfit < 15000, text: 'העלו את הרווח הממוצע - שקלו הגדלת מחירי כרטיסים או בחירת מסלולים ארוכים יותר' },
