@@ -3143,18 +3143,21 @@ function renderAirlineRating() {
   const fuelPerNM = totalDist > 0 ? totalFuel / totalDist : 99;
   const profitPerHour = totalHours > 0 ? totalProfit / totalHours : 0;
 
-  // Landing quality
-  let perfectLandings = 0, hardLandings = 0, totalFPM = 0, fpmCount = 0;
+  // Landing quality (matching app classification: <=100 butter, <=200 good, <=400 rough, >400 hard)
+  let butterLandings = 0, goodLandings = 0, hardLandings = 0, totalFPM = 0, fpmCount = 0;
   flights.forEach(f => {
     const fpm = f.fpm || 0;
     if (fpm !== 0) {
-      totalFPM += Math.abs(fpm);
+      const abs = Math.abs(fpm);
+      totalFPM += abs;
       fpmCount++;
-      if (Math.abs(fpm) <= 150) perfectLandings++;
-      if (Math.abs(fpm) > 400) hardLandings++;
+      if (abs <= 100) butterLandings++;
+      if (abs <= 200) goodLandings++;
+      if (abs > 400) hardLandings++;
     }
   });
-  const perfectPct = fpmCount > 0 ? (perfectLandings / fpmCount) * 100 : 50;
+  const goodPct = fpmCount > 0 ? (goodLandings / fpmCount) * 100 : 50;
+  const butterPct = fpmCount > 0 ? (butterLandings / fpmCount) * 100 : 0;
   const hardPct = fpmCount > 0 ? (hardLandings / fpmCount) * 100 : 0;
   const avgFPM = fpmCount > 0 ? totalFPM / fpmCount : 200;
 
@@ -3193,8 +3196,9 @@ function renderAirlineRating() {
       emoji: '🛡️',
       weight: 0.25,
       metrics: [
-        { name: 'נחיתות מושלמות', value: `${perfectPct.toFixed(0)}%`, score: ratingScore(perfectPct, 10, 60) },
-        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 150, 400) },
+        { name: 'נחיתות טובות (≤200 FPM)', value: `${goodPct.toFixed(0)}%`, score: ratingScore(goodPct, 20, 80) },
+        { name: 'נחיתות Butter (≤100 FPM)', value: `${butterPct.toFixed(0)}%`, score: ratingScore(butterPct, 5, 50) },
+        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 120, 350) },
         { name: 'נחיתות קשות', value: `${hardPct.toFixed(0)}%`, score: ratingScoreInverse(hardPct, 0, 20) }
       ]
     },
@@ -3294,8 +3298,9 @@ function renderAirlineRating() {
 
   const tipMap = {
     'בטיחות': [
-      { cond: perfectPct < 40, text: 'שפרו את איכות הנחיתות - נסו לשמור על FPM בין -100 ל-200' },
-      { cond: hardPct > 10, text: 'צמצמו נחיתות קשות (FPM > 400) - הקפידו על approach יציב' }
+      { cond: goodPct < 60, text: 'שפרו את איכות הנחיתות - נסו לשמור על FPM בין -100 ל-200' },
+      { cond: hardPct > 10, text: 'צמצמו נחיתות קשות (FPM > 400) - הקפידו על approach יציב' },
+      { cond: butterPct < 20 && goodPct >= 60, text: 'נחיתות טובות! נסו לשפר ל-Butter Landing (מתחת ל-100 FPM)' }
     ],
     'רווחיות': [
       { cond: avgProfit < 15000, text: 'העלו את הרווח הממוצע - שקלו הגדלת מחירי כרטיסים או בחירת מסלולים ארוכים יותר' },
