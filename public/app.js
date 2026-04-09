@@ -3133,7 +3133,7 @@ function renderAirlineRating() {
   const totalFuel = flights.reduce((s, f) => s + (f.fuel || 0), 0);
   const totalProfit = flights.reduce((s, f) => s + (f.profit || 0), 0);
   const totalPayload = flights.reduce((s, f) => s + (f.payload || 0), 0);
-  const totalMins = flights.reduce((s, f) => s + (f.duration_mins || 0), 0);
+  const totalMins = flights.reduce((s, f) => s + (f.durationMins || f.duration_mins || 0), 0);
   const totalHours = totalMins / 60;
 
   const avgPax = totalPax / totalFlights;
@@ -3160,7 +3160,7 @@ function renderAirlineRating() {
 
   // Destinations & continents
   const uniqueDests = new Set(flights.map(f => f.destination)).size;
-  const continentMap = { E: 'EU', K: 'NA', L: 'EU', O: 'AS', R: 'AS', S: 'SA', V: 'AS', W: 'AS', H: 'AF', F: 'AF', D: 'AF', G: 'AF', Y: 'AU', N: 'OC' };
+  const continentMap = { E: 'EU', K: 'NA', L: 'EU', O: 'AS', R: 'AS', S: 'SA', V: 'AS', W: 'AS', H: 'AF', F: 'AF', D: 'AF', G: 'AF', Y: 'AU', N: 'OC', U: 'AS', Z: 'AS' };
   const continents = new Set();
   flights.forEach(f => {
     const code = (f.destination || '').charAt(0).toUpperCase();
@@ -3170,8 +3170,11 @@ function renderAirlineRating() {
   // Completed missions
   const completedCount = completedMissions ? completedMissions.length : 0;
 
-  // Rank
-  const rankIdx = typeof currentRankIndex !== 'undefined' ? currentRankIndex : 0;
+  // Rank - calculate from flight hours (same logic as updateRank)
+  let rankIdx = 0;
+  for (let i = RANK_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (totalHours >= RANK_THRESHOLDS[i]) { rankIdx = i; break; }
+  }
   const rankNames = t('ranks') || ['סטודנט','טייס מתחיל','טייס','טייס בכיר','קברניט','קברניט בכיר','אגדי'];
   const rankName = rankNames[rankIdx] || 'סטודנט';
 
