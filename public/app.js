@@ -3196,10 +3196,7 @@ function renderAirlineRating() {
       emoji: '🛡️',
       weight: 0.25,
       metrics: [
-        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 300, 100) },
-        { name: 'נחיתות רכות (0-250)', value: `${softPct.toFixed(0)}%`, score: ratingScore(softPct, 30, 90) },
-        { name: 'נחיתות קשות (251-300)', value: `${slightlyHardPct.toFixed(0)}%`, score: ratingScoreInverse(slightlyHardPct, 30, 0) },
-        { name: 'נחיתות גרועות (300+)', value: `${badPct.toFixed(0)}%`, score: ratingScoreInverse(badPct, 30, 0) }
+        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 100, 300) }
       ]
     },
     {
@@ -3298,10 +3295,9 @@ function renderAirlineRating() {
 
   const tipMap = {
     'בטיחות': [
-      { cond: badPct > 10, text: 'צמצמו נחיתות גרועות (300+ FPM) - הקפידו על approach יציב ומהירות מדויקת' },
-      { cond: slightlyHardPct > 20, text: 'צמצמו נחיתות קשות (251-300 FPM) - חשבו לאט יותר ב-descent ל-final' },
-      { cond: softPct < 60, text: 'שפרו את איכות הנחיתות - כוונו ל-FPM מתחת ל-250 לנחיתה רכה' },
-      { cond: avgFPM > 250, text: 'ה-FPM הממוצע גבוה - נסו descent הדרגתי יותר ב-final approach' }
+      { cond: avgFPM > 300, text: 'ה-FPM הממוצע גבוה מדי (300+) - שפרו את איכות הנחיתות, יש לירוד בצורה הדרגתית יותר' },
+      { cond: avgFPM > 200, text: 'ה-FPM הממוצע בטווח בינוני (200-300) - כוונו ל-FPM של 100-150 לנחיתות רכות' },
+      { cond: avgFPM <= 150, text: 'מעולה! נחיתות רכות עם FPM של 150 ומטה' }
     ],
     'רווחיות': [
       { cond: avgProfit < 15000, text: 'העלו את הרווח הממוצע - שקלו הגדלת מחירי כרטיסים או בחירת מסלולים ארוכים יותר' },
