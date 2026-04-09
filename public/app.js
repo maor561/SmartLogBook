@@ -3132,12 +3132,14 @@ function renderAirlineRating() {
   const totalDist = flights.reduce((s, f) => s + (f.distance || 0), 0);
   const totalFuel = flights.reduce((s, f) => s + (f.fuel || 0), 0);
   const totalProfit = flights.reduce((s, f) => s + (f.profit || 0), 0);
+  const totalPayload = flights.reduce((s, f) => s + (f.payload || 0), 0);
   const totalMins = flights.reduce((s, f) => s + (f.duration_mins || 0), 0);
   const totalHours = totalMins / 60;
 
   const avgPax = totalPax / totalFlights;
   const avgDist = totalDist / totalFlights;
   const avgProfit = totalProfit / totalFlights;
+  const avgPayload = totalPayload / totalFlights;
   const fuelPerNM = totalDist > 0 ? totalFuel / totalDist : 99;
   const profitPerHour = totalHours > 0 ? totalProfit / totalHours : 0;
 
@@ -3208,6 +3210,7 @@ function renderAirlineRating() {
       metrics: [
         { name: 'צריכת דלק (kg/NM)', value: fuelPerNM.toFixed(1), score: ratingScoreInverse(fuelPerNM, 3.0, 8.0) },
         { name: 'תפוסת נוסעים', value: avgPax.toFixed(0), score: ratingScore(avgPax, 50, 180) },
+        { name: 'מטען ממוצע (kg)', value: avgPayload.toFixed(0), score: ratingScore(avgPayload, 500, 5000) },
         { name: 'מרחק ממוצע (NM)', value: avgDist.toFixed(0), score: ratingScore(avgDist, 300, 2000) }
       ]
     },
@@ -3295,7 +3298,8 @@ function renderAirlineRating() {
     ],
     'יעילות': [
       { cond: fuelPerNM > 5, text: 'צמצמו צריכת דלק - בדקו תכנון מסלולים יעיל יותר' },
-      { cond: avgPax < 120, text: 'הגדילו תפוסת נוסעים - שקלו מסלולים פופולריים יותר' }
+      { cond: avgPax < 120, text: 'הגדילו תפוסת נוסעים - שקלו מסלולים פופולריים יותר' },
+      { cond: avgPayload < 2000, text: 'הגדילו מטען ממוצע - מטען נוסף מגדיל הכנסות מ-cargo' }
     ],
     'מוניטין': [
       { cond: uniqueDests < 10, text: 'הרחיבו את רשת היעדים - טוסו ליעדים חדשים לשיפור המוניטין' },
