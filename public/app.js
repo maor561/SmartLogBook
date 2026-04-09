@@ -954,6 +954,7 @@ function switchTab(tab) {
   if (tab === 'missions') renderMissions();
   if (tab === 'pricing') loadPricingHistory(selectedPricingDays);
   if (tab === 'settings') loadGoalsForm();
+  if (tab === 'rating') renderAirlineRating();
 }
 
 // ===== SIMBRIEF LOAD =====
@@ -3075,6 +3076,259 @@ function openAchievementsGallery() {
   modal.onclick = (e) => {
     if (e.target === modal) modal.remove();
   };
+}
+
+// ===== AIRLINE RATING =====
+function ratingScore(value, minFor1, maxFor5) {
+  if (maxFor5 === minFor1) return 3;
+  const clamped = Math.max(minFor1, Math.min(maxFor5, value));
+  return 1 + 4 * (clamped - minFor1) / (maxFor5 - minFor1);
+}
+
+function ratingScoreInverse(value, minFor5, maxFor1) {
+  // Higher value = worse score (e.g. hard landings %)
+  return ratingScore(value, maxFor1, minFor5);
+}
+
+function starsHTML(score, size = 16) {
+  const full = Math.floor(score);
+  const half = (score - full) >= 0.25 && (score - full) < 0.75;
+  const fullStar = (score - full) >= 0.75;
+  const stars = [];
+  for (let i = 0; i < 5; i++) {
+    if (i < full || (i === full && fullStar)) stars.push('<span style="color:#f59e0b">&#9733;</span>');
+    else if (i === full && half) stars.push('<span style="color:#f59e0b">&#9733;</span>');
+    else stars.push('<span style="color:var(--text-secondary);opacity:0.3">&#9733;</span>');
+  }
+  return `<span style="font-size:${size}px;letter-spacing:2px">${stars.join('')}</span>`;
+}
+
+function barColor(score) {
+  if (score >= 4) return '#10b981';
+  if (score >= 3) return '#f59e0b';
+  if (score >= 2) return '#f97316';
+  return '#ef4444';
+}
+
+function scoreClass(score) {
+  if (score >= 4) return 'high';
+  if (score >= 2.5) return 'mid';
+  return 'low';
+}
+
+function renderAirlineRating() {
+  if (!flights || flights.length === 0) {
+    document.getElementById('ratingGaugeScore').textContent = '-';
+    document.getElementById('ratingGaugeStars').innerHTML = starsHTML(0, 28);
+    document.getElementById('ratingGaugeLabel').textContent = 'אין מספיק נתונים - הוסף טיסות';
+    document.getElementById('ratingCategoriesGrid').innerHTML = '';
+    document.getElementById('ratingDetailsTable').innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">הוסף טיסות כדי לקבל דירוג</p>';
+    document.getElementById('ratingTips').innerHTML = '';
+    return;
+  }
+
+  const totalFlights = flights.length;
+  const totalPax = flights.reduce((s, f) => s + (f.passengers || 0), 0);
+  const totalDist = flights.reduce((s, f) => s + (f.distance || 0), 0);
+  const totalFuel = flights.reduce((s, f) => s + (f.fuel || 0), 0);
+  const totalProfit = flights.reduce((s, f) => s + (f.profit || 0), 0);
+  const totalMins = flights.reduce((s, f) => s + (f.duration_mins || 0), 0);
+  const totalHours = totalMins / 60;
+
+  const avgPax = totalPax / totalFlights;
+  const avgDist = totalDist / totalFlights;
+  const avgProfit = totalProfit / totalFlights;
+  const fuelPerNM = totalDist > 0 ? totalFuel / totalDist : 99;
+  const profitPerHour = totalHours > 0 ? totalProfit / totalHours : 0;
+
+  // Landing quality
+  let perfectLandings = 0, hardLandings = 0, totalFPM = 0, fpmCount = 0;
+  flights.forEach(f => {
+    const fpm = f.fpm || 0;
+    if (fpm !== 0) {
+      totalFPM += Math.abs(fpm);
+      fpmCount++;
+      if (Math.abs(fpm) <= 150) perfectLandings++;
+      if (Math.abs(fpm) > 400) hardLandings++;
+    }
+  });
+  const perfectPct = fpmCount > 0 ? (perfectLandings / fpmCount) * 100 : 50;
+  const hardPct = fpmCount > 0 ? (hardLandings / fpmCount) * 100 : 0;
+  const avgFPM = fpmCount > 0 ? totalFPM / fpmCount : 200;
+
+  // Destinations & continents
+  const uniqueDests = new Set(flights.map(f => f.destination)).size;
+  const continentMap = { E: 'EU', K: 'NA', L: 'EU', O: 'AS', R: 'AS', S: 'SA', V: 'AS', W: 'AS', H: 'AF', F: 'AF', D: 'AF', G: 'AF', Y: 'AU', N: 'OC' };
+  const continents = new Set();
+  flights.forEach(f => {
+    const code = (f.destination || '').charAt(0).toUpperCase();
+    if (continentMap[code]) continents.add(continentMap[code]);
+  });
+
+  // Completed missions
+  const completedCount = completedMissions ? completedMissions.length : 0;
+
+  // Rank
+  const rankIdx = typeof currentRankIndex !== 'undefined' ? currentRankIndex : 0;
+
+  // Goals achievement
+  let goalAchievement = 50; // default
+  const goalInputs = document.getElementById('goalFlights');
+  if (goalInputs) {
+    const goalFlights = parseInt(goalInputs.value) || 0;
+    if (goalFlights > 0) goalAchievement = Math.min(100, (totalFlights / goalFlights) * 100);
+  }
+
+  // === CATEGORY CALCULATIONS ===
+  const categories = [
+    {
+      name: 'בטיחות',
+      emoji: '🛡️',
+      weight: 0.25,
+      metrics: [
+        { name: 'נחיתות מושלמות', value: `${perfectPct.toFixed(0)}%`, score: ratingScore(perfectPct, 10, 60) },
+        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: ratingScoreInverse(avgFPM, 150, 400) },
+        { name: 'נחיתות קשות', value: `${hardPct.toFixed(0)}%`, score: ratingScoreInverse(hardPct, 0, 20) }
+      ]
+    },
+    {
+      name: 'רווחיות',
+      emoji: '💰',
+      weight: 0.25,
+      metrics: [
+        { name: 'רווח ממוצע/טיסה', value: `$${(avgProfit/1000).toFixed(1)}K`, score: ratingScore(avgProfit, 5000, 30000) },
+        { name: 'רווח/שעת טיסה', value: `$${(profitPerHour/1000).toFixed(1)}K`, score: ratingScore(profitPerHour, 2000, 10000) },
+        { name: 'עמידה ביעד', value: `${goalAchievement.toFixed(0)}%`, score: ratingScore(goalAchievement, 20, 100) }
+      ]
+    },
+    {
+      name: 'יעילות',
+      emoji: '⚡',
+      weight: 0.20,
+      metrics: [
+        { name: 'צריכת דלק (kg/NM)', value: fuelPerNM.toFixed(1), score: ratingScoreInverse(fuelPerNM, 3.0, 8.0) },
+        { name: 'תפוסת נוסעים', value: avgPax.toFixed(0), score: ratingScore(avgPax, 50, 180) },
+        { name: 'מרחק ממוצע (NM)', value: avgDist.toFixed(0), score: ratingScore(avgDist, 300, 2000) }
+      ]
+    },
+    {
+      name: 'מוניטין',
+      emoji: '🌍',
+      weight: 0.15,
+      metrics: [
+        { name: 'יעדים ייחודיים', value: uniqueDests, score: ratingScore(uniqueDests, 3, 20) },
+        { name: 'יבשות', value: continents.size, score: ratingScore(continents.size, 1, 5) },
+        { name: 'משימות שהושלמו', value: completedCount, score: ratingScore(completedCount, 0, 10) }
+      ]
+    },
+    {
+      name: 'פעילות',
+      emoji: '📊',
+      weight: 0.15,
+      metrics: [
+        { name: 'סה"כ טיסות', value: totalFlights, score: ratingScore(totalFlights, 5, 100) },
+        { name: 'שעות טיסה', value: totalHours.toFixed(0), score: ratingScore(totalHours, 10, 500) },
+        { name: 'דרגת טייס', value: rankIdx, score: ratingScore(rankIdx, 0, 5) }
+      ]
+    }
+  ];
+
+  // Calculate category scores and overall
+  categories.forEach(cat => {
+    cat.score = cat.metrics.reduce((s, m) => s + m.score, 0) / cat.metrics.length;
+  });
+
+  const overall = categories.reduce((s, cat) => s + cat.score * cat.weight, 0);
+
+  // Overall label
+  let overallLabel = 'חברת תעופה מתחילה';
+  if (overall >= 4.5) overallLabel = 'חברת תעופה מצטיינת';
+  else if (overall >= 3.5) overallLabel = 'חברת תעופה מצוינת';
+  else if (overall >= 2.5) overallLabel = 'חברת תעופה טובה';
+  else if (overall >= 1.5) overallLabel = 'חברת תעופה מתפתחת';
+
+  // === RENDER OVERALL ===
+  document.getElementById('ratingGaugeScore').textContent = overall.toFixed(1);
+  document.getElementById('ratingGaugeStars').innerHTML = starsHTML(overall, 28);
+  document.getElementById('ratingGaugeLabel').textContent = overallLabel;
+
+  // === RENDER CATEGORIES ===
+  document.getElementById('ratingCategoriesGrid').innerHTML = categories.map(cat => `
+    <div class="rating-category-card">
+      <div class="rating-category-emoji">${cat.emoji}</div>
+      <div class="rating-category-name">${cat.name}</div>
+      <div class="rating-category-score">${cat.score.toFixed(1)}</div>
+      <div class="rating-category-stars">${starsHTML(cat.score)}</div>
+      <div class="rating-category-bar">
+        <div class="rating-category-bar-fill" style="width:${(cat.score/5)*100}%;background:${barColor(cat.score)}"></div>
+      </div>
+    </div>
+  `).join('');
+
+  // === RENDER DETAILS TABLE ===
+  let detailsHTML = '';
+  categories.forEach(cat => {
+    detailsHTML += `<div style="margin-top:12px;margin-bottom:6px;font-weight:700;color:var(--text-primary)">${cat.emoji} ${cat.name} <span style="float:left;color:var(--accent)">${cat.score.toFixed(1)}/5</span></div>`;
+    cat.metrics.forEach(m => {
+      detailsHTML += `
+        <div class="rating-detail-row">
+          <span class="rating-detail-name">${m.name}</span>
+          <span class="rating-detail-value">${m.value}</span>
+          <span class="rating-detail-score ${scoreClass(m.score)}">${m.score.toFixed(1)}</span>
+        </div>`;
+    });
+  });
+  document.getElementById('ratingDetailsTable').innerHTML = detailsHTML;
+
+  // === RENDER TIPS ===
+  const sorted = [...categories].sort((a, b) => a.score - b.score);
+  const tips = [];
+
+  const tipMap = {
+    'בטיחות': [
+      { cond: perfectPct < 40, text: 'שפרו את איכות הנחיתות - נסו לשמור על FPM בין -100 ל-200' },
+      { cond: hardPct > 10, text: 'צמצמו נחיתות קשות (FPM > 400) - הקפידו על approach יציב' }
+    ],
+    'רווחיות': [
+      { cond: avgProfit < 15000, text: 'העלו את הרווח הממוצע - שקלו הגדלת מחירי כרטיסים או בחירת מסלולים ארוכים יותר' },
+      { cond: profitPerHour < 5000, text: 'שפרו רווח לשעת טיסה - מסלולים ארוכים בדרך כלל רווחיים יותר ליחידת זמן' }
+    ],
+    'יעילות': [
+      { cond: fuelPerNM > 5, text: 'צמצמו צריכת דלק - בדקו תכנון מסלולים יעיל יותר' },
+      { cond: avgPax < 120, text: 'הגדילו תפוסת נוסעים - שקלו מסלולים פופולריים יותר' }
+    ],
+    'מוניטין': [
+      { cond: uniqueDests < 10, text: 'הרחיבו את רשת היעדים - טוסו ליעדים חדשים לשיפור המוניטין' },
+      { cond: completedCount < 3, text: 'השלימו משימות מיוחדות לחיזוק המוניטין של החברה' }
+    ],
+    'פעילות': [
+      { cond: totalFlights < 20, text: 'הגדילו את תדירות הטיסות - כל טיסה משפרת את הדירוג' },
+      { cond: totalHours < 50, text: 'צברו עוד שעות טיסה - זה ישפר גם את הדרגה שלכם' }
+    ]
+  };
+
+  // Show tips for the 2 weakest categories
+  for (let i = 0; i < Math.min(2, sorted.length); i++) {
+    const cat = sorted[i];
+    if (cat.score >= 4.5) continue;
+    const catTips = tipMap[cat.name] || [];
+    catTips.forEach(tip => {
+      if (tip.cond && tips.length < 4) {
+        tips.push({ emoji: cat.emoji, text: tip.text });
+      }
+    });
+  }
+
+  if (tips.length === 0) {
+    tips.push({ emoji: '🏆', text: 'מצוין! חברת התעופה שלך בביצועים מעולים בכל התחומים' });
+  }
+
+  document.getElementById('ratingTips').innerHTML = tips.map(tip => `
+    <div class="rating-tip">
+      <span class="rating-tip-icon">${tip.emoji}</span>
+      <span class="rating-tip-text">${tip.text}</span>
+    </div>
+  `).join('');
 }
 
 // ===== SMART NOTIFICATIONS =====

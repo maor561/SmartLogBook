@@ -52,6 +52,9 @@
   <button class="tab-btn" onclick="switchTab('missions')" data-tab="missions">
     🎖️ <span id="tabMissionsLabel">משימות</span>
   </button>
+  <button class="tab-btn" onclick="switchTab('rating')" data-tab="rating">
+    ⭐ <span id="tabRatingLabel">דירוג חברה</span>
+  </button>
 </nav>
 
 <!-- MAIN -->
@@ -369,6 +372,39 @@
       </div>
     </div>
   </div>
+
+  <!-- AIRLINE RATING TAB -->
+  <div class="tab-content" id="rating">
+    <div class="section-header" style="text-align:center; margin-bottom:24px;">
+      <h2>⭐ דירוג חברת התעופה</h2>
+      <p style="color:var(--text-secondary);">ציון כולל המבוסס על ביצועי החברה בכל התחומים</p>
+    </div>
+
+    <!-- Overall Score -->
+    <div class="rating-overall-card" id="ratingOverallCard">
+      <div class="rating-gauge" id="ratingGauge">
+        <div class="rating-gauge-score" id="ratingGaugeScore">0.0</div>
+        <div class="rating-gauge-stars" id="ratingGaugeStars"></div>
+        <div class="rating-gauge-label" id="ratingGaugeLabel">טוען...</div>
+      </div>
+    </div>
+
+    <!-- Category Cards -->
+    <div class="rating-categories-grid" id="ratingCategoriesGrid"></div>
+
+    <!-- Detailed Metrics -->
+    <div class="rating-details-card" id="ratingDetailsCard">
+      <div class="card-title">📊 פירוט מדדים</div>
+      <div id="ratingDetailsTable"></div>
+    </div>
+
+    <!-- Improvement Tips -->
+    <div class="rating-tips-card" id="ratingTipsCard">
+      <div class="card-title">💡 טיפים לשיפור</div>
+      <div id="ratingTips"></div>
+    </div>
+  </div>
+
 </main>
 
 <!-- ===== MODALS ===== -->
