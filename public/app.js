@@ -3196,7 +3196,7 @@ function renderAirlineRating() {
       emoji: '🛡️',
       weight: 0.25,
       metrics: [
-        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: Math.max(1, Math.min(5, 5 - (avgFPM - 100) / 50)) }
+        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: Math.max(1, Math.min(5, 5 - Math.max(0, avgFPM - 150) / 150 * 4)) }
       ]
     },
     {
@@ -3296,8 +3296,8 @@ function renderAirlineRating() {
   const tipMap = {
     'בטיחות': [
       { cond: avgFPM > 300, text: 'ה-FPM הממוצע גבוה מדי (300+) - שפרו את איכות הנחיתות, יש לירוד בצורה הדרגתית יותר' },
-      { cond: avgFPM > 200, text: 'ה-FPM הממוצע בטווח בינוני (200-300) - כוונו ל-FPM של 100-150 לנחיתות רכות' },
-      { cond: avgFPM <= 150, text: 'מעולה! נחיתות רכות עם FPM של 150 ומטה' }
+      { cond: avgFPM > 150 && avgFPM <= 300, text: `ה-FPM הממוצע בטווח בינוני (${avgFPM.toFixed(0)}) - כוונו ל-150 ומטה לנחיתות אופטימליות` },
+      { cond: avgFPM <= 150, text: 'מעולה! נחיתות מושלמות עם FPM של 150 ומטה' }
     ],
     'רווחיות': [
       { cond: avgProfit < 15000, text: 'העלו את הרווח הממוצע - שקלו הגדלת מחירי כרטיסים או בחירת מסלולים ארוכים יותר' },
