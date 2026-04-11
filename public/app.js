@@ -1870,8 +1870,30 @@ function updateMap() {
   const L_tr = TRANSLATIONS[currentLang];
   const bounds = [];
 
+  // Group airports with their stats
+  const airports = {};
+
   flights.forEach(f => {
     // Skip if any coordinate is missing
+    if (!f.originLat || !f.originLon || !f.destLat || !f.destLon) return;
+
+    // Track origin
+    if (!airports[f.origin]) {
+      airports[f.origin] = { lat: f.originLat, lon: f.originLon, departures: 0, arrivals: 0, profit: 0 };
+    }
+    airports[f.origin].departures++;
+    airports[f.origin].profit += (f.profit || 0);
+
+    // Track destination
+    if (!airports[f.destination]) {
+      airports[f.destination] = { lat: f.destLat, lon: f.destLon, departures: 0, arrivals: 0, profit: 0 };
+    }
+    airports[f.destination].arrivals++;
+    airports[f.destination].profit += (f.profit || 0);
+  });
+
+  // Draw routes
+  flights.forEach(f => {
     if (!f.originLat || !f.originLon || !f.destLat || !f.destLon) return;
     const from = [f.originLat, f.originLon];
     const to = [f.destLat, f.destLon];
@@ -1887,23 +1909,28 @@ function updateMap() {
     line.addTo(mapInstance);
     mapLayers.push(line);
 
-    [from, to].forEach((pos, idx) => {
-      const isOrigin = idx === 0;
-      const code = isOrigin ? f.origin : f.destination;
-      const mk = L.circleMarker(pos, {
-        radius: 6,
-        fillColor: isOrigin ? '#f59e0b' : '#6366f1',
-        color: '#ffffff',
-        fillOpacity: 0.9,
-        weight: 2,
-        className: 'map-route-circle'
-      });
-      mk.bindPopup(`<div style="font-weight:bold;font-size:12px;">${code}</div>`);
-      mk.addTo(mapInstance);
-      mapLayers.push(mk);
+    bounds.push(from, to);
+  });
+
+  // Draw airport circles with counts
+  Object.entries(airports).forEach(([code, airport]) => {
+    const pos = [airport.lat, airport.lon];
+    const color = airport.profit >= 0 ? '#10b981' : '#ef4444';
+    const total = airport.departures + airport.arrivals;
+
+    const mk = L.circleMarker(pos, {
+      radius: 6,
+      fillColor: color,
+      color: '#ffffff',
+      fillOpacity: 0.9,
+      weight: 2,
+      className: 'map-route-circle'
     });
 
-    bounds.push(from, to);
+    const label = `${code}\n↑${airport.departures} ↓${airport.arrivals}`;
+    mk.bindPopup(`<div style="font-weight:bold;font-size:12px;text-align:center;">${label}</div>`);
+    mk.addTo(mapInstance);
+    mapLayers.push(mk);
   });
 
   if (bounds.length > 0) {
