@@ -1890,8 +1890,15 @@ function updateMap() {
     [from, to].forEach((pos, idx) => {
       const isOrigin = idx === 0;
       const code = isOrigin ? f.origin : f.destination;
-      const mk = L.circleMarker(pos, { radius: 12, fillColor: isOrigin ? '#f59e0b' : '#6366f1', color: '#ffffff', fillOpacity: 1, weight: 3 });
-      mk.bindPopup(`<div style="font-weight:bold">${code}</div>`);
+      const mk = L.circleMarker(pos, {
+        radius: 6,
+        fillColor: isOrigin ? '#f59e0b' : '#6366f1',
+        color: '#ffffff',
+        fillOpacity: 0.9,
+        weight: 2,
+        className: 'map-route-circle'
+      });
+      mk.bindPopup(`<div style="font-weight:bold;font-size:12px;">${code}</div>`);
       mk.addTo(mapInstance);
       mapLayers.push(mk);
     });
