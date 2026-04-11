@@ -3398,6 +3398,8 @@ function renderAirlineRating() {
   const mostUsedAircraft = Object.entries(aircraftCounts)
     .sort((a, b) => b[1] - a[1])[0]?.[0] || 'B738';
   const actualCapacity = aircraftCapacities[mostUsedAircraft] || getAircraftCapacity(mostUsedAircraft);
+  // Fix cargo capacity to 20468 kg for all calculations
+  actualCapacity.cargo = 20468;
 
   // === CATEGORY CALCULATIONS ===
   const categories = [
