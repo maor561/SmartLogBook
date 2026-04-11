@@ -1177,7 +1177,7 @@ function displayCurrentFlight() {
 
   // SECTION 3: Rating data — utilization bars
   const maxPax   = d.aircraft_max_passengers || 189;
-  const maxCargo = d.aircraft_max_cargo || 5000;
+  const maxCargo = 20468; // Fixed cargo capacity
   const paxPct   = Math.min(100, Math.round((d.passengers || 0) / maxPax   * 100));
   const cargoPct = Math.min(100, Math.round((d.payload    || 0) / maxCargo * 100));
   const paxColor   = paxPct   >= 80 ? '#10b981' : paxPct   >= 50 ? '#f59e0b' : '#ef4444';
