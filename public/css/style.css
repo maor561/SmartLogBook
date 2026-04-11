@@ -1499,6 +1499,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: help;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
@@ -1545,4 +1546,51 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   font-size: 0.85rem;
   color: var(--text-primary);
   line-height: 1.5;
+}
+
+/* ===== METRIC TOOLTIP ===== */
+#metricTooltip {
+  position: fixed;
+  display: none;
+  z-index: 9999;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 220px;
+  max-width: 300px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  pointer-events: none;
+  font-size: 0.8rem;
+}
+
+.mtt-title {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mtt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+  color: var(--text-secondary);
+}
+
+.mtt-row span:last-child {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.mtt-more {
+  text-align: center;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-size: 0.75rem;
 }

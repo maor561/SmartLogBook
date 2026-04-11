@@ -3199,6 +3199,14 @@ function renderAirlineRating() {
     if (goalFlights > 0) goalAchievement = Math.min(100, (totalFlights / goalFlights) * 100);
   }
 
+  // Pre-compute per-flight tooltip data
+  const flLabel = f => `${f.origin}→${f.destination}`;
+  const avgCI = flights.reduce((s, f) => s + (f.costIndex || 0), 0) / totalFlights;
+  const avgWeatherRisk = flights.reduce((s, f) => {
+    const w = f.windSpeed || 0, v = f.visibility || 10, c = f.ceiling || 5000;
+    return s + (w > 30 ? 1 : w > 20 ? 0.7 : 0.5) * (v < 3 ? 1 : v < 5 ? 0.7 : 0.3) * (c < 1000 ? 1 : c < 3000 ? 0.7 : 0.3);
+  }, 0) / Math.max(1, totalFlights);
+
   // === CATEGORY CALCULATIONS ===
   const categories = [
     {
@@ -3206,22 +3214,21 @@ function renderAirlineRating() {
       emoji: '🛡️',
       weight: 0.25,
       metrics: [
-        { name: 'FPM ממוצע', value: avgFPM.toFixed(0), score: Math.max(1, Math.min(5, 5 - Math.max(0, avgFPM - 150) / 150 * 4)) },
-        { name: 'Cost Index', value: Math.round(flights.reduce((s, f) => s + (f.costIndex || 0), 0) / flights.length || 0), score: Math.max(1, Math.min(5, 5 - (flights.reduce((s, f) => s + (f.costIndex || 0), 0) / flights.length || 0) / 500 * 4)) },
-        { name: 'מצב מזג אוויר', value: flights.reduce((s, f) => {
-          const w = f.windSpeed || 0;
-          const v = f.visibility || 10;
-          const c = f.ceiling || 5000;
-          return s + (w > 30 ? 1 : w > 20 ? 0.7 : 0.5) * (v < 3 ? 1 : v < 5 ? 0.7 : 0.3) * (c < 1000 ? 1 : c < 3000 ? 0.7 : 0.3);
-        }, 0) / Math.max(1, flights.length), score: (() => {
-          const avgWeatherRisk = flights.reduce((s, f) => {
-            const w = f.windSpeed || 0;
-            const v = f.visibility || 10;
-            const c = f.ceiling || 5000;
-            return s + (w > 30 ? 1 : w > 20 ? 0.7 : 0.5) * (v < 3 ? 1 : v < 5 ? 0.7 : 0.3) * (c < 1000 ? 1 : c < 3000 ? 0.7 : 0.3);
-          }, 0) / Math.max(1, flights.length);
-          return Math.max(1, 5 - avgWeatherRisk * 4);
-        })() }
+        {
+          name: 'FPM ממוצע', value: avgFPM.toFixed(0),
+          score: Math.max(1, Math.min(5, 5 - Math.max(0, avgFPM - 150) / 150 * 4)),
+          tips: flights.filter(f => f.fpm !== 0).map(f => ({ label: flLabel(f), val: `${Math.abs(f.fpm)} FPM` }))
+        },
+        {
+          name: 'Cost Index', value: Math.round(avgCI),
+          score: Math.max(1, Math.min(5, 5 - avgCI / 500 * 4)),
+          tips: flights.map(f => ({ label: flLabel(f), val: `CI ${f.costIndex || 80}` }))
+        },
+        {
+          name: 'מצב מזג אוויר', value: avgWeatherRisk.toFixed(2),
+          score: Math.max(1, 5 - avgWeatherRisk * 4),
+          tips: flights.map(f => ({ label: flLabel(f), val: `${f.windSpeed || 0}kts | Vis:${f.visibility || 10}NM | Ceil:${f.ceiling || 5000}ft` }))
+        }
       ]
     },
     {
@@ -3229,9 +3236,21 @@ function renderAirlineRating() {
       emoji: '💰',
       weight: 0.25,
       metrics: [
-        { name: 'רווח ממוצע/טיסה', value: `$${(avgProfit/1000).toFixed(1)}K`, score: ratingScore(avgProfit, 5000, 30000) },
-        { name: 'רווח/שעת טיסה', value: `$${(profitPerHour/1000).toFixed(1)}K`, score: ratingScore(profitPerHour, 2000, 10000) },
-        { name: 'עמידה ביעד', value: `${goalAchievement.toFixed(0)}%`, score: ratingScore(goalAchievement, 20, 100) }
+        {
+          name: 'רווח ממוצע/טיסה', value: `$${(avgProfit/1000).toFixed(1)}K`,
+          score: ratingScore(avgProfit, 5000, 30000),
+          tips: flights.map(f => ({ label: flLabel(f), val: `$${(f.profit||0).toLocaleString()}` }))
+        },
+        {
+          name: 'רווח/שעת טיסה', value: `$${(profitPerHour/1000).toFixed(1)}K`,
+          score: ratingScore(profitPerHour, 2000, 10000),
+          tips: flights.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `$${Math.round((f.profit||0)/((f.durationMins||60)/60)).toLocaleString()}/h` }))
+        },
+        {
+          name: 'עמידה ביעד', value: `${goalAchievement.toFixed(0)}%`,
+          score: ratingScore(goalAchievement, 20, 100),
+          tips: [{ label: 'סה"כ טיסות', val: totalFlights }, { label: 'יעד', val: document.getElementById('goalFlights')?.value || '—' }]
+        }
       ]
     },
     {
@@ -3239,10 +3258,26 @@ function renderAirlineRating() {
       emoji: '⚡',
       weight: 0.20,
       metrics: [
-        { name: 'צריכת דלק (kg/NM)', value: fuelPerNM.toFixed(1), score: ratingScoreInverse(fuelPerNM, 3.0, 8.0) },
-        { name: 'תפוסת נוסעים', value: avgPax.toFixed(0), score: ratingScore(avgPax, 50, 180) },
-        { name: 'מטען ממוצע (kg)', value: avgPayload.toFixed(0), score: ratingScore(avgPayload, 500, 5000) },
-        { name: 'מרחק ממוצע (NM)', value: avgDist.toFixed(0), score: ratingScore(avgDist, 300, 2000) }
+        {
+          name: 'צריכת דלק (kg/NM)', value: fuelPerNM.toFixed(1),
+          score: ratingScoreInverse(fuelPerNM, 3.0, 8.0),
+          tips: flights.filter(f => (f.distance||0) > 0).map(f => ({ label: flLabel(f), val: `${(f.fuel/f.distance).toFixed(1)} kg/NM` }))
+        },
+        {
+          name: 'תפוסת נוסעים', value: avgPax.toFixed(0),
+          score: ratingScore(avgPax, 50, 180),
+          tips: flights.map(f => ({ label: flLabel(f), val: `${f.passengers||0} pax` }))
+        },
+        {
+          name: 'מטען ממוצע (kg)', value: avgPayload.toFixed(0),
+          score: ratingScore(avgPayload, 500, 5000),
+          tips: flights.map(f => ({ label: flLabel(f), val: `${f.payload||0} kg` }))
+        },
+        {
+          name: 'מרחק ממוצע (NM)', value: avgDist.toFixed(0),
+          score: ratingScore(avgDist, 300, 2000),
+          tips: flights.map(f => ({ label: flLabel(f), val: `${f.distance||0} NM` }))
+        }
       ]
     },
     {
@@ -3250,9 +3285,21 @@ function renderAirlineRating() {
       emoji: '🌍',
       weight: 0.15,
       metrics: [
-        { name: 'יעדים ייחודיים', value: uniqueDests, score: ratingScore(uniqueDests, 3, 20) },
-        { name: 'יבשות', value: continents.size, score: ratingScore(continents.size, 1, 5) },
-        { name: 'משימות שהושלמו', value: completedCount, score: ratingScore(completedCount, 0, 10) }
+        {
+          name: 'יעדים ייחודיים', value: uniqueDests,
+          score: ratingScore(uniqueDests, 3, 20),
+          tips: [...new Set(flights.map(f => f.destination))].map(d => ({ label: d, val: `${flights.filter(f => f.destination === d).length} טיסות` }))
+        },
+        {
+          name: 'יבשות', value: continents.size,
+          score: ratingScore(continents.size, 1, 5),
+          tips: [...continents].map(c => ({ label: c, val: `${flights.filter(f => continentMap[(f.destination||'').charAt(0).toUpperCase()] === c).length} טיסות` }))
+        },
+        {
+          name: 'משימות שהושלמו', value: completedCount,
+          score: ratingScore(completedCount, 0, 10),
+          tips: completedMissions && completedMissions.length ? completedMissions.map(m => ({ label: m, val: '✅' })) : [{ label: 'אין משימות שהושלמו', val: '' }]
+        }
       ]
     },
     {
@@ -3260,9 +3307,21 @@ function renderAirlineRating() {
       emoji: '📊',
       weight: 0.15,
       metrics: [
-        { name: 'סה"כ טיסות', value: totalFlights, score: ratingScore(totalFlights, 5, 100) },
-        { name: 'שעות טיסה', value: totalHours.toFixed(0), score: ratingScore(totalHours, 10, 500) },
-        { name: 'דרגת טייס', value: rankName, score: ratingScore(rankIdx, 0, 5) }
+        {
+          name: 'סה"כ טיסות', value: totalFlights,
+          score: ratingScore(totalFlights, 5, 100),
+          tips: flights.slice(0, 20).map(f => ({ label: flLabel(f), val: new Date(f.date).toLocaleDateString('he-IL') }))
+        },
+        {
+          name: 'שעות טיסה', value: totalHours.toFixed(0),
+          score: ratingScore(totalHours, 10, 500),
+          tips: flights.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `${Math.floor((f.durationMins||0)/60)}:${String((f.durationMins||0)%60).padStart(2,'0')}h` }))
+        },
+        {
+          name: 'דרגת טייס', value: rankName,
+          score: ratingScore(rankIdx, 0, 5),
+          tips: RANK_THRESHOLDS.map((h, i) => ({ label: (t('ranks')||['סטודנט','טייס מתחיל','טייס','טייס בכיר','קברניט','קברניט בכיר','אגדי'])[i], val: `${h}h` }))
+        }
       ]
     }
   ];
@@ -3300,12 +3359,17 @@ function renderAirlineRating() {
   `).join('');
 
   // === RENDER DETAILS TABLE ===
+  // Store tooltip data globally for hover handler
+  window._metricTips = {};
   let detailsHTML = '';
+  let metricId = 0;
   categories.forEach(cat => {
     detailsHTML += `<div style="margin-top:12px;margin-bottom:6px;font-weight:700;color:var(--text-primary)">${cat.emoji} ${cat.name} <span style="float:left;color:var(--accent)">${cat.score.toFixed(1)}/5</span></div>`;
     cat.metrics.forEach(m => {
+      const mid = `mt_${metricId++}`;
+      window._metricTips[mid] = { name: m.name, tips: m.tips || [] };
       detailsHTML += `
-        <div class="rating-detail-row">
+        <div class="rating-detail-row" id="${mid}" onmouseenter="showMetricTip(event,'${mid}')" onmouseleave="hideMetricTip()" onmousemove="moveMetricTip(event)">
           <span class="rating-detail-name">${m.name}</span>
           <span class="rating-detail-value">${m.value}</span>
           <span class="rating-detail-score ${scoreClass(m.score)}">${m.score.toFixed(1)}</span>
@@ -3375,6 +3439,35 @@ function renderAirlineRating() {
 let ratingRadarChartInstance = null;
 let ratingBarChartInstance = null;
 let ratingMetricsChartInstance = null;
+
+// ===== METRIC TOOLTIP =====
+function showMetricTip(event, mid) {
+  const data = window._metricTips?.[mid];
+  if (!data || !data.tips.length) return;
+  const el = document.getElementById('metricTooltip');
+  const shown = data.tips.slice(0, 15);
+  const more = data.tips.length > 15 ? `<div class="mtt-more">+ ${data.tips.length - 15} נוספים...</div>` : '';
+  el.innerHTML = `
+    <div class="mtt-title">${data.name}</div>
+    ${shown.map(t => `<div class="mtt-row"><span>${t.label}</span><span>${t.val}</span></div>`).join('')}
+    ${more}
+  `;
+  el.style.display = 'block';
+  moveMetricTip(event);
+}
+
+function moveMetricTip(event) {
+  const el = document.getElementById('metricTooltip');
+  if (el.style.display === 'none') return;
+  const x = event.clientX + 16;
+  const y = event.clientY - 10;
+  el.style.left = `${Math.min(x, window.innerWidth - el.offsetWidth - 10)}px`;
+  el.style.top = `${Math.min(y, window.innerHeight - el.offsetHeight - 10)}px`;
+}
+
+function hideMetricTip() {
+  document.getElementById('metricTooltip').style.display = 'none';
+}
 
 function renderRatingCharts(categories) {
   const isDark = document.body.classList.contains('dark');
