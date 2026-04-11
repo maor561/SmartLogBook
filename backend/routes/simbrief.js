@@ -47,6 +47,20 @@ function extractFlightData(xmlData) {
   const weightsBlock     = extractBlock(xmlData, 'weights');
   const paramsBlock      = extractBlock(xmlData, 'params');
   const weatherBlock     = extractBlock(xmlData, 'weather');
+  const apiParamsBlock   = extractBlock(xmlData, 'api_params');
+
+  // Extract aircraft specs from acdata_parsed JSON (in api_params, not aircraft!)
+  let maxPassengers = 189, maxCargo = 5000;
+  const acdataStr = extractValue(apiParamsBlock, 'acdata_parsed');
+  if (acdataStr) {
+    try {
+      const acdata = JSON.parse(acdataStr);
+      maxPassengers = parseInt(acdata.maxpax) || 189;
+      maxCargo = Math.round(parseFloat(acdata.maxcargo || 5) * 1000); // Convert tons to kg
+    } catch(e) {
+      console.error('[SimBrief] Error parsing acdata:', e.message);
+    }
+  }
 
   return {
     origin: {
@@ -65,7 +79,9 @@ function extractFlightData(xmlData) {
     },
     aircraft: {
       icaocode:  extractValue(aircraftBlock, 'icaocode'),
-      name:      extractValue(aircraftBlock, 'name')
+      name:      extractValue(aircraftBlock, 'name'),
+      maxPassengers: maxPassengers,
+      maxCargo: maxCargo
     },
     general: {
       route_distance: extractValue(generalBlock, 'route_distance'),

@@ -33,7 +33,8 @@ router.post('/', async (req, res) => {
       date, origin, destination, originName, destName, aircraft,
       distance, duration, durationMins, passengers, fuel, payload, fpm, profit,
       originLat, originLon, destLat, destLon,
-      costIndex, windSpeed, visibility, ceiling, weatherConditions
+      costIndex, windSpeed, visibility, ceiling, weatherConditions,
+      aircraft_max_passengers, aircraft_max_cargo
     } = req.body;
 
     const result = await db.collection('flights').insertOne({
@@ -48,6 +49,8 @@ router.post('/', async (req, res) => {
       visibility: visibility || 10,
       ceiling: ceiling || 5000,
       weather_conditions: weatherConditions || 'CAVOK',
+      aircraft_max_passengers: req.body.aircraft_max_passengers || 189,
+      aircraft_max_cargo: req.body.aircraft_max_cargo || 5000,
       created_at: new Date()
     });
 
@@ -63,11 +66,26 @@ router.put('/:id', async (req, res) => {
   try {
     const db = await getDb();
     const { id } = req.params;
-    const { date, passengers, fuel, payload, fpm, profit, durationMins } = req.body;
+    const {
+      date, passengers, fuel, payload, fpm, profit, durationMins,
+      costIndex, windSpeed, visibility, ceiling, weatherConditions,
+      aircraft_max_passengers, aircraft_max_cargo
+    } = req.body;
 
     const result = await db.collection('flights').findOneAndUpdate(
       { _id: new ObjectId(id) },
-      { $set: { date, passengers, fuel, payload, fpm, profit, duration_mins: durationMins, updated_at: new Date() } }
+      { $set: {
+        date, passengers, fuel, payload, fpm, profit,
+        duration_mins: durationMins,
+        cost_index: costIndex || 80,
+        wind_speed: windSpeed || 0,
+        visibility: visibility || 10,
+        ceiling: ceiling || 5000,
+        weather_conditions: weatherConditions || 'CAVOK',
+        aircraft_max_passengers: aircraft_max_passengers || 189,
+        aircraft_max_cargo: aircraft_max_cargo || 5000,
+        updated_at: new Date()
+      } }
     );
 
     if (!result) {

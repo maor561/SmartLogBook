@@ -412,6 +412,77 @@ const DEFAULT_PRICING = {
 const LARGE_AIRCRAFT = ['B744','B748','B77W','B77L','B772','B773','A388','A346','A345','A359','A35K','B789','B78X','A332','A333','A343'];
 const SMALL_AIRCRAFT = ['E190','E195','E170','E175','CRJ9','CRJ7','A318','AT76','AT75','DH8D','B190','SF34','E135','E145','CRJ2'];
 
+// Aircraft capacity database (passengers, cargo_kg)
+const AIRCRAFT_CAPACITY = {
+  // Boeing 737 variants
+  'B738': { pax: 189, cargo: 5280 },
+  'B739': { pax: 189, cargo: 5280 },
+  'B73H': { pax: 189, cargo: 5280 },
+  'B73J': { pax: 210, cargo: 5500 },
+  'B73G': { pax: 149, cargo: 5280 },
+  'B732': { pax: 130, cargo: 5050 },
+  'B733': { pax: 149, cargo: 5050 },
+  'B734': { pax: 189, cargo: 5050 },
+  'B735': { pax: 189, cargo: 5050 },
+  'B736': { pax: 189, cargo: 5280 },
+
+  // Airbus A320 family
+  'A320': { pax: 180, cargo: 6730 },
+  'A321': { pax: 236, cargo: 9100 },
+  'A319': { pax: 150, cargo: 6700 },
+  'A318': { pax: 107, cargo: 5600 },
+
+  // Airbus A330 family
+  'A330': { pax: 293, cargo: 8600 },
+  'A332': { pax: 293, cargo: 8600 },
+  'A333': { pax: 345, cargo: 9200 },
+
+  // Boeing 777 family
+  'B772': { pax: 305, cargo: 12500 },
+  'B773': { pax: 330, cargo: 12500 },
+  'B77W': { pax: 350, cargo: 12400 },
+  'B77L': { pax: 396, cargo: 12400 },
+  'B789': { pax: 242, cargo: 8668 },
+  'B78X': { pax: 330, cargo: 9668 },
+
+  // Airbus A380
+  'A388': { pax: 525, cargo: 1600 },
+
+  // Regional jets
+  'E170': { pax: 78, cargo: 3300 },
+  'E175': { pax: 88, cargo: 3300 },
+  'E190': { pax: 114, cargo: 3700 },
+  'E195': { pax: 146, cargo: 3700 },
+  'CRJ2': { pax: 50, cargo: 2800 },
+  'CRJ7': { pax: 70, cargo: 2800 },
+  'CRJ9': { pax: 90, cargo: 2800 },
+  'AT76': { pax: 72, cargo: 3600 },
+  'DH8D': { pax: 90, cargo: 2800 },
+};
+
+function getAircraftCapacity(aircraftCode) {
+  if (!aircraftCode) return { pax: 180, cargo: 5000 }; // default
+  const code = aircraftCode.toUpperCase();
+
+  // Try exact match
+  if (AIRCRAFT_CAPACITY[code]) return AIRCRAFT_CAPACITY[code];
+
+  // Try substring match (e.g., 'B738' matches 'B737-8')
+  for (const [key, value] of Object.entries(AIRCRAFT_CAPACITY)) {
+    if (code.includes(key) || key.includes(code)) return value;
+  }
+
+  // Default based on size
+  if (LARGE_AIRCRAFT.some(a => code.includes(a))) {
+    return { pax: 350, cargo: 12000 };
+  }
+  if (SMALL_AIRCRAFT.some(a => code.includes(a))) {
+    return { pax: 100, cargo: 3500 };
+  }
+
+  return { pax: 180, cargo: 5000 }; // generic medium aircraft
+}
+
 function getTicketPrice(distance) {
   if (distance <= 500) return pricing.ticketPriceBase || 120;
   if (distance <= 2000) return pricing.ticketPriceMedium || 200;
@@ -1011,6 +1082,8 @@ async function loadFromSimbrief() {
       destLat: parseFloat(destination.pos_lat || 0),
       destLon: parseFloat(destination.pos_long || 0),
       aircraft: data.aircraft?.icaocode || data.aircraft?.base_type || 'Unknown',
+      aircraft_max_passengers: data.aircraft?.maxPassengers || 189,
+      aircraft_max_cargo: data.aircraft?.maxCargo || 5000,
       distance: parseInt(general.route_distance || general.gc_distance || 0),
       duration: `${hours}:${String(mins).padStart(2,'0')}`,
       durationMins: durationMins,
@@ -1298,6 +1371,8 @@ async function confirmFlight() {
     destLat: d.destLat,
     destLon: d.destLon,
     aircraft: d.aircraft,
+    aircraft_max_passengers: d.aircraft_max_passengers || 189,
+    aircraft_max_cargo: d.aircraft_max_cargo || 5000,
     distance: d.distance,
     duration: d.duration,
     durationMins: d.durationMins,
@@ -2590,16 +2665,23 @@ function exportExcel() {
         Distance_NM: f.distance,
         Duration: f.duration,
         Passengers: f.passengers,
+        Aircraft_Max_Passengers: f.aircraft_max_passengers || 189,
+        Aircraft_Max_Cargo_kg: f.aircraft_max_cargo || 5000,
         Fuel_kg: f.fuel,
         Payload_kg: f.payload || 0,
         FPM: f.fpm,
+        Cost_Index: f.costIndex || 0,
+        Wind_Speed_kt: f.windSpeed || 0,
+        Visibility: f.visibility || 10,
+        Ceiling_ft: f.ceiling || 5000,
+        Weather_Conditions: f.weatherConditions || 'CAVOK',
         Profit_USD: f.profit,
       };
     });
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{wch:12},{wch:8},{wch:8},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:8},{wch:12}];
+    ws['!cols'] = [{wch:12},{wch:8},{wch:8},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:12},{wch:10},{wch:18},{wch:12}];
     XLSX.utils.book_append_sheet(wb, ws, 'Flights');
     const today = new Date();
     XLSX.writeFile(wb, `flights_${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}.xlsx`);
@@ -2650,6 +2732,13 @@ async function importExcel(input) {
           fuel: parseInt(row.Fuel_kg) || 0,
           payload: parseInt(row.Payload_kg) || 0,
           fpm: parseInt(row.FPM) || 0,
+          aircraft_max_passengers: parseInt(row.Aircraft_Max_Passengers) || 189,
+          aircraft_max_cargo: parseInt(row.Aircraft_Max_Cargo_kg) || 5000,
+          costIndex: parseInt(row.Cost_Index) || 0,
+          windSpeed: parseInt(row.Wind_Speed_kt) || 0,
+          visibility: parseInt(row.Visibility) || 10,
+          ceiling: parseInt(row.Ceiling_ft) || 5000,
+          weatherConditions: row.Weather_Conditions || 'CAVOK',
           profit: parseInt(row.Profit_USD) || 0,
         };
       });
@@ -3211,6 +3300,34 @@ function renderAirlineRating() {
     return s + (w > 30 ? 1 : w > 20 ? 0.7 : 0.5) * (v < 3 ? 1 : v < 5 ? 0.7 : 0.3) * (c < 1000 ? 1 : c < 3000 ? 0.7 : 0.3);
   }, 0) / Math.max(1, totalFlights);
 
+  // Determine actual aircraft capacity from flights
+  // Use capacity data from SimBrief (stored in each flight) if available
+  // Fall back to hardcoded database if not available
+  const aircraftCounts = {};
+  const aircraftCapacities = {};
+
+  flights.forEach(f => {
+    const ac = f.aircraft || 'unknown';
+    aircraftCounts[ac] = (aircraftCounts[ac] || 0) + 1;
+
+    // Try to use capacity from SimBrief first, then fallback to database
+    if (!aircraftCapacities[ac]) {
+      if (f.aircraft_max_passengers && f.aircraft_max_cargo) {
+        aircraftCapacities[ac] = {
+          pax: f.aircraft_max_passengers,
+          cargo: f.aircraft_max_cargo
+        };
+      } else {
+        aircraftCapacities[ac] = getAircraftCapacity(ac);
+      }
+    }
+  });
+
+  // Get the most used aircraft
+  const mostUsedAircraft = Object.entries(aircraftCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] || 'B738';
+  const actualCapacity = aircraftCapacities[mostUsedAircraft] || getAircraftCapacity(mostUsedAircraft);
+
   // === CATEGORY CALCULATIONS ===
   const categories = [
     {
@@ -3268,14 +3385,14 @@ function renderAirlineRating() {
           tips: flightsByDate.filter(f => (f.distance||0) > 0).map(f => ({ label: flLabel(f), val: `${(f.fuel/f.distance).toFixed(1)} kg/NM` }))
         },
         {
-          name: 'תפוסת נוסעים', value: avgPax.toFixed(0),
-          score: ratingScore(avgPax, 50, 180),
-          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.passengers||0} pax` }))
+          name: `ניצול נוסעים`, value: `${(avgPax / actualCapacity.pax * 100).toFixed(1)}%`,
+          score: ratingScore(avgPax / actualCapacity.pax * 100, 30, 100),
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.passengers||0}/${actualCapacity.pax} (${(f.passengers/actualCapacity.pax*100).toFixed(0)}%)` }))
         },
         {
-          name: 'מטען ממוצע (kg)', value: avgPayload.toFixed(0),
-          score: ratingScore(avgPayload, 500, 5000),
-          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.payload||0} kg` }))
+          name: `ניצול מטען`, value: `${(avgPayload / actualCapacity.cargo * 100).toFixed(1)}%`,
+          score: ratingScore(avgPayload / actualCapacity.cargo * 100, 15, 80),
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.payload||0}/${actualCapacity.cargo}kg (${(f.payload/actualCapacity.cargo*100).toFixed(0)}%)` }))
         },
         {
           name: 'מרחק ממוצע (NM)', value: avgDist.toFixed(0),
@@ -3399,8 +3516,8 @@ function renderAirlineRating() {
     ],
     'יעילות': [
       { cond: fuelPerNM > 5, text: 'צמצמו צריכת דלק - בדקו תכנון מסלולים יעיל יותר' },
-      { cond: avgPax < 120, text: 'הגדילו תפוסת נוסעים - שקלו מסלולים פופולריים יותר' },
-      { cond: avgPayload < 2000, text: 'הגדילו מטען ממוצע - מטען נוסף מגדיל הכנסות מ-cargo' }
+      { cond: avgPax / actualCapacity.pax < 0.6, text: `הגדילו ניצול נוסעים - יעד: 80%+ מהקיבולת (${Math.round(actualCapacity.pax * 0.8)} נוסעים)` },
+      { cond: avgPayload / actualCapacity.cargo < 0.4, text: `הגדילו ניצול מטען - יעד: 60%+ מהקיבולת (${Math.round(actualCapacity.cargo * 0.6)}ק"ג)` }
     ],
     'מוניטין': [
       { cond: uniqueDests < 10, text: 'הרחיבו את רשת היעדים - טוסו ליעדים חדשים לשיפור המוניטין' },
