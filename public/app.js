@@ -1927,6 +1927,16 @@ function updateMap() {
       className: 'map-route-circle'
     });
 
+    // Hover tooltip
+    const tooltipText = `${code}\n↑${airport.departures} ↓${airport.arrivals}\n💰 $${Math.abs(airport.profit).toLocaleString()}`;
+    mk.bindTooltip(tooltipText, {
+      permanent: false,
+      direction: 'top',
+      className: 'map-airport-tooltip',
+      offset: [0, -10]
+    });
+
+    // Click popup for more details
     const label = `${code}\n↑${airport.departures} ↓${airport.arrivals}`;
     mk.bindPopup(`<div style="font-weight:bold;font-size:12px;text-align:center;">${label}</div>`);
     mk.addTo(mapInstance);
