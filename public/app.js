@@ -1136,27 +1136,77 @@ function displayCurrentFlight() {
   const d = currentFlightData;
   const L = TRANSLATIONS[currentLang];
 
-  document.getElementById('cfOriginFlag').textContent = d.originFlag;
+  // Route header
+  document.getElementById('cfOriginFlag').textContent = d.originFlag || '';
   document.getElementById('cfOrigin').textContent = d.origin;
   document.getElementById('cfDest').textContent = d.destination;
-  document.getElementById('cfDestFlag').textContent = d.destFlag;
+  document.getElementById('cfDestFlag').textContent = d.destFlag || '';
   document.getElementById('cfNames').textContent = d.originName && d.destName
     ? `${d.originName} → ${d.destName}` : '';
+  document.getElementById('cfAircraftTag').textContent = `✈️ ${d.aircraft}`;
 
-  const infoGrid = document.getElementById('cfInfoGrid');
-  infoGrid.innerHTML = [
-    { label: L.aircraft, value: d.aircraft },
-    { label: L.distance, value: `${d.distance.toLocaleString()} NM` },
-    { label: L.duration, value: d.duration },
-    { label: L.passengers, value: d.passengers.toLocaleString() },
-    { label: L.fuelLabel, value: `${d.fuel.toLocaleString()} kg` },
-  ].map(item => `
-    <div class="info-card">
-      <div class="info-card-label">${item.label}</div>
-      <div class="info-card-value">${item.value}</div>
+  // Stats row
+  document.getElementById('cfStatsRow').innerHTML = [
+    { icon: '📍', label: L.distance || 'מרחק', value: (d.distance||0).toLocaleString(), unit: 'NM' },
+    { icon: '⏱️', label: L.duration || 'זמן טיסה', value: d.duration, unit: '' },
+    { icon: '⛽', label: L.fuelLabel || 'דלק', value: (d.fuel||0).toLocaleString(), unit: 'kg' },
+  ].map(s => `
+    <div class="cf-stat-card">
+      <div class="cf-stat-icon">${s.icon}</div>
+      <div class="cf-stat-val">${s.value}<span class="cf-stat-unit">${s.unit ? ' '+s.unit : ''}</span></div>
+      <div class="cf-stat-lbl">${s.label}</div>
     </div>
   `).join('');
 
+  // Utilization with progress bars
+  const maxPax = d.aircraft_max_passengers || 189;
+  const maxCargo = d.aircraft_max_cargo || 5000;
+  const paxPct = Math.min(100, Math.round((d.passengers || 0) / maxPax * 100));
+  const cargoPct = Math.min(100, Math.round((d.payload || 0) / maxCargo * 100));
+  const paxColor = paxPct >= 80 ? '#10b981' : paxPct >= 50 ? '#f59e0b' : '#ef4444';
+  const cargoColor = cargoPct >= 60 ? '#10b981' : cargoPct >= 30 ? '#f59e0b' : '#ef4444';
+
+  document.getElementById('cfUtilGrid').innerHTML = `
+    <div class="cf-util-card">
+      <div class="cf-util-header">
+        <span>👥 נוסעים</span>
+        <span class="cf-util-pct" style="color:${paxColor}">${paxPct}%</span>
+      </div>
+      <div class="cf-util-nums">${d.passengers || 0} / ${maxPax}</div>
+      <div class="cf-util-bar-bg"><div class="cf-util-bar-fill" style="width:${paxPct}%;background:${paxColor}"></div></div>
+    </div>
+    <div class="cf-util-card">
+      <div class="cf-util-header">
+        <span>📦 מטען</span>
+        <span class="cf-util-pct" style="color:${cargoColor}">${cargoPct}%</span>
+      </div>
+      <div class="cf-util-nums">${(d.payload||0).toLocaleString()} / ${maxCargo.toLocaleString()} kg</div>
+      <div class="cf-util-bar-bg"><div class="cf-util-bar-fill" style="width:${cargoPct}%;background:${cargoColor}"></div></div>
+    </div>
+  `;
+
+  // Conditions badges
+  const wSpd = d.windSpeed || 0;
+  const vis = d.visibility || 10;
+  const ceil = d.ceiling || 5000;
+  const ci = d.costIndex || 0;
+  const windDot = wSpd > 25 ? '🔴' : wSpd > 15 ? '🟡' : '🟢';
+  const visDot = vis < 3 ? '🔴' : vis < 6 ? '🟡' : '🟢';
+  const ceilDot = ceil < 1000 ? '🔴' : ceil < 2000 ? '🟡' : '🟢';
+  const ciDot = ci > 100 ? '🔴' : ci > 50 ? '🟡' : '🟢';
+
+  document.getElementById('cfConditions').innerHTML = `
+    <div class="cf-cond-title">🌤️ תנאי טיסה — לחישוב דירוג</div>
+    <div class="cf-cond-row">
+      <div class="cf-cond-badge">${windDot} 💨 ${wSpd}kt</div>
+      <div class="cf-cond-badge">${visDot} 👁️ ${vis}km</div>
+      <div class="cf-cond-badge">${ceilDot} ☁️ ${ceil.toLocaleString()}ft</div>
+      <div class="cf-cond-badge">${ciDot} 📊 CI ${ci}</div>
+      <div class="cf-cond-badge">🌍 ${d.weatherConditions || 'CAVOK'}</div>
+    </div>
+  `;
+
+  // Financial
   const fin = calcFinancials(d, 0);
   document.getElementById('finAnalysisContent').innerHTML = buildFinancialHTML(d, fin, false);
 
@@ -1188,85 +1238,67 @@ function calcFinancials(d, fpm) {
 function buildFinancialHTML(d, fin, showPenalty) {
   const L = TRANSLATIONS[currentLang];
   const fmt = (n) => `$${Math.round(Math.abs(n)).toLocaleString()}`;
+  const isPos = fin.netProfit >= 0;
 
   return `
-    <!-- Market Conditions Section -->
-    <div style="background: rgba(99,102,241,0.1); padding: 10px; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid #6366f1;">
-      <div class="fin-section-title" style="margin-bottom: 8px;">📊 תנאי שוק:</div>
-      <div class="fin-row" style="font-size: 0.9rem;">
-        <span class="label">⛽ עלות דלק</span>
-        <span style="color: #f97316;">$${pricing.fuelCost}/ק"ג</span>
-      </div>
-      <div class="fin-row" style="font-size: 0.9rem;">
-        <span class="label">📈 מדד עלויות</span>
-        <span style="color: #8b5cf6;">נורמלי (50)</span>
-      </div>
-      <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px;">
-        ✅ מחירים דינמיים מעודכנים אוטומטית
-      </div>
-    </div>
-    <hr class="fin-divider">
-
-    <div class="fin-section-title">${L.revenues}:</div>
-    <div class="fin-row">
-      <span class="label">${L.tickets}: ${d.passengers} × $${fin.ticketPrice}</span>
-      <span class="value-positive">+${fmt(fin.ticketRevenue)}</span>
-    </div>
-    ${fin.cargoRevenue > 0 ? `
-    <div class="fin-row">
-      <span class="label">${L.cargo}: ${(d.payload || 0).toLocaleString()} × $${pricing.cargoRate}</span>
-      <span class="value-positive">+${fmt(fin.cargoRevenue)}</span>
-    </div>
-    ` : ''}
-    <div class="fin-row" style="font-weight:700;margin-top:2px">
-      <span class="label">${L.totalRevenues}</span>
-      <span class="value-positive">+${fmt(fin.totalIncome)}</span>
-    </div>
-    <hr class="fin-divider">
-    <div class="fin-section-title">${L.expenses}:</div>
-    <div class="fin-row">
-      <span class="label">${L.fuel}: ${d.fuel.toLocaleString()} × $${pricing.fuelCost}</span>
-      <span class="value-negative">-${fmt(fin.fuelExpense)}</span>
-    </div>
-    <div class="fin-row">
-      <span class="label">${L.crew}</span>
-      <span class="value-negative">-${fmt(fin.crewExpense)}</span>
-    </div>
-    <div class="fin-row">
-      <span class="label">${L.landing}</span>
-      <span class="value-negative">-${fmt(fin.landingExpense)}</span>
-    </div>
-    <div class="fin-row">
-      <span class="label">${L.maintenance}: ${(d.durationMins/60).toFixed(2)}h × $${pricing.maintenanceCost}</span>
-      <span class="value-negative">-${fmt(fin.maintenanceExpense)}</span>
-    </div>
-    ${showPenalty && fin.penalty > 0 ? `
-    <div class="fin-row">
-      <span class="label">${L.penalty}</span>
-      <span class="value-negative">-${fmt(fin.penalty)}</span>
-    </div>` : ''}
-    <div class="fin-row" style="font-weight:700;margin-top:2px">
-      <span class="label">${L.totalExpenses}</span>
-      <span class="value-negative">-${fmt(fin.totalExpenses)}</span>
-    </div>
-    <hr class="fin-divider">
-    <div class="fin-total">
-      <span>${L.netProfit}:</span>
-      <span class="${fin.netProfit >= 0 ? 'profit-positive' : 'profit-negative'}">
-        ${fin.netProfit >= 0 ? '+' : '-'}${fmt(fin.netProfit)} ${fin.netProfit >= 0 ? '✅' : '❌'}
-      </span>
+    <!-- Pricing Badges -->
+    <div class="cf-pricing-badges">
+      <span class="cf-price-badge">⛽ $${pricing.fuelCost}/kg</span>
+      <span class="cf-price-badge">🪑 $${fin.ticketPrice}/כרטיס</span>
+      <span class="cf-price-badge">📦 $${pricing.cargoRate}/kg מטען</span>
+      <span class="cf-price-live">✅ מחירים דינמיים</span>
     </div>
 
-    <!-- Pricing Impact Summary -->
-    <hr class="fin-divider">
-    <div style="background: rgba(34,197,94,0.08); padding: 10px; border-radius: 6px; border-left: 3px solid #22c55e;">
-      <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px;">
-        🎯 <strong>השפעת מחירים דינמיים:</strong>
+    <!-- Two-column Income / Expense -->
+    <div class="cf-fin-grid">
+      <div class="cf-fin-col">
+        <div class="cf-fin-col-title cf-income-title">📈 ${L.revenues}</div>
+        <div class="cf-fin-row">
+          <span>🪑 ${d.passengers} × $${fin.ticketPrice}</span>
+          <span class="value-positive">+${fmt(fin.ticketRevenue)}</span>
+        </div>
+        ${fin.cargoRevenue > 0 ? `<div class="cf-fin-row">
+          <span>📦 ${(d.payload||0).toLocaleString()}kg</span>
+          <span class="value-positive">+${fmt(fin.cargoRevenue)}</span>
+        </div>` : ''}
+        <div class="cf-fin-subtotal cf-income-sub">
+          <span>${L.totalRevenues}</span>
+          <span>+${fmt(fin.totalIncome)}</span>
+        </div>
       </div>
-      <div style="font-size: 0.8rem; color: var(--text-secondary);">
-        💰 דלק: ${fmt(fin.fuelExpense)} | 🪑 קרו: ${fmt(fin.crewExpense)} | 🛬 נחיתה: ${fmt(fin.landingExpense)}<br>
-        🔧 תחזוקה: ${fmt(fin.maintenanceExpense)} ${fin.penalty > 0 ? `| 💥 קנס: ${fmt(fin.penalty)}` : ''}
+      <div class="cf-fin-col">
+        <div class="cf-fin-col-title cf-expense-title">📉 ${L.expenses}</div>
+        <div class="cf-fin-row">
+          <span>⛽ ${L.fuel}</span>
+          <span class="value-negative">-${fmt(fin.fuelExpense)}</span>
+        </div>
+        <div class="cf-fin-row">
+          <span>👨‍✈️ ${L.crew}</span>
+          <span class="value-negative">-${fmt(fin.crewExpense)}</span>
+        </div>
+        <div class="cf-fin-row">
+          <span>🛬 ${L.landing}</span>
+          <span class="value-negative">-${fmt(fin.landingExpense)}</span>
+        </div>
+        <div class="cf-fin-row">
+          <span>🔧 ${L.maintenance}</span>
+          <span class="value-negative">-${fmt(fin.maintenanceExpense)}</span>
+        </div>
+        ${showPenalty && fin.penalty > 0 ? `<div class="cf-fin-row">
+          <span>💥 ${L.penalty}</span>
+          <span class="value-negative">-${fmt(fin.penalty)}</span>
+        </div>` : ''}
+        <div class="cf-fin-subtotal cf-expense-sub">
+          <span>${L.totalExpenses}</span>
+          <span>-${fmt(fin.totalExpenses)}</span>
+        </div>
       </div>
+    </div>
+
+    <!-- Net Profit Big Display -->
+    <div class="cf-net-profit ${isPos ? 'cf-net-pos' : 'cf-net-neg'}">
+      <span class="cf-net-label">${L.netProfit}</span>
+      <span class="cf-net-value">${isPos ? '+' : '-'}${fmt(fin.netProfit)} ${isPos ? '✅' : '❌'}</span>
     </div>
   `;
 }
@@ -1278,6 +1310,22 @@ function openConfirmModal() {
   const fb = document.getElementById('fpmFeedback');
   fb.textContent = t('fpmGood');
   fb.className = 'fpm-feedback fpm-good';
+
+  // Mini route in modal
+  const d = currentFlightData;
+  const routeMini = document.getElementById('cfConfirmRouteMini');
+  if (routeMini) {
+    routeMini.innerHTML = `
+      <span>${d.originFlag||''} <strong>${d.origin}</strong></span>
+      <span class="cf-mini-arrow">✈️</span>
+      <span><strong>${d.destination}</strong> ${d.destFlag||''}</span>
+      <span class="cf-mini-aircraft">${d.aircraft}</span>
+    `;
+  }
+
+  // Show initial profit preview
+  updateFpmFeedback();
+
   document.getElementById('confirmModal').style.display = 'flex';
   setTimeout(() => document.getElementById('fpmInput').focus(), 150);
 }
@@ -1290,10 +1338,26 @@ function updateFpmFeedback() {
   else if (abs <= 200) { fb.textContent = t('fpmGood'); fb.className = 'fpm-feedback fpm-good'; }
   else if (abs <= 400) { fb.textContent = t('fpmRough'); fb.className = 'fpm-feedback fpm-rough'; }
   else {
-    // Show actual penalty from current pricing settings
     const penaltyText = t('fpmHard').replace('$500', `$${pricing.landingPenalty}`);
     fb.textContent = penaltyText;
     fb.className = 'fpm-feedback fpm-hard';
+  }
+
+  // Update profit preview in confirm modal
+  if (currentFlightData) {
+    const fin = calcFinancials(currentFlightData, val);
+    const profitEl = document.getElementById('cfConfirmProfit');
+    if (profitEl) {
+      const isPos = fin.netProfit >= 0;
+      const sign = isPos ? '+' : '-';
+      profitEl.innerHTML = `
+        <div class="cf-profit-preview ${isPos ? 'cf-profit-pos' : 'cf-profit-neg'}">
+          <span class="cf-profit-label">💵 רווח צפוי:</span>
+          <span class="cf-profit-value">${sign}$${Math.abs(fin.netProfit).toLocaleString()}</span>
+          ${abs > 400 ? `<div class="cf-profit-penalty">⚠️ כולל קנס נחיתה קשה: -$${pricing.landingPenalty.toLocaleString()}</div>` : ''}
+        </div>
+      `;
+    }
   }
 }
 

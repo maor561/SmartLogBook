@@ -78,24 +78,39 @@
 
     <!-- Current Flight Panel -->
     <div class="current-flight" id="currentFlightPanel" style="display:none">
+      <!-- Route Header -->
       <div class="route-header">
         <div class="route-display">
           <span id="cfOriginFlag"></span>
           <span id="cfOrigin" class="route-icao"></span>
-          <span class="arrow">→</span>
+          <span class="arrow">✈️</span>
           <span id="cfDest" class="route-icao"></span>
           <span id="cfDestFlag"></span>
         </div>
         <div class="route-names" id="cfNames"></div>
+        <div class="cf-aircraft-tag" id="cfAircraftTag"></div>
       </div>
-      <div class="flight-info-grid" id="cfInfoGrid"></div>
+
+      <!-- Stats Row -->
+      <div class="cf-stats-row" id="cfStatsRow"></div>
+
+      <!-- Utilization (Rating Data) -->
+      <div class="cf-section-label">📊 ניצולת — נתוני דירוג</div>
+      <div class="cf-util-grid" id="cfUtilGrid"></div>
+
+      <!-- Conditions (Rating Data) -->
+      <div class="cf-conditions" id="cfConditions"></div>
+
+      <!-- Financial Analysis -->
       <div class="financial-analysis">
         <div class="financial-title">💰 <span id="finAnalysisTitle">ניתוח פיננסי</span></div>
         <div id="finAnalysisContent"></div>
       </div>
+
+      <!-- Confirm Button -->
       <div style="text-align:center;margin-top:16px">
-        <button class="btn btn-success" onclick="openConfirmModal()">
-          ✅ <span id="confirmBtnText">אשר סיום טיסה</span>
+        <button class="btn btn-success cf-land-btn" onclick="openConfirmModal()">
+          🛬 <span id="confirmBtnText">אשר נחיתה</span>
         </button>
       </div>
     </div>
@@ -432,25 +447,16 @@
 
 <!-- Confirm Flight -->
 <div class="modal-overlay" id="confirmModal" style="display:none" onclick="handleOverlayClick(event,'confirmModal')">
-  <div class="modal">
-    <div class="modal-title">🛬 <span id="confirmModalTitle">אישור טיסה</span></div>
-    <p class="modal-desc" id="confirmModalDesc">הזן את קצב הירידה בנחיתה</p>
-    <div class="form-group">
+  <div class="modal cf-confirm-modal">
+    <div class="modal-title">🛬 <span id="confirmModalTitle">אישור נחיתה</span></div>
+    <div class="cf-confirm-route-mini" id="cfConfirmRouteMini"></div>
+    <div class="form-group" style="margin-top:16px">
       <label id="fpmLabel">קצב ירידה (FPM):</label>
-      <input type="number" id="fpmInput" placeholder="-145" oninput="updateFpmFeedback()">
+      <input type="number" id="fpmInput" placeholder="-145" oninput="updateFpmFeedback()" class="cf-fpm-input">
     </div>
     <div class="fpm-feedback fpm-good" id="fpmFeedback">נחיתה טובה ✅</div>
-
-    <!-- Update pricing section -->
-    <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.08); border-radius: 6px; border-left: 3px solid #6366f1;">
-      <div style="font-size: 0.85rem; margin-bottom: 8px;">💡 <strong>עדכן מחירים בזמן אמת:</strong></div>
-      <button class="btn btn-info" onclick="updateFlightPricing()" style="width: 100%; font-size: 0.9rem;">
-        📊 טען מחירים דינמיים וחשב מחדש
-      </button>
-      <div id="flightPricingStatus" style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary); display: none;"></div>
-    </div>
-
-    <div class="modal-actions">
+    <div id="cfConfirmProfit"></div>
+    <div class="modal-actions" style="margin-top:20px">
       <button class="btn btn-secondary" onclick="closeModal('confirmModal')" id="cancelBtn">ביטול</button>
       <button class="btn btn-success" onclick="confirmFlight()">✅ <span id="confirmFlightBtnText">אשר</span></button>
     </div>

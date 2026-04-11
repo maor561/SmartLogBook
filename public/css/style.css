@@ -335,6 +335,253 @@ body {
 }
 .info-card-value { font-size: 0.95rem; font-weight: 700; }
 
+/* ===== CURRENT FLIGHT REDESIGN ===== */
+.cf-aircraft-tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 12px;
+  background: rgba(99,102,241,0.15);
+  border: 1px solid rgba(99,102,241,0.3);
+  border-radius: 20px;
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Stats Row */
+.cf-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.cf-stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 10px;
+  text-align: center;
+}
+.cf-stat-icon { font-size: 1.4rem; margin-bottom: 4px; }
+.cf-stat-val { font-size: 1rem; font-weight: 700; }
+.cf-stat-unit { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; }
+.cf-stat-lbl { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 3px; }
+
+/* Section label */
+.cf-section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+
+/* Utilization grid */
+.cf-util-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cf-util-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.cf-util-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.cf-util-pct { font-size: 1rem; font-weight: 800; }
+.cf-util-nums { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; }
+.cf-util-bar-bg {
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+.cf-util-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* Conditions bar */
+.cf-conditions {
+  background: rgba(99,102,241,0.06);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.cf-cond-title {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+.cf-cond-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cf-cond-badge {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Confirm button */
+.cf-land-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+}
+
+/* ===== FINANCIAL REDESIGN ===== */
+.cf-pricing-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+  align-items: center;
+}
+.cf-price-badge {
+  background: rgba(249,115,22,0.12);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f97316;
+}
+.cf-price-live {
+  font-size: 0.72rem;
+  color: var(--green);
+  font-weight: 600;
+  margin-left: auto;
+}
+
+/* Two-column fin grid */
+.cf-fin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.cf-fin-col { display: flex; flex-direction: column; gap: 2px; }
+.cf-fin-col-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 5px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.cf-income-title { color: var(--green); }
+.cf-expense-title { color: var(--red); }
+.cf-fin-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  padding: 3px 0;
+  color: var(--text-secondary);
+}
+.cf-fin-subtotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.83rem;
+  font-weight: 700;
+  padding: 5px 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.cf-income-sub { color: var(--green); }
+.cf-expense-sub { color: var(--red); }
+
+/* Net profit big display */
+.cf-net-profit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+.cf-net-pos { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); }
+.cf-net-neg { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
+.cf-net-label { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); }
+.cf-net-value { font-size: 1.4rem; font-weight: 800; }
+.cf-net-pos .cf-net-value { color: var(--green); }
+.cf-net-neg .cf-net-value { color: var(--red); }
+
+/* ===== CONFIRM MODAL REDESIGN ===== */
+.cf-confirm-modal { max-width: 380px; }
+.cf-confirm-route-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
+.cf-mini-arrow { color: var(--accent); font-size: 1.3rem; }
+.cf-mini-aircraft {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: rgba(99,102,241,0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.cf-fpm-input {
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  letter-spacing: 2px;
+}
+
+/* Profit preview in confirm modal */
+.cf-profit-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cf-profit-pos { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); }
+.cf-profit-neg { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); }
+.cf-profit-label { font-size: 0.85rem; color: var(--text-secondary); }
+.cf-profit-value { font-size: 1.2rem; font-weight: 800; }
+.cf-profit-pos .cf-profit-value { color: var(--green); }
+.cf-profit-neg .cf-profit-value { color: var(--red); }
+.cf-profit-penalty { width: 100%; font-size: 0.75rem; color: var(--red); font-weight: 600; }
+
+@media (max-width: 480px) {
+  .cf-stats-row { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .cf-util-grid { grid-template-columns: 1fr; }
+  .cf-fin-grid { grid-template-columns: 1fr; }
+}
+
 /* ===== FINANCIAL ===== */
 .financial-analysis {
   background: var(--bg-secondary);
