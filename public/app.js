@@ -1017,7 +1017,7 @@ async function loadFromSimbrief() {
       passengers: parseInt(data.weights?.pax_count_actual || general.passengers || 0),
       fuel: fuelKg,
       payload: Math.round(payloadKg),
-      costIndex: data.params?.costindex || 0,
+      costIndex: data.costindex || data.params?.costindex || data.general?.costindex || 0,
       windSpeed: data.weather?.wind_spd || 0,
       visibility: data.weather?.visibility || 10,
       ceiling: data.weather?.ceiling || 5000,
@@ -3199,8 +3199,12 @@ function renderAirlineRating() {
     if (goalFlights > 0) goalAchievement = Math.min(100, (totalFlights / goalFlights) * 100);
   }
 
-  // Pre-compute per-flight tooltip data
-  const flLabel = f => `${f.origin}→${f.destination}`;
+  // Pre-compute per-flight tooltip data - sorted chronologically (oldest first)
+  const flightsByDate = [...flights].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const flLabel = f => {
+    const d = new Date(f.date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' });
+    return `${d} ${f.origin}→${f.destination}`;
+  };
   const avgCI = flights.reduce((s, f) => s + (f.costIndex || 0), 0) / totalFlights;
   const avgWeatherRisk = flights.reduce((s, f) => {
     const w = f.windSpeed || 0, v = f.visibility || 10, c = f.ceiling || 5000;
@@ -3217,17 +3221,17 @@ function renderAirlineRating() {
         {
           name: 'FPM ממוצע', value: avgFPM.toFixed(0),
           score: Math.max(1, Math.min(5, 5 - Math.max(0, avgFPM - 150) / 150 * 4)),
-          tips: flights.filter(f => f.fpm !== 0).map(f => ({ label: flLabel(f), val: `${Math.abs(f.fpm)} FPM` }))
+          tips: flightsByDate.filter(f => f.fpm !== 0).map(f => ({ label: flLabel(f), val: `${Math.abs(f.fpm)} FPM` }))
         },
         {
           name: 'Cost Index', value: Math.round(avgCI),
           score: Math.max(1, Math.min(5, 5 - avgCI / 500 * 4)),
-          tips: flights.map(f => ({ label: flLabel(f), val: `CI ${f.costIndex || 80}` }))
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `CI ${f.costIndex || 80}` }))
         },
         {
           name: 'מצב מזג אוויר', value: avgWeatherRisk.toFixed(2),
           score: Math.max(1, 5 - avgWeatherRisk * 4),
-          tips: flights.map(f => ({ label: flLabel(f), val: `${f.windSpeed || 0}kts | Vis:${f.visibility || 10}NM | Ceil:${f.ceiling || 5000}ft` }))
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.windSpeed || 0}kts | Vis:${f.visibility || 10}NM` }))
         }
       ]
     },
@@ -3239,12 +3243,12 @@ function renderAirlineRating() {
         {
           name: 'רווח ממוצע/טיסה', value: `$${(avgProfit/1000).toFixed(1)}K`,
           score: ratingScore(avgProfit, 5000, 30000),
-          tips: flights.map(f => ({ label: flLabel(f), val: `$${(f.profit||0).toLocaleString()}` }))
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `$${(f.profit||0).toLocaleString()}` }))
         },
         {
           name: 'רווח/שעת טיסה', value: `$${(profitPerHour/1000).toFixed(1)}K`,
           score: ratingScore(profitPerHour, 2000, 10000),
-          tips: flights.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `$${Math.round((f.profit||0)/((f.durationMins||60)/60)).toLocaleString()}/h` }))
+          tips: flightsByDate.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `$${Math.round((f.profit||0)/((f.durationMins||60)/60)).toLocaleString()}/h` }))
         },
         {
           name: 'עמידה ביעד', value: `${goalAchievement.toFixed(0)}%`,
@@ -3261,22 +3265,22 @@ function renderAirlineRating() {
         {
           name: 'צריכת דלק (kg/NM)', value: fuelPerNM.toFixed(1),
           score: ratingScoreInverse(fuelPerNM, 3.0, 8.0),
-          tips: flights.filter(f => (f.distance||0) > 0).map(f => ({ label: flLabel(f), val: `${(f.fuel/f.distance).toFixed(1)} kg/NM` }))
+          tips: flightsByDate.filter(f => (f.distance||0) > 0).map(f => ({ label: flLabel(f), val: `${(f.fuel/f.distance).toFixed(1)} kg/NM` }))
         },
         {
           name: 'תפוסת נוסעים', value: avgPax.toFixed(0),
           score: ratingScore(avgPax, 50, 180),
-          tips: flights.map(f => ({ label: flLabel(f), val: `${f.passengers||0} pax` }))
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.passengers||0} pax` }))
         },
         {
           name: 'מטען ממוצע (kg)', value: avgPayload.toFixed(0),
           score: ratingScore(avgPayload, 500, 5000),
-          tips: flights.map(f => ({ label: flLabel(f), val: `${f.payload||0} kg` }))
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.payload||0} kg` }))
         },
         {
           name: 'מרחק ממוצע (NM)', value: avgDist.toFixed(0),
           score: ratingScore(avgDist, 300, 2000),
-          tips: flights.map(f => ({ label: flLabel(f), val: `${f.distance||0} NM` }))
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.distance||0} NM` }))
         }
       ]
     },
@@ -3310,12 +3314,12 @@ function renderAirlineRating() {
         {
           name: 'סה"כ טיסות', value: totalFlights,
           score: ratingScore(totalFlights, 5, 100),
-          tips: flights.slice(0, 20).map(f => ({ label: flLabel(f), val: new Date(f.date).toLocaleDateString('he-IL') }))
+          tips: flightsByDate.map(f => ({ label: flLabel(f), val: new Date(f.date).toLocaleDateString('he-IL') }))
         },
         {
           name: 'שעות טיסה', value: totalHours.toFixed(0),
           score: ratingScore(totalHours, 10, 500),
-          tips: flights.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `${Math.floor((f.durationMins||0)/60)}:${String((f.durationMins||0)%60).padStart(2,'0')}h` }))
+          tips: flightsByDate.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `${Math.floor((f.durationMins||0)/60)}:${String((f.durationMins||0)%60).padStart(2,'0')}h` }))
         },
         {
           name: 'דרגת טייס', value: rankName,
@@ -3441,32 +3445,40 @@ let ratingBarChartInstance = null;
 let ratingMetricsChartInstance = null;
 
 // ===== METRIC TOOLTIP =====
+let _metricTipHideTimer = null;
+
 function showMetricTip(event, mid) {
+  clearTimeout(_metricTipHideTimer);
   const data = window._metricTips?.[mid];
   if (!data || !data.tips.length) return;
   const el = document.getElementById('metricTooltip');
-  const shown = data.tips.slice(0, 15);
-  const more = data.tips.length > 15 ? `<div class="mtt-more">+ ${data.tips.length - 15} נוספים...</div>` : '';
+
+  // Sort tips chronologically if they have date-like labels (keep as-is for non-flight tips)
+  const sorted = [...data.tips];
+
   el.innerHTML = `
-    <div class="mtt-title">${data.name}</div>
-    ${shown.map(t => `<div class="mtt-row"><span>${t.label}</span><span>${t.val}</span></div>`).join('')}
-    ${more}
+    <div class="mtt-title">${data.name} <span style="font-weight:400;color:var(--text-muted)">(${sorted.length})</span></div>
+    ${sorted.map(t => `<div class="mtt-row"><span>${t.label}</span><span>${t.val}</span></div>`).join('')}
   `;
   el.style.display = 'block';
-  moveMetricTip(event);
-}
 
-function moveMetricTip(event) {
-  const el = document.getElementById('metricTooltip');
-  if (el.style.display === 'none') return;
+  // Pin tooltip position to where it appeared (don't follow mouse so user can scroll)
   const x = event.clientX + 16;
   const y = event.clientY - 10;
   el.style.left = `${Math.min(x, window.innerWidth - el.offsetWidth - 10)}px`;
   el.style.top = `${Math.min(y, window.innerHeight - el.offsetHeight - 10)}px`;
+
+  // Allow moving into tooltip without hiding
+  el.onmouseenter = () => clearTimeout(_metricTipHideTimer);
+  el.onmouseleave = () => { _metricTipHideTimer = setTimeout(hideMetricTip, 150); };
 }
 
+function moveMetricTip() { /* position is fixed on show */ }
+
 function hideMetricTip() {
-  document.getElementById('metricTooltip').style.display = 'none';
+  _metricTipHideTimer = setTimeout(() => {
+    document.getElementById('metricTooltip').style.display = 'none';
+  }, 150);
 }
 
 function renderRatingCharts(categories) {

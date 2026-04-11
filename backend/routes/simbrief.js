@@ -69,7 +69,14 @@ function extractFlightData(xmlData) {
     },
     general: {
       route_distance: extractValue(generalBlock, 'route_distance'),
-      route:          extractValue(generalBlock, 'route')
+      gc_distance:    extractValue(generalBlock, 'gc_distance'),
+      route:          extractValue(generalBlock, 'route'),
+      costindex:      extractValue(generalBlock, 'costindex'),
+      passengers:     extractValue(generalBlock, 'passengers'),
+      // Wind averages are in general block in SimBrief
+      avg_wind_spd:   extractValue(generalBlock, 'avg_wind_spd'),
+      avg_wind_dir:   extractValue(generalBlock, 'avg_wind_dir'),
+      avg_wind_comp:  extractValue(generalBlock, 'avg_wind_comp')
     },
     times: {
       est_time_enroute: extractValue(timesBlock, 'est_time_enroute')
@@ -84,22 +91,19 @@ function extractFlightData(xmlData) {
       pax_weight:       extractValue(weightsBlock, 'pax_weight')
     },
     params: {
-      units: extractValue(paramsBlock, 'units'),
-      costindex: parseInt(extractValue(paramsBlock, 'costindex') || '0')
+      units: extractValue(paramsBlock, 'units')
     },
     weather: {
-      // Wind at destination (average)
-      wind_dir: extractValue(weatherBlock, 'wind_dir'),
-      wind_spd: parseInt(extractValue(weatherBlock, 'wind_spd') || '0'),
-      // Visibility (in statute miles)
-      visibility: parseInt(extractValue(weatherBlock, 'vis') || '10'),
-      // Ceiling (in feet)
-      ceiling: parseInt(extractValue(weatherBlock, 'ceil') || '5000'),
-      // Temperature
-      temp: extractValue(weatherBlock, 'temp'),
-      // General conditions
-      conditions: extractValue(weatherBlock, 'conditions') || 'CAVOK'
-    }
+      // SimBrief avg wind is in the general block
+      wind_spd: parseInt(extractValue(generalBlock, 'avg_wind_spd') || extractValue(weatherBlock, 'avg_wind_spd') || extractValue(weatherBlock, 'wind_spd') || '0'),
+      wind_dir: extractValue(generalBlock, 'avg_wind_dir') || extractValue(weatherBlock, 'avg_wind_dir') || extractValue(weatherBlock, 'wind_dir'),
+      // Destination METAR visibility/ceiling if available
+      visibility: parseInt(extractValue(destBlock, 'metar_vis') || extractValue(weatherBlock, 'vis') || '10'),
+      ceiling:    parseInt(extractValue(destBlock, 'metar_ceil') || extractValue(weatherBlock, 'ceil') || '5000'),
+      conditions: extractValue(destBlock, 'metar_wx') || extractValue(weatherBlock, 'conditions') || 'CAVOK'
+    },
+    // costindex from general block (primary SimBrief location)
+    costindex: parseInt(extractValue(generalBlock, 'costindex') || extractValue(paramsBlock, 'costindex') || '0')
   };
 }
 
