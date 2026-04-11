@@ -1473,7 +1473,7 @@ function updateAnalytics() {
 
   // 6. Best Landing Streak (consecutive FPM <= 400)
   let bestStreak = 0, curStreak = 0;
-  const sorted = [...flights].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
   sorted.forEach(f => {
     if (Math.abs(f.fpm || 0) <= 400) { curStreak++; bestStreak = Math.max(bestStreak, curStreak); }
     else curStreak = 0;
@@ -1791,7 +1791,7 @@ function renderChart(type, period = 'day') {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
   const ctx = document.getElementById('mainChart').getContext('2d');
-  const sorted = [...flights].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
   const L = TRANSLATIONS[currentLang];
 
   // ── Key functions by period ──────────────────────────────────────────────
@@ -2460,7 +2460,7 @@ function generateReport() {
   const monthFlights = flights.filter(f => {
     const d = new Date(f.date);
     return d.getFullYear() === year && d.getMonth() + 1 === month;
-  }).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (monthFlights.length === 0) {
     showToast('❌ ' + (L.reportNoFlights || 'No flights this month'), 'error');
@@ -3200,7 +3200,7 @@ function renderAirlineRating() {
   }
 
   // Pre-compute per-flight tooltip data - sorted chronologically (oldest first)
-  const flightsByDate = [...flights].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const flightsByDate = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
   const flLabel = f => {
     const d = new Date(f.date).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' });
     return `${d} ${f.origin}→${f.destination}`;
