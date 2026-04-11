@@ -336,6 +336,106 @@ body {
 .info-card-value { font-size: 0.95rem; font-weight: 700; }
 
 /* ===== CURRENT FLIGHT REDESIGN ===== */
+
+/* 4-Section panel cards */
+.cf-panel-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.cf-panel-section::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; right: 0;
+  width: 3px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.cf-section-pricing::before  { background: #f97316; }
+.cf-section-flight::before   { background: #3b82f6; }
+.cf-section-rating::before   { background: #8b5cf6; }
+.cf-section-financial::before { background: #10b981; }
+
+.cf-panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.cf-panel-section-icon { font-size: 1rem; }
+.cf-panel-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.cf-price-live-badge {
+  font-size: 0.68rem;
+  color: var(--green);
+  font-weight: 600;
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+/* Section 1: Pricing tiles */
+.cf-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.cf-price-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+}
+.cf-price-tile-icon { font-size: 1.3rem; margin-bottom: 4px; }
+.cf-price-tile-value { font-size: 1rem; font-weight: 800; color: #f97316; }
+.cf-price-tile-unit { font-size: 0.6rem; color: var(--text-muted); font-weight: 400; display: block; }
+.cf-price-tile-label { font-size: 0.63rem; color: var(--text-muted); margin-top: 3px; }
+
+/* Section 2: 5-column stats inside the card */
+.cf-section-flight .cf-stats-row {
+  grid-template-columns: repeat(5, 1fr);
+  margin-bottom: 0;
+}
+
+/* Section 3: rating overrides — remove double border from conditions */
+.cf-section-rating .cf-util-grid { margin-bottom: 10px; }
+.cf-section-rating .cf-conditions {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+.cf-section-rating .cf-cond-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* Confirm button */
+.cf-land-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
 .cf-aircraft-tag {
   display: inline-block;
   margin-top: 8px;

@@ -1143,13 +1143,30 @@ function displayCurrentFlight() {
   document.getElementById('cfDestFlag').textContent = d.destFlag || '';
   document.getElementById('cfNames').textContent = d.originName && d.destName
     ? `${d.originName} → ${d.destName}` : '';
-  document.getElementById('cfAircraftTag').textContent = `✈️ ${d.aircraft}`;
+  document.getElementById('cfAircraftTag').textContent = d.aircraft;
 
-  // Stats row
+  // SECTION 1: Dynamic pricing — 4 tiles
+  const ticketPriceNow = getTicketPrice(d.distance || 0);
+  document.getElementById('cfPricingGrid').innerHTML = [
+    { icon: '⛽', label: 'עלות דלק',    value: `$${pricing.fuelCost}`,         unit: '/kg' },
+    { icon: '🪑', label: 'מחיר כרטיס', value: `$${ticketPriceNow}`,            unit: '/pax' },
+    { icon: '📦', label: 'תעריף מטען',  value: `$${pricing.cargoRate}`,         unit: '/kg' },
+    { icon: '🔧', label: 'תחזוקה',      value: `$${pricing.maintenanceCost}`,   unit: '/שעה' },
+  ].map(p => `
+    <div class="cf-price-tile">
+      <div class="cf-price-tile-icon">${p.icon}</div>
+      <div class="cf-price-tile-value">${p.value}<span class="cf-price-tile-unit">${p.unit}</span></div>
+      <div class="cf-price-tile-label">${p.label}</div>
+    </div>
+  `).join('');
+
+  // SECTION 2: Flight data — 5 stat cards
   document.getElementById('cfStatsRow').innerHTML = [
-    { icon: '📍', label: L.distance || 'מרחק', value: (d.distance||0).toLocaleString(), unit: 'NM' },
-    { icon: '⏱️', label: L.duration || 'זמן טיסה', value: d.duration, unit: '' },
-    { icon: '⛽', label: L.fuelLabel || 'דלק', value: (d.fuel||0).toLocaleString(), unit: 'kg' },
+    { icon: '📍', label: L.distance  || 'מרחק',      value: (d.distance||0).toLocaleString(),  unit: 'NM'  },
+    { icon: '⏱️', label: L.duration  || 'זמן טיסה',  value: d.duration,                        unit: ''    },
+    { icon: '⛽', label: L.fuelLabel || 'דלק',        value: (d.fuel||0).toLocaleString(),       unit: 'kg'  },
+    { icon: '👥', label: 'נוסעים',                    value: (d.passengers||0).toLocaleString(), unit: ''    },
+    { icon: '📦', label: 'מטען',                      value: (d.payload||0).toLocaleString(),    unit: 'kg'  },
   ].map(s => `
     <div class="cf-stat-card">
       <div class="cf-stat-icon">${s.icon}</div>
@@ -1158,55 +1175,55 @@ function displayCurrentFlight() {
     </div>
   `).join('');
 
-  // Utilization with progress bars
-  const maxPax = d.aircraft_max_passengers || 189;
+  // SECTION 3: Rating data — utilization bars
+  const maxPax   = d.aircraft_max_passengers || 189;
   const maxCargo = d.aircraft_max_cargo || 5000;
-  const paxPct = Math.min(100, Math.round((d.passengers || 0) / maxPax * 100));
-  const cargoPct = Math.min(100, Math.round((d.payload || 0) / maxCargo * 100));
-  const paxColor = paxPct >= 80 ? '#10b981' : paxPct >= 50 ? '#f59e0b' : '#ef4444';
+  const paxPct   = Math.min(100, Math.round((d.passengers || 0) / maxPax   * 100));
+  const cargoPct = Math.min(100, Math.round((d.payload    || 0) / maxCargo * 100));
+  const paxColor   = paxPct   >= 80 ? '#10b981' : paxPct   >= 50 ? '#f59e0b' : '#ef4444';
   const cargoColor = cargoPct >= 60 ? '#10b981' : cargoPct >= 30 ? '#f59e0b' : '#ef4444';
 
   document.getElementById('cfUtilGrid').innerHTML = `
     <div class="cf-util-card">
       <div class="cf-util-header">
-        <span>👥 נוסעים</span>
+        <span>👥 ניצולת נוסעים</span>
         <span class="cf-util-pct" style="color:${paxColor}">${paxPct}%</span>
       </div>
-      <div class="cf-util-nums">${d.passengers || 0} / ${maxPax}</div>
       <div class="cf-util-bar-bg"><div class="cf-util-bar-fill" style="width:${paxPct}%;background:${paxColor}"></div></div>
+      <div class="cf-util-nums">${d.passengers||0} / ${maxPax} נוסעים</div>
     </div>
     <div class="cf-util-card">
       <div class="cf-util-header">
-        <span>📦 מטען</span>
+        <span>📦 ניצולת מטען</span>
         <span class="cf-util-pct" style="color:${cargoColor}">${cargoPct}%</span>
       </div>
-      <div class="cf-util-nums">${(d.payload||0).toLocaleString()} / ${maxCargo.toLocaleString()} kg</div>
       <div class="cf-util-bar-bg"><div class="cf-util-bar-fill" style="width:${cargoPct}%;background:${cargoColor}"></div></div>
+      <div class="cf-util-nums">${(d.payload||0).toLocaleString()} / ${maxCargo.toLocaleString()} kg</div>
     </div>
   `;
 
-  // Conditions badges
+  // SECTION 3: Rating data — conditions
   const wSpd = d.windSpeed || 0;
-  const vis = d.visibility || 10;
+  const vis  = d.visibility || 10;
   const ceil = d.ceiling || 5000;
-  const ci = d.costIndex || 0;
+  const ci   = d.costIndex || 0;
   const windDot = wSpd > 25 ? '🔴' : wSpd > 15 ? '🟡' : '🟢';
-  const visDot = vis < 3 ? '🔴' : vis < 6 ? '🟡' : '🟢';
+  const visDot  = vis  <  3 ? '🔴' : vis  <  6 ? '🟡' : '🟢';
   const ceilDot = ceil < 1000 ? '🔴' : ceil < 2000 ? '🟡' : '🟢';
-  const ciDot = ci > 100 ? '🔴' : ci > 50 ? '🟡' : '🟢';
+  const ciDot   = ci  > 100  ? '🔴' : ci   >  50   ? '🟡' : '🟢';
 
   document.getElementById('cfConditions').innerHTML = `
-    <div class="cf-cond-title">🌤️ תנאי טיסה — לחישוב דירוג</div>
+    <div class="cf-cond-title">תנאי מזג אוויר</div>
     <div class="cf-cond-row">
-      <div class="cf-cond-badge">${windDot} 💨 ${wSpd}kt</div>
-      <div class="cf-cond-badge">${visDot} 👁️ ${vis}km</div>
+      <div class="cf-cond-badge">${windDot} 💨 רוח ${wSpd}kt</div>
+      <div class="cf-cond-badge">${visDot} 👁️ ראות ${vis}km</div>
       <div class="cf-cond-badge">${ceilDot} ☁️ ${ceil.toLocaleString()}ft</div>
       <div class="cf-cond-badge">${ciDot} 📊 CI ${ci}</div>
       <div class="cf-cond-badge">🌍 ${d.weatherConditions || 'CAVOK'}</div>
     </div>
   `;
 
-  // Financial
+  // SECTION 4: Financial
   const fin = calcFinancials(d, 0);
   document.getElementById('finAnalysisContent').innerHTML = buildFinancialHTML(d, fin, false);
 
@@ -1241,15 +1258,6 @@ function buildFinancialHTML(d, fin, showPenalty) {
   const isPos = fin.netProfit >= 0;
 
   return `
-    <!-- Pricing Badges -->
-    <div class="cf-pricing-badges">
-      <span class="cf-price-badge">⛽ $${pricing.fuelCost}/kg</span>
-      <span class="cf-price-badge">🪑 $${fin.ticketPrice}/כרטיס</span>
-      <span class="cf-price-badge">📦 $${pricing.cargoRate}/kg מטען</span>
-      <span class="cf-price-live">✅ מחירים דינמיים</span>
-    </div>
-
-    <!-- Two-column Income / Expense -->
     <div class="cf-fin-grid">
       <div class="cf-fin-col">
         <div class="cf-fin-col-title cf-income-title">📈 ${L.revenues}</div>
@@ -1258,7 +1266,7 @@ function buildFinancialHTML(d, fin, showPenalty) {
           <span class="value-positive">+${fmt(fin.ticketRevenue)}</span>
         </div>
         ${fin.cargoRevenue > 0 ? `<div class="cf-fin-row">
-          <span>📦 ${(d.payload||0).toLocaleString()}kg</span>
+          <span>📦 ${(d.payload||0).toLocaleString()} kg</span>
           <span class="value-positive">+${fmt(fin.cargoRevenue)}</span>
         </div>` : ''}
         <div class="cf-fin-subtotal cf-income-sub">
@@ -1295,7 +1303,6 @@ function buildFinancialHTML(d, fin, showPenalty) {
       </div>
     </div>
 
-    <!-- Net Profit Big Display -->
     <div class="cf-net-profit ${isPos ? 'cf-net-pos' : 'cf-net-neg'}">
       <span class="cf-net-label">${L.netProfit}</span>
       <span class="cf-net-value">${isPos ? '+' : '-'}${fmt(fin.netProfit)} ${isPos ? '✅' : '❌'}</span>

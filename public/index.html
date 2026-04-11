@@ -78,6 +78,7 @@
 
     <!-- Current Flight Panel -->
     <div class="current-flight" id="currentFlightPanel" style="display:none">
+
       <!-- Route Header -->
       <div class="route-header">
         <div class="route-display">
@@ -91,28 +92,49 @@
         <div class="cf-aircraft-tag" id="cfAircraftTag"></div>
       </div>
 
-      <!-- Stats Row -->
-      <div class="cf-stats-row" id="cfStatsRow"></div>
+      <!-- SECTION 1: Dynamic Pricing Analysis -->
+      <div class="cf-panel-section cf-section-pricing">
+        <div class="cf-panel-section-header">
+          <span class="cf-panel-section-icon">💹</span>
+          <span class="cf-panel-section-title">ניתוח תמחור דינמי</span>
+          <span class="cf-price-live-badge">✅ מחירים עודכנו</span>
+        </div>
+        <div class="cf-pricing-grid" id="cfPricingGrid"></div>
+      </div>
 
-      <!-- Utilization (Rating Data) -->
-      <div class="cf-section-label">📊 ניצולת — נתוני דירוג</div>
-      <div class="cf-util-grid" id="cfUtilGrid"></div>
+      <!-- SECTION 2: Flight Data -->
+      <div class="cf-panel-section cf-section-flight">
+        <div class="cf-panel-section-header">
+          <span class="cf-panel-section-icon">✈️</span>
+          <span class="cf-panel-section-title">נתוני הטיסה</span>
+        </div>
+        <div class="cf-stats-row" id="cfStatsRow"></div>
+      </div>
 
-      <!-- Conditions (Rating Data) -->
-      <div class="cf-conditions" id="cfConditions"></div>
+      <!-- SECTION 3: Rating Data -->
+      <div class="cf-panel-section cf-section-rating">
+        <div class="cf-panel-section-header">
+          <span class="cf-panel-section-icon">⭐</span>
+          <span class="cf-panel-section-title">נתוני דירוג</span>
+        </div>
+        <div class="cf-util-grid" id="cfUtilGrid"></div>
+        <div class="cf-conditions" id="cfConditions"></div>
+      </div>
 
-      <!-- Financial Analysis -->
-      <div class="financial-analysis">
-        <div class="financial-title">💰 <span id="finAnalysisTitle">ניתוח פיננסי</span></div>
+      <!-- SECTION 4: Financial Calculation -->
+      <div class="cf-panel-section cf-section-financial">
+        <div class="cf-panel-section-header">
+          <span class="cf-panel-section-icon">💰</span>
+          <span class="cf-panel-section-title" id="finAnalysisTitle">חישוב פיננסי</span>
+        </div>
         <div id="finAnalysisContent"></div>
       </div>
 
       <!-- Confirm Button -->
-      <div style="text-align:center;margin-top:16px">
-        <button class="btn btn-success cf-land-btn" onclick="openConfirmModal()">
-          🛬 <span id="confirmBtnText">אשר נחיתה</span>
-        </button>
-      </div>
+      <button class="btn btn-success cf-land-btn" onclick="openConfirmModal()">
+        🛬 <span id="confirmBtnText">אשר נחיתה</span>
+      </button>
+
     </div>
 
     <!-- Stats Grid -->
