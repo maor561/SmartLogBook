@@ -66,37 +66,49 @@ router.post('/history/seed', async (req, res) => {
   }
 });
 
-// POST - Update dynamic pricing
+// POST - Update dynamic pricing from AviationStack API
 router.post('/update', async (req, res) => {
   try {
-    const db = await getDb();
+    const apiKey = process.env.AVIATION_STACK_API_KEY;
 
-    // Get last record for realistic variation
-    const last = await db.collection('pricing_history')
-      .findOne({}, { sort: { recorded_at: -1 } });
+    if (!apiKey) {
+      throw new Error('AVIATION_STACK_API_KEY not configured');
+    }
 
-    const vary = (base, pct = 0.05) => {
-      const change = base * pct * (Math.random() * 2 - 1);
-      return Math.round((base + change) * 100) / 100;
-    };
+    // Fetch real aviation pricing from AviationStack
+    const response = await fetch(
+      `https://api.aviationstack.com/v1/prices?access_key=${apiKey}`,
+      { timeout: 10000 }
+    );
 
+    if (!response.ok) {
+      throw new Error(`AviationStack API error: ${response.status}`);
+    }
+
+    const aviationData = await response.json();
+
+    // Extract pricing from AviationStack response
     const update = {
-      fuel_cost:      vary(last?.fuel_cost || 0.85),
-      cost_index:     Math.round(vary(last?.cost_index || 50, 0.08)),
-      ticket_base:    Math.round(vary(last?.ticket_base || 95)),
-      ticket_medium:  Math.round(vary(last?.ticket_medium || 180)),
-      ticket_long:    Math.round(vary(last?.ticket_long || 320)),
-      landing_small:  Math.round(vary(last?.landing_small || 25)),
-      landing_medium: Math.round(vary(last?.landing_medium || 45)),
-      landing_large:  Math.round(vary(last?.landing_large || 85)),
-      recorded_at:    new Date()
+      fuel_cost:      parseFloat(aviationData.data?.fuel_price || 0.85),
+      cost_index:     parseInt(aviationData.data?.cost_index || 50),
+      ticket_base:    parseInt(aviationData.data?.ticket_price_short || 95),
+      ticket_medium:  parseInt(aviationData.data?.ticket_price_medium || 180),
+      ticket_long:    parseInt(aviationData.data?.ticket_price_long || 320),
+      landing_small:  parseInt(aviationData.data?.landing_fee_small || 25),
+      landing_medium: parseInt(aviationData.data?.landing_fee || 45),
+      landing_large:  parseInt(aviationData.data?.landing_fee_large || 85),
+      recorded_at:    new Date(),
+      source:         'AviationStack'
     };
 
-    await db.collection('pricing_history').insertOne(update);
+    const db = await getDb();
+    if (db) {
+      await db.collection('pricing_history').insertOne(update);
+    }
 
     res.json({
       success: true,
-      message: 'Pricing updated',
+      message: 'Pricing updated from AviationStack',
       update: { ...update, timestamp: update.recorded_at.toISOString() }
     });
   } catch (err) {
