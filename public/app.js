@@ -1105,19 +1105,28 @@ async function loadFromSimbrief() {
       showToast('⚠️ ' + flightErrors[0], 'warning');
     }
 
-    // Auto-load dynamic pricing before displaying flight
+    // Auto-capture real-time pricing for this flight (EIA real fuel price)
     try {
       const pricingRes = await fetch('/api/pricing/update', { method: 'POST' });
       const pricingData = await pricingRes.json();
-      if (pricingData.success) {
-        const newSettings = await API.getSettings();
-        if (newSettings.pricing) {
-          pricing = { ...pricing, ...newSettings.pricing };
-        }
-        console.log('[Pricing] Auto-updated: cost index', pricingData.update?.costIndex, 'fuel', pricingData.update?.fuelCost);
+      if (pricingData.success && pricingData.update) {
+        const pu = pricingData.update;
+        const dist = currentFlightData.distance || 0;
+
+        // Save ACTUAL prices captured at this moment with the flight
+        currentFlightData.actualFuelCost        = pu.fuelCost;
+        currentFlightData.actualTicketPrice     = dist <= 500  ? pu.ticketBase
+                                                : dist <= 2000 ? pu.ticketMedium
+                                                :                pu.ticketLong;
+        currentFlightData.actualLandingFee      = getLandingFeeFromUpdateCamelCase(currentFlightData.aircraft || 'B738', pu);
+        currentFlightData.actualMaintenanceCost = 180;
+        currentFlightData.pricingTimestamp      = new Date().toISOString();
+        currentFlightData.pricingSource         = pu.source || 'EIA';
+
+        console.log(`[Pricing] ✅ Auto-captured: fuel $${pu.fuelCost}/kg | ticket $${currentFlightData.actualTicketPrice}/pax | source: ${pu.source}`);
       }
     } catch (e) {
-      console.warn('[Pricing] Auto-update failed, using cached prices:', e);
+      console.warn('[Pricing] Auto-capture failed, using defaults:', e);
     }
 
     displayCurrentFlight();
@@ -1145,22 +1154,33 @@ function displayCurrentFlight() {
     ? `${d.originName} → ${d.destName}` : '';
   document.getElementById('cfAircraftTag').textContent = d.aircraft;
 
-  // SECTION 1: Dynamic pricing — calculated in real-time for THIS flight
-  const ticketPriceNow  = getTicketPrice(d.distance || 0);
-  const durationHours   = (d.durationMins || 0) / 60;
+  // SECTION 1: Dynamic pricing — use ACTUAL captured prices if available, else defaults
+  const fuelRate      = d.actualFuelCost        || pricing.fuelCost        || 0.85;
+  const ticketPrice   = d.actualTicketPrice     || getTicketPrice(d.distance || 0);
+  const landingFee    = d.actualLandingFee       || getLandingFee(d.aircraft || 'B738');
+  const maintRate     = d.actualMaintenanceCost  || pricing.maintenanceCost || 180;
+  const durationHours = (d.durationMins || 0) / 60;
 
-  const calcFuelCost    = Math.round((d.fuel        || 0) * (pricing.fuelCost        || 0.85));
-  const calcTicketRev   = Math.round((d.passengers  || 0) * ticketPriceNow);
-  const calcCargoRev    = Math.round((d.payload      || 0) * (pricing.cargoRate       || 2.0));
-  const calcMaintCost   = Math.round(durationHours          * (pricing.maintenanceCost || 180));
+  const calcFuelCost  = Math.round((d.fuel       || 0) * fuelRate);
+  const calcTicketRev = Math.round((d.passengers || 0) * ticketPrice);
+  const calcCargoRev  = Math.round((d.payload    || 0) * (pricing.cargoRate || 2.0));
+  const calcMaintCost = Math.round(durationHours        * maintRate);
 
-  const fmtAmt = n => `$${Math.abs(n).toLocaleString()}`;
+  const fmtAmt  = n => `$${Math.abs(n).toLocaleString()}`;
+  const isReal  = !!d.actualFuelCost;
+  const srcBadge = isReal
+    ? `<span style="color:#10b981;font-size:0.75rem;font-weight:600">✅ ${d.pricingSource || 'EIA'} - בזמן אמת</span>`
+    : `<span style="color:#f59e0b;font-size:0.75rem">⏳ טוען מחירים...</span>`;
+
+  // Update badge in section header
+  const liveBadgeEl = document.querySelector('.cf-price-live-badge');
+  if (liveBadgeEl) liveBadgeEl.innerHTML = srcBadge;
 
   document.getElementById('cfPricingGrid').innerHTML = [
-    { icon: '⛽', label: 'עלות דלק',    value: fmtAmt(calcFuelCost),  sub: `${pricing.fuelCost||0.85}$/kg × ${(d.fuel||0).toLocaleString()}kg`,  color: '#ef4444' },
-    { icon: '🪑', label: 'הכנסת כרטיסים', value: fmtAmt(calcTicketRev), sub: `${ticketPriceNow}$/pax × ${d.passengers||0} נוסעים`,               color: '#10b981' },
-    { icon: '📦', label: 'הכנסת מטען',  value: fmtAmt(calcCargoRev),  sub: `${pricing.cargoRate||2}$/kg × ${(d.payload||0).toLocaleString()}kg`,  color: '#10b981' },
-    { icon: '🔧', label: 'עלות תחזוקה', value: fmtAmt(calcMaintCost), sub: `${pricing.maintenanceCost||180}$/h × ${durationHours.toFixed(1)}h`,   color: '#ef4444' },
+    { icon: '⛽', label: 'עלות דלק',       value: fmtAmt(calcFuelCost),  sub: `${fuelRate.toFixed(2)}$/kg × ${(d.fuel||0).toLocaleString()}kg`,    color: '#ef4444' },
+    { icon: '🪑', label: 'הכנסת כרטיסים',  value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים`,                   color: '#10b981' },
+    { icon: '📦', label: 'הכנסת מטען',     value: fmtAmt(calcCargoRev),  sub: `${pricing.cargoRate||2}$/kg × ${(d.payload||0).toLocaleString()}kg`, color: '#10b981' },
+    { icon: '🔧', label: 'עלות תחזוקה',    value: fmtAmt(calcMaintCost), sub: `${maintRate}$/h × ${durationHours.toFixed(1)}h`,                     color: '#ef4444' },
   ].map(p => `
     <div class="cf-price-tile">
       <div class="cf-price-tile-icon">${p.icon}</div>
