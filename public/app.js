@@ -2949,15 +2949,20 @@ function generateReport() {
   const deltaColor = (cur, prev) => cur >= prev ? '#16a34a' : '#dc2626';
 
   // ── Cost breakdown (dynamic pricing model) ──
+  // Use actual captured costs from flights when available, else calculate
+  const totalActualFuel = flights.reduce((s, f) => s + (f.actualFuelCost ? f.fuel * f.actualFuelCost : f.fuel * (pricing.fuelCost || 0.85)), 0);
+  const totalActualMaintenance = flights.reduce((s, f) => s + (f.actualMaintenanceCost || Math.round((f.durationMins / 60) * (pricing.maintenanceCost || 180))), 0);
+  const totalActualCargo = flights.reduce((s, f) => s + (f.payload * (f.actualCargoRate || pricing.cargoRate || 2.0)), 0);
+
+  // For backward compatibility, also calculate with old method
   const fuelCostPerKg = 0.85;
   const crewCostPerHour = 450;
   const landingFeeBase = 800;
-  const maintenancePct = 0.03;
 
-  const costFuel        = Math.round(totalFuel * fuelCostPerKg);
-  const costCrew        = Math.round((totalMins / 60) * crewCostPerHour);
+  const costFuel        = Math.round(totalActualFuel > 0 ? totalActualFuel : (totalFuel * fuelCostPerKg));
+  const costCrew        = 0;  // Already included in actualMaintenanceCost
   const costLanding     = Math.round(totalFlights * landingFeeBase);
-  const costMaintenance = Math.round(Math.abs(totalProfit) * maintenancePct + costFuel * 0.05);
+  const costMaintenance = Math.round(totalActualMaintenance > 0 ? totalActualMaintenance : Math.round((totalMins / 60) * (pricing.maintenanceCost || 180)));
   const totalCosts      = costFuel + costCrew + costLanding + costMaintenance;
   const totalRevenue    = totalProfit + totalCosts;
   const profitMargin    = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
