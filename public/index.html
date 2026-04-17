@@ -237,47 +237,84 @@
   <!-- PRICING ANALYTICS TAB -->
   <div class="tab-content" id="pricing">
     <div style="padding: 16px;">
-      <h2>📊 ניתוח מחירים דינמיים</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 16px;">צפה בשינויים בעלויות ובמדדים לאורך זמן</p>
+      <h2>📊 ניתוח פיננסי בזמן אמת</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 16px;">עלויות והכנסות מחושבות מנתוני הטיסות האמיתיים</p>
 
       <!-- Period Selector -->
-      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-        <button class="btn btn-secondary" onclick="loadPricingHistory(7)" style="flex: 1;">7 ימים</button>
-        <button class="btn btn-secondary" onclick="loadPricingHistory(30)" style="flex: 1;">30 ימים</button>
-        <button class="btn btn-secondary" onclick="loadPricingHistory(90)" style="flex: 1;">90 ימים</button>
+      <div class="pricing-period-bar" style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button class="btn btn-secondary pricing-period-btn" onclick="loadPricingHistory(7)" data-days="7" style="flex: 1;">7 ימים</button>
+        <button class="btn btn-secondary pricing-period-btn" onclick="loadPricingHistory(30)" data-days="30" style="flex: 1;">30 ימים</button>
+        <button class="btn btn-secondary pricing-period-btn active" onclick="loadPricingHistory(90)" data-days="90" style="flex: 1;">90 ימים</button>
+        <button class="btn btn-secondary pricing-period-btn" onclick="loadPricingHistory(9999)" data-days="9999" style="flex: 1;">הכל</button>
+      </div>
+
+      <!-- KPI Summary Row -->
+      <div id="pricingSummaryRow" style="display:none; gap:10px; margin-bottom:16px; grid-template-columns:repeat(4,1fr);">
+        <div class="pricing-kpi-card">
+          <div class="pricing-kpi-icon">⛽</div>
+          <div class="pricing-kpi-value" id="pkpiTotalFuel">$0</div>
+          <div class="pricing-kpi-label">עלות דלק</div>
+        </div>
+        <div class="pricing-kpi-card">
+          <div class="pricing-kpi-icon">🎫</div>
+          <div class="pricing-kpi-value" id="pkpiTotalRevenue">$0</div>
+          <div class="pricing-kpi-label">הכנסות</div>
+        </div>
+        <div class="pricing-kpi-card">
+          <div class="pricing-kpi-icon">🔧</div>
+          <div class="pricing-kpi-value" id="pkpiTotalCosts">$0</div>
+          <div class="pricing-kpi-label">עלויות תפעול</div>
+        </div>
+        <div class="pricing-kpi-card pricing-kpi-profit">
+          <div class="pricing-kpi-icon">💰</div>
+          <div class="pricing-kpi-value" id="pkpiNetProfit">$0</div>
+          <div class="pricing-kpi-label">רווח נקי</div>
+        </div>
       </div>
 
       <!-- Charts Container - 2x2 Grid -->
-      <div id="pricingChartsContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 100%;">
+      <div id="pricingChartsContainer" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 100%;">
         <!-- Fuel Cost Chart -->
-        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
-          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">⛽ עלות דלק</h3>
+        <div class="pricing-chart-card">
+          <div class="pricing-chart-header">
+            <span>⛽ עלות דלק לטיסה</span>
+            <span class="pricing-chart-unit" id="pcUnitFuel"></span>
+          </div>
           <canvas id="fuelCostChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
         </div>
 
-        <!-- Cost Index Chart -->
-        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
-          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">📈 מדד עלויות</h3>
+        <!-- Revenue Chart (was Cost Index) -->
+        <div class="pricing-chart-card">
+          <div class="pricing-chart-header">
+            <span>💰 הכנסות לטיסה</span>
+            <span class="pricing-chart-unit" id="pcUnitRevenue"></span>
+          </div>
           <canvas id="costIndexChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
         </div>
 
-        <!-- Ticket Prices Chart -->
-        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
-          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">🎫 מחירי כרטיסים</h3>
+        <!-- Net Profit Chart (was Ticket Prices) -->
+        <div class="pricing-chart-card">
+          <div class="pricing-chart-header">
+            <span>📈 רווח נקי לטיסה</span>
+            <span class="pricing-chart-unit" id="pcUnitProfit"></span>
+          </div>
           <canvas id="ticketPricesChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
         </div>
 
-        <!-- Landing Fees Chart -->
-        <div style="background: var(--bg-secondary); padding: 10px; border-radius: 8px; min-width: 0;">
-          <h3 style="margin: 0 0 6px 0; font-size: 0.85rem;">🛬 עמלות נחיתה</h3>
+        <!-- Operating Costs Chart (was Landing Fees) -->
+        <div class="pricing-chart-card">
+          <div class="pricing-chart-header">
+            <span>🔧 עלויות תפעול לטיסה</span>
+            <span class="pricing-chart-unit" id="pcUnitCosts"></span>
+          </div>
           <canvas id="landingFeesChart" width="400" height="130" style="display: block; width: 100% !important; height: auto !important;"></canvas>
         </div>
       </div>
 
       <!-- Loading State -->
       <div id="pricingLoadingState" style="text-align: center; padding: 32px; color: var(--text-secondary);">
-        <p>⏳ לא קיימת היסטוריית מחירים עדיין</p>
-        <p style="font-size: 0.9rem;">לחץ על "עדכן מחירים" בהגדרות כדי להתחיל</p>
+        <p>⏳ אין טיסות בתקופה שנבחרה</p>
+        <p style="font-size: 0.9rem;">הוסף טיסות כדי לראות ניתוח פיננסי בזמן אמת</p>
       </div>
     </div>
   </div>

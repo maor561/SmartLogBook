@@ -2469,202 +2469,223 @@ function formatChartLabel(dateStr, days) {
 }
 
 async function loadPricingHistory(days = 30) {
-  selectedPricingDays = days;  // Save selected period
-  try {
-    const container = document.getElementById('pricingChartsContainer');
-    const loadingState = document.getElementById('pricingLoadingState');
+  selectedPricingDays = days;
 
-    loadingState.style.display = 'block';
-    container.style.display = 'none';
+  // Highlight active period button
+  document.querySelectorAll('.pricing-period-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.days) === days);
+  });
 
-    const r = await fetch(`/api/pricing/history?days=${days}`);
-    const data = await r.json();
+  const container   = document.getElementById('pricingChartsContainer');
+  const loadingState = document.getElementById('pricingLoadingState');
+  const summaryRow   = document.getElementById('pricingSummaryRow');
 
-    if (!data || !data.history || data.history.length === 0) {
-      loadingState.style.display = 'block';
-      return;
-    }
+  // --- Filter flights by period ---
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - (days >= 9999 ? 99999 : days));
 
-    loadingState.style.display = 'none';
-    container.style.display = 'grid';
+  const periodFlights = (flights || [])
+    .filter(f => new Date(f.date) >= cutoff)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Process data - Format labels based on selected time period
-    const labels = data.history.map(h => formatChartLabel(h.recorded_at, days));
-
-    // Destroy existing charts
-    Object.values(pricingCharts).forEach(chart => chart.destroy?.());
-    pricingCharts = {};
-
-    // Fuel Cost Chart
-    const fuelCtx = document.getElementById('fuelCostChart').getContext('2d');
-    pricingCharts.fuel = new Chart(fuelCtx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: '⛽ עלות דלק ($/ק"ג)',
-          data: data.history.map(h => parseFloat(h.fuel_cost)),
-          borderColor: '#f97316',
-          backgroundColor: 'rgba(249,115,22,0.1)',
-          tension: 0.4,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: {
-            ticks: {
-              maxTicksLimit: 5,
-              autoSkip: true,
-              maxRotation: 0,
-              font: { size: 10 }
-            }
-          },
-          y: {
-            ticks: {
-              font: { size: 10 }
-            }
-          }
-        }
-      }
-    });
-
-    // Cost Index Chart
-    const indexCtx = document.getElementById('costIndexChart').getContext('2d');
-    pricingCharts.index = new Chart(indexCtx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: '📈 מדד עלויות',
-          data: data.history.map(h => parseFloat(h.cost_index)),
-          borderColor: '#8b5cf6',
-          backgroundColor: 'rgba(139,92,246,0.1)',
-          tension: 0.4,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: {
-            ticks: {
-              maxTicksLimit: 5,
-              autoSkip: true,
-              maxRotation: 0,
-              font: { size: 10 }
-            }
-          },
-          y: {
-            ticks: {
-              font: { size: 10 }
-            }
-          }
-        }
-      }
-    });
-
-    // Ticket Prices Chart
-    const ticketCtx = document.getElementById('ticketPricesChart').getContext('2d');
-    pricingCharts.tickets = new Chart(ticketCtx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'טיסה קצרה',
-            data: data.history.map(h => parseFloat(h.ticket_base)),
-            borderColor: '#3b82f6',
-            tension: 0.4
-          },
-          {
-            label: 'טיסה בינונית',
-            data: data.history.map(h => parseFloat(h.ticket_medium)),
-            borderColor: '#06b6d4',
-            tension: 0.4
-          },
-          {
-            label: 'טיסה ארוכה',
-            data: data.history.map(h => parseFloat(h.ticket_long)),
-            borderColor: '#10b981',
-            tension: 0.4
-          }
-        ]
-      },
-      options: {
-        responsive: false,
-        scales: {
-          x: {
-            ticks: {
-              maxTicksLimit: 5,
-              autoSkip: true,
-              maxRotation: 0,
-              font: { size: 10 }
-            }
-          },
-          y: {
-            ticks: {
-              font: { size: 10 }
-            }
-          }
-        }
-      }
-    });
-
-    // Landing Fees Chart
-    const landingCtx = document.getElementById('landingFeesChart').getContext('2d');
-    pricingCharts.landing = new Chart(landingCtx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'קטנה',
-            data: data.history.map(h => parseFloat(h.landing_small)),
-            borderColor: '#ec4899',
-            tension: 0.4
-          },
-          {
-            label: 'בינונית',
-            data: data.history.map(h => parseFloat(h.landing_medium)),
-            borderColor: '#f59e0b',
-            tension: 0.4
-          },
-          {
-            label: 'גדולה',
-            data: data.history.map(h => parseFloat(h.landing_large)),
-            borderColor: '#ef4444',
-            tension: 0.4
-          }
-        ]
-      },
-      options: {
-        responsive: false,
-        scales: {
-          x: {
-            ticks: {
-              maxTicksLimit: 5,
-              autoSkip: true,
-              maxRotation: 0,
-              font: { size: 10 }
-            }
-          },
-          y: {
-            ticks: {
-              font: { size: 10 }
-            }
-          }
-        }
-      }
-    });
-
-  } catch (err) {
-    console.error('Pricing history error:', err);
-    document.getElementById('pricingLoadingState').innerHTML = '❌ שגיאה בטעינת היסטוריה';
+  if (periodFlights.length === 0) {
+    loadingState.style.display  = 'block';
+    loadingState.innerHTML = `
+      <p>⏳ אין טיסות ב${days >= 9999 ? 'מאגר' : `-${days} הימים האחרונים`}</p>
+      <p style="font-size:0.9rem;">הוסף טיסות כדי לראות ניתוח פיננסי בזמן אמת</p>`;
+    container.style.display  = 'none';
+    summaryRow.style.display = 'none';
+    return;
   }
+
+  loadingState.style.display  = 'none';
+  container.style.display     = 'grid';
+  summaryRow.style.display    = 'grid';
+
+  // --- Per-flight calculations ---
+  const fuelRate        = pricing.fuelCost        || 0.85;
+  const cargoRate       = pricing.cargoRate        || 2.0;
+  const maintRate       = pricing.maintenanceCost  || 180;
+
+  const fuelCosts       = periodFlights.map(f => Math.round((f.fuel     || 0) * fuelRate));
+  const ticketRevenues  = periodFlights.map(f => Math.round((f.passengers || 0) * getTicketPrice(f.distance || 0)));
+  const cargoRevenues   = periodFlights.map(f => Math.round((f.payload   || 0) * cargoRate));
+  const maintCosts      = periodFlights.map(f => Math.round(((f.durationMins || 0) / 60) * maintRate));
+  const landingFees     = periodFlights.map(f => getLandingFee(f.aircraft || 'B738'));
+
+  const totalRevenues   = periodFlights.map((_, i) => ticketRevenues[i] + cargoRevenues[i]);
+  const totalOpCosts    = periodFlights.map((_, i) => maintCosts[i] + landingFees[i]);
+  const netProfits      = periodFlights.map((_, i) => totalRevenues[i] - fuelCosts[i] - totalOpCosts[i]);
+
+  // --- KPI Summary ---
+  const sumFuel    = fuelCosts.reduce((s, v) => s + v, 0);
+  const sumRev     = totalRevenues.reduce((s, v) => s + v, 0);
+  const sumOpCosts = totalOpCosts.reduce((s, v) => s + v, 0);
+  const sumProfit  = netProfits.reduce((s, v) => s + v, 0);
+
+  const fmt = v => v >= 1000000 ? `$${(v/1000000).toFixed(1)}M`
+                 : v >= 1000    ? `$${(v/1000).toFixed(0)}K`
+                 : `$${v}`;
+
+  document.getElementById('pkpiTotalFuel').textContent    = fmt(sumFuel);
+  document.getElementById('pkpiTotalRevenue').textContent = fmt(sumRev);
+  document.getElementById('pkpiTotalCosts').textContent   = fmt(sumOpCosts);
+  const profitEl = document.getElementById('pkpiNetProfit');
+  profitEl.textContent = fmt(sumProfit);
+  profitEl.style.color = sumProfit >= 0 ? '#10b981' : '#ef4444';
+
+  // --- Chart labels ---
+  const labels = periodFlights.map(f => {
+    const d = new Date(f.date);
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  });
+
+  // --- Chart options helpers ---
+  const isDark    = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  const makeYTicks = () => ({
+    font: { size: 10 }, color: textColor,
+    callback: v => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`
+  });
+  const makeXTicks = () => ({
+    maxTicksLimit: 8, autoSkip: true, maxRotation: 0,
+    font: { size: 10 }, color: textColor
+  });
+  const baseScales = () => ({
+    x: { ticks: makeXTicks(), grid: { color: gridColor } },
+    y: { ticks: makeYTicks(), grid: { color: gridColor } }
+  });
+  const basePlugins = (legendDisplay = false) => ({
+    legend: {
+      display: legendDisplay,
+      labels: { color: textColor, font: { size: 11 }, boxWidth: 12 }
+    },
+    tooltip: {
+      callbacks: {
+        title: ctx => {
+          const f = periodFlights[ctx[0].dataIndex];
+          return `${f.origin}→${f.destination} · ${labels[ctx[0].dataIndex]}`;
+        },
+        label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}`
+      }
+    }
+  });
+
+  // Destroy existing charts
+  Object.values(pricingCharts).forEach(c => c.destroy?.());
+  pricingCharts = {};
+
+  // === CHART 1: Fuel cost per flight ===
+  document.getElementById('pcUnitFuel').textContent = `ממוצע: ${fmt(Math.round(sumFuel / periodFlights.length))}`;
+  pricingCharts.fuel = new Chart(
+    document.getElementById('fuelCostChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'עלות דלק',
+          data: fuelCosts,
+          backgroundColor: 'rgba(249,115,22,0.75)',
+          borderColor: '#f97316',
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: { responsive: false, plugins: basePlugins(), scales: baseScales() }
+    }
+  );
+
+  // === CHART 2: Revenue per flight (tickets + cargo stacked) ===
+  document.getElementById('pcUnitRevenue').textContent = `ממוצע: ${fmt(Math.round(sumRev / periodFlights.length))}`;
+  pricingCharts.revenue = new Chart(
+    document.getElementById('costIndexChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'כרטיסים',
+            data: ticketRevenues,
+            backgroundColor: 'rgba(59,130,246,0.75)',
+            borderColor: '#3b82f6',
+            borderWidth: 1,
+            borderRadius: 0
+          },
+          {
+            label: 'מטען',
+            data: cargoRevenues,
+            backgroundColor: 'rgba(16,185,129,0.75)',
+            borderColor: '#10b981',
+            borderWidth: 1,
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: false,
+        plugins: basePlugins(true),
+        scales: { ...baseScales(), x: { ...baseScales().x, stacked: true }, y: { ...baseScales().y, stacked: true } }
+      }
+    }
+  );
+
+  // === CHART 3: Net profit per flight (green/red bars) ===
+  const profitColors = netProfits.map(v => v >= 0 ? 'rgba(16,185,129,0.8)' : 'rgba(239,68,68,0.8)');
+  const profitBorders = netProfits.map(v => v >= 0 ? '#10b981' : '#ef4444');
+  document.getElementById('pcUnitProfit').textContent = `סה"כ: ${fmt(sumProfit)}`;
+  pricingCharts.profit = new Chart(
+    document.getElementById('ticketPricesChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'רווח נקי',
+          data: netProfits,
+          backgroundColor: profitColors,
+          borderColor: profitBorders,
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: { responsive: false, plugins: basePlugins(), scales: baseScales() }
+    }
+  );
+
+  // === CHART 4: Operating costs (maintenance + landing stacked) ===
+  document.getElementById('pcUnitCosts').textContent = `ממוצע: ${fmt(Math.round(sumOpCosts / periodFlights.length))}`;
+  pricingCharts.costs = new Chart(
+    document.getElementById('landingFeesChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'תחזוקה',
+            data: maintCosts,
+            backgroundColor: 'rgba(139,92,246,0.75)',
+            borderColor: '#8b5cf6',
+            borderWidth: 1,
+            borderRadius: 0
+          },
+          {
+            label: 'עמלת נחיתה',
+            data: landingFees,
+            backgroundColor: 'rgba(245,158,11,0.75)',
+            borderColor: '#f59e0b',
+            borderWidth: 1,
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: false,
+        plugins: basePlugins(true),
+        scales: { ...baseScales(), x: { ...baseScales().x, stacked: true }, y: { ...baseScales().y, stacked: true } }
+      }
+    }
+  );
 }
 
 // ===== EXCEL =====
