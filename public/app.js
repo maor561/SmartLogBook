@@ -1277,17 +1277,21 @@ function displayCurrentFlight() {
 
 // ===== FINANCIAL CALCULATIONS =====
 function calcFinancials(d, fpm) {
-  const ticketPrice = getTicketPrice(d.distance || 0);
-  const landingFee = getLandingFee(d.aircraft || '');
+  const ticketPrice = d.actualTicketPrice || getTicketPrice(d.distance || 0);
+  const landingFee = d.actualLandingFee || getLandingFee(d.aircraft || '');
+  const cargoRate = d.actualCargoRate || pricing.cargoRate;
+  const fuelCost = d.actualFuelCost || pricing.fuelCost;
 
   const ticketRevenue = d.passengers * ticketPrice;
-  const cargoRevenue = (d.payload || 0) * pricing.cargoRate;
+  const cargoRevenue = (d.payload || 0) * cargoRate;
   const totalIncome = ticketRevenue + cargoRevenue;
 
-  const fuelExpense = d.fuel * pricing.fuelCost;
-  const crewExpense = pricing.crewCost;
+  const fuelExpense = d.fuel * fuelCost;
   const landingExpense = landingFee;
-  const maintenanceExpense = (d.durationMins / 60) * pricing.maintenanceCost;
+  // Use actualMaintenanceCost if captured (includes crew costs), else calculate from hourly rate
+  const maintenanceExpense = d.actualMaintenanceCost || ((d.durationMins / 60) * pricing.maintenanceCost);
+  // crewExpense is only added if using fallback hourly calculation (not included in actualMaintenanceCost)
+  const crewExpense = d.actualMaintenanceCost ? 0 : pricing.crewCost;
   const penalty = Math.abs(fpm) > 400 ? pricing.landingPenalty : 0;
   const totalExpenses = fuelExpense + crewExpense + landingExpense + maintenanceExpense + penalty;
   const netProfit = Math.round(totalIncome - totalExpenses);
@@ -1323,10 +1327,10 @@ function buildFinancialHTML(d, fin, showPenalty) {
           <span>⛽ ${L.fuel}</span>
           <span class="value-negative">-${fmt(fin.fuelExpense)}</span>
         </div>
-        <div class="cf-fin-row">
+        ${fin.crewExpense > 0 ? `<div class="cf-fin-row">
           <span>👨‍✈️ ${L.crew}</span>
           <span class="value-negative">-${fmt(fin.crewExpense)}</span>
-        </div>
+        </div>` : ''}
         <div class="cf-fin-row">
           <span>🛬 ${L.landing}</span>
           <span class="value-negative">-${fmt(fin.landingExpense)}</span>
