@@ -2736,12 +2736,14 @@ async function loadPricingHistory(days = 30) {
   const textColor = isDark ? '#94a3b8' : '#64748b';
 
   const makeYTicks = () => ({
-    font: { size: 10 }, color: textColor,
-    callback: v => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`
+    font: { size: 12, weight: '500' }, color: textColor,
+    callback: v => v >= 1000 ? `$${(v/1000).toFixed(0)}K` : `$${v}`,
+    padding: 8
   });
   const makeXTicks = () => ({
     maxTicksLimit: 8, autoSkip: true, maxRotation: 0,
-    font: { size: 10 }, color: textColor
+    font: { size: 12, weight: '500' }, color: textColor,
+    padding: 6
   });
   const baseScales = () => ({
     x: { ticks: makeXTicks(), grid: { color: gridColor } },
