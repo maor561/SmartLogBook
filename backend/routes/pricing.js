@@ -142,10 +142,24 @@ router.post('/update', async (req, res) => {
       await db.collection('pricing_history').insertOne(update);
     }
 
+    // Convert response to camelCase for frontend compatibility
+    const camelCaseUpdate = {
+      fuelCost: update.fuel_cost,
+      costIndex: update.cost_index,
+      ticketBase: update.ticket_base,
+      ticketMedium: update.ticket_medium,
+      ticketLong: update.ticket_long,
+      landingSmall: update.landing_small,
+      landingMedium: update.landing_medium,
+      landingLarge: update.landing_large,
+      timestamp: update.recorded_at.toISOString(),
+      source: update.source
+    };
+
     res.json({
       success: true,
       message: `Pricing updated from ${source}`,
-      update: { ...update, timestamp: update.recorded_at.toISOString() }
+      update: camelCaseUpdate
     });
   } catch (err) {
     console.error('[Pricing Update Error]', err);

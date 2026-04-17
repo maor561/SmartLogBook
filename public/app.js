@@ -1402,11 +1402,18 @@ async function updateCurrentFlightPricing() {
 
     // Store actual prices in currentFlightData
     const distance = currentFlightData.distance || 0;
-    currentFlightData.actualFuelCost = pricing_update.fuel_cost;
-    currentFlightData.actualTicketPrice = distance <= 500 ? pricing_update.ticket_base
-                                         : distance <= 2000 ? pricing_update.ticket_medium
-                                         : pricing_update.ticket_long;
-    currentFlightData.actualLandingFee = getLandingFeeFromUpdate(currentFlightData.aircraft || 'B738', pricing_update);
+    currentFlightData.actualFuelCost = pricing_update.fuelCost;
+    currentFlightData.actualTicketPrice = distance <= 500 ? pricing_update.ticketBase
+                                         : distance <= 2000 ? pricing_update.ticketMedium
+                                         : pricing_update.ticketLong;
+
+    // Map camelCase landing fees back to getLandingFeeFromUpdate format
+    const landingFeeMap = {
+      landing_large: pricing_update.landingLarge,
+      landing_medium: pricing_update.landingMedium,
+      landing_small: pricing_update.landingSmall
+    };
+    currentFlightData.actualLandingFee = getLandingFeeFromUpdateCamelCase(currentFlightData.aircraft || 'B738', pricing_update);
     currentFlightData.actualMaintenanceCost = 180; // Will be updated if API provides it
     currentFlightData.pricingTimestamp = new Date().toISOString();
 
@@ -1425,12 +1432,20 @@ async function updateCurrentFlightPricing() {
   }
 }
 
-// Helper: get landing fee from pricing update
+// Helper: get landing fee from pricing update (snake_case)
 function getLandingFeeFromUpdate(aircraft, pricingUpdate) {
   const code = (aircraft || '').toUpperCase();
   if (LARGE_AIRCRAFT.some(a => code.includes(a))) return pricingUpdate.landing_large || 600;
   if (SMALL_AIRCRAFT.some(a => code.includes(a))) return pricingUpdate.landing_small || 150;
   return pricingUpdate.landing_medium || 350;
+}
+
+// Helper: get landing fee from pricing update (camelCase)
+function getLandingFeeFromUpdateCamelCase(aircraft, pricingUpdate) {
+  const code = (aircraft || '').toUpperCase();
+  if (LARGE_AIRCRAFT.some(a => code.includes(a))) return pricingUpdate.landingLarge || 600;
+  if (SMALL_AIRCRAFT.some(a => code.includes(a))) return pricingUpdate.landingSmall || 150;
+  return pricingUpdate.landingMedium || 350;
 }
 
 // Display flight with DYNAMIC pricing (actual prices from API)
