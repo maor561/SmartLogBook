@@ -2689,109 +2689,366 @@ function generateReport() {
   const monthFlights = flights.filter(f => {
     const d = new Date(f.date);
     return d.getFullYear() === year && d.getMonth() + 1 === month;
-  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+  }).sort((a, b) => new Date(a.date) - new Date(b.date));
 
   if (monthFlights.length === 0) {
     showToast('❌ ' + (L.reportNoFlights || 'No flights this month'), 'error');
     return;
   }
 
-  // Summary stats
+  // ── Previous month for comparison ──
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear  = month === 1 ? year - 1 : year;
+  const prevFlights = flights.filter(f => {
+    const d = new Date(f.date);
+    return d.getFullYear() === prevYear && d.getMonth() + 1 === prevMonth;
+  });
+
+  // ── Totals ──
   const totalFlights = monthFlights.length;
-  const totalProfit = monthFlights.reduce((s, f) => s + (f.profit || 0), 0);
-  const totalMins = monthFlights.reduce((s, f) => s + (f.durationMins || 0), 0);
-  const totalFuel = monthFlights.reduce((s, f) => s + (f.fuel || 0), 0);
-  const totalPax = monthFlights.reduce((s, f) => s + (f.passengers || 0), 0);
-  const totalDist = monthFlights.reduce((s, f) => s + (f.distance || 0), 0);
-  const hours = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
+  const totalProfit  = monthFlights.reduce((s,f) => s+(f.profit||0), 0);
+  const totalMins    = monthFlights.reduce((s,f) => s+(f.durationMins||0), 0);
+  const totalFuel    = monthFlights.reduce((s,f) => s+(f.fuel||0), 0);
+  const totalPax     = monthFlights.reduce((s,f) => s+(f.passengers||0), 0);
+  const totalDist    = monthFlights.reduce((s,f) => s+(f.distance||0), 0);
+  const totalPayload = monthFlights.reduce((s,f) => s+(f.payload||0), 0);
+  const hours = Math.floor(totalMins/60), mins = totalMins%60;
 
-  // Top 5 routes by profit
+  // ── Prev month totals ──
+  const prevProfit = prevFlights.reduce((s,f) => s+(f.profit||0), 0);
+  const prevFlightCount = prevFlights.length;
+  const prevPax    = prevFlights.reduce((s,f) => s+(f.passengers||0), 0);
+
+  // ── Delta helpers ──
+  const delta = (cur, prev) => {
+    if (prev === 0) return cur > 0 ? '+100%' : '—';
+    const pct = Math.round(((cur - prev) / Math.abs(prev)) * 100);
+    return (pct >= 0 ? '+' : '') + pct + '%';
+  };
+  const deltaColor = (cur, prev) => cur >= prev ? '#16a34a' : '#dc2626';
+
+  // ── Cost breakdown (dynamic pricing model) ──
+  const fuelCostPerKg = 0.85;
+  const crewCostPerHour = 450;
+  const landingFeeBase = 800;
+  const maintenancePct = 0.03;
+
+  const costFuel        = Math.round(totalFuel * fuelCostPerKg);
+  const costCrew        = Math.round((totalMins / 60) * crewCostPerHour);
+  const costLanding     = Math.round(totalFlights * landingFeeBase);
+  const costMaintenance = Math.round(Math.abs(totalProfit) * maintenancePct + costFuel * 0.05);
+  const totalCosts      = costFuel + costCrew + costLanding + costMaintenance;
+  const totalRevenue    = totalProfit + totalCosts;
+  const profitMargin    = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
+  const roi             = totalCosts > 0 ? ((totalProfit / totalCosts) * 100).toFixed(1) : '0';
+
+  const costBar = (val) => {
+    const pct = totalCosts > 0 ? Math.round((val / totalCosts) * 100) : 0;
+    return `<div style="background:#e2e8f0;border-radius:4px;height:10px;margin-top:4px;overflow:hidden;">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#3b82f6,#6366f1);border-radius:4px;"></div></div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px;">${pct}% מסך עלויות</div>`;
+  };
+
+  // ── Landing quality ──
+  const fpms = monthFlights.filter(f => f.fpm && f.fpm !== 0);
+  const soft   = fpms.filter(f => Math.abs(f.fpm) <= 250).length;
+  const normal = fpms.filter(f => Math.abs(f.fpm) > 250 && Math.abs(f.fpm) <= 400).length;
+  const hard   = fpms.filter(f => Math.abs(f.fpm) > 400).length;
+  const avgFpm = fpms.length > 0 ? Math.round(fpms.reduce((s,f) => s+Math.abs(f.fpm),0)/fpms.length) : 0;
+  const safetyScore = fpms.length > 0 ? Math.round(((soft + normal*0.6) / fpms.length)*100) : 0;
+
+  const fpmBar = (count, total, color) => {
+    const pct = total > 0 ? Math.round((count/total)*100) : 0;
+    return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
+      <div style="width:80px;font-size:12px;color:#475569;">${count} (${pct}%)</div>
+      <div style="flex:1;background:#e2e8f0;border-radius:4px;height:10px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;"></div></div></div>`;
+  };
+
+  // ── Utilization ──
+  const maxPaxCapacity = Math.max(...monthFlights.map(f => f.aircraft_max_passengers || 180));
+  const avgPaxUtil = totalFlights > 0 ? Math.round((totalPax/totalFlights)/maxPaxCapacity*100) : 0;
+  const avgCargoUtil = totalFlights > 0 ? Math.round((totalPayload/totalFlights)/20468*100) : 0;
+
+  // ── Top routes/aircraft ──
   const routeP = {};
-  monthFlights.forEach(f => {
-    const r = `${f.origin}-${f.destination}`;
-    routeP[r] = (routeP[r] || 0) + (f.profit || 0);
-  });
-  const topRoutes = Object.entries(routeP).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  monthFlights.forEach(f => { const r=`${f.origin}→${f.destination}`; routeP[r]=(routeP[r]||0)+(f.profit||0); });
+  const topRoutes = Object.entries(routeP).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
-  // Top 5 aircraft by profit
   const acP = {};
-  monthFlights.forEach(f => {
-    const ac = f.aircraft || '?';
-    acP[ac] = (acP[ac] || 0) + (f.profit || 0);
-  });
-  const topAircraft = Object.entries(acP).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  monthFlights.forEach(f => { const ac=f.aircraft||'?'; acP[ac]=(acP[ac]||0)+(f.profit||0); });
+  const topAircraft = Object.entries(acP).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
-  const monthName = L.monthNames[month - 1];
-  const isRtl = currentLang === 'he';
-  const dir = isRtl ? 'rtl' : 'ltr';
-  const fmtMoney = (n) => `$${n.toLocaleString()}`;
+  // ── Weather summary ──
+  const weatherOk  = monthFlights.filter(f => (f.windSpeed||0)<=20 && (f.visibility||10)>=5).length;
+  const weatherBad = monthFlights.length - weatherOk;
+
+  const monthName = L.monthNames[month-1];
+  const prevMonthName = L.monthNames[prevMonth-1];
+  const dir = currentLang==='he' ? 'rtl' : 'ltr';
+  const align = currentLang==='he' ? 'right' : 'left';
+  const fmtMoney = n => (n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString();
+  const today = new Date().toLocaleDateString('he-IL');
 
   const html = `<!DOCTYPE html>
-<html dir="${dir}">
+<html dir="${dir}" lang="${currentLang}">
 <head>
 <meta charset="UTF-8">
-<title>FlightPro - ${L.reportTitle || 'Monthly Report'} - ${monthName} ${year}</title>
+<title>דוח חודשי - ${monthName} ${year}</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #fff; color: #1e293b; padding: 30px; direction: ${dir}; }
-  .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; }
-  .header h1 { font-size: 24px; color: #1e293b; }
-  .header h2 { font-size: 18px; color: #64748b; margin-top: 5px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
-  .stat-box { background: #f1f5f9; border-radius: 8px; padding: 15px; text-align: center; }
-  .stat-box .val { font-size: 22px; font-weight: 700; color: #3b82f6; }
-  .stat-box .lbl { font-size: 12px; color: #64748b; margin-top: 4px; }
-  h3 { font-size: 16px; margin: 20px 0 10px; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
-  th { background: #f1f5f9; padding: 8px; text-align: ${isRtl ? 'right' : 'left'}; font-weight: 600; border-bottom: 2px solid #cbd5e1; }
-  td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; }
-  tr:nth-child(even) { background: #f8fafc; }
-  .profit-pos { color: #16a34a; }
-  .profit-neg { color: #dc2626; }
-  .print-btn { display: block; margin: 20px auto; padding: 10px 30px; background: #3b82f6; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
-  @media print { .print-btn { display: none; } }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:#f8fafc;color:#1e293b;direction:${dir};}
+  .page{max-width:900px;margin:0 auto;padding:30px;}
+
+  /* HEADER */
+  .report-header{background:linear-gradient(135deg,#1e40af,#4f46e5,#7c3aed);color:#fff;padding:32px 36px;border-radius:16px;margin-bottom:28px;position:relative;overflow:hidden;}
+  .report-header::after{content:'✈️';position:absolute;left:-10px;bottom:-20px;font-size:120px;opacity:0.08;}
+  .report-header h1{font-size:28px;font-weight:700;letter-spacing:-0.5px;}
+  .report-header h2{font-size:15px;opacity:0.85;margin-top:4px;}
+  .report-header .meta{font-size:12px;opacity:0.65;margin-top:12px;}
+
+  /* KPI ROW */
+  .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+  .kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;position:relative;overflow:hidden;}
+  .kpi::before{content:'';position:absolute;top:0;right:0;width:4px;height:100%;background:var(--c);}
+  .kpi .icon{font-size:22px;margin-bottom:6px;}
+  .kpi .val{font-size:22px;font-weight:700;color:#0f172a;}
+  .kpi .lbl{font-size:11px;color:#64748b;margin-top:2px;}
+  .kpi .delta{font-size:11px;font-weight:600;margin-top:6px;}
+
+  /* SECTION */
+  .section{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px;margin-bottom:20px;}
+  .section-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;}
+
+  /* TWO COLUMN */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+  /* COST ITEM */
+  .cost-item{margin-bottom:14px;}
+  .cost-item .cost-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;}
+  .cost-item .cost-name{color:#475569;}
+  .cost-item .cost-val{font-weight:600;color:#0f172a;}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{background:#f8fafc;padding:9px 10px;text-align:${align};font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;}
+  td{padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#334155;}
+  tr:hover td{background:#fafbff;}
+  .pos{color:#16a34a;font-weight:600;}
+  .neg{color:#dc2626;font-weight:600;}
+
+  /* SAFETY BAR */
+  .safety-label{font-size:12px;color:#475569;margin-bottom:2px;}
+
+  /* UTIL PILL */
+  .util-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .util-label{font-size:12px;color:#475569;min-width:80px;}
+  .util-track{flex:1;background:#e2e8f0;border-radius:6px;height:12px;overflow:hidden;}
+  .util-fill{height:100%;border-radius:6px;}
+  .util-pct{font-size:12px;font-weight:700;min-width:36px;text-align:${dir==='rtl'?'left':'right'};}
+
+  /* ROI BADGE */
+  .roi-badge{display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:22px;font-weight:700;padding:12px 24px;border-radius:12px;margin:8px 0;}
+
+  /* COMPARISON */
+  .comp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;}
+  .comp-row:last-child{border:none;}
+  .comp-metric{color:#475569;}
+  .comp-vals{display:flex;gap:16px;}
+  .comp-cur{font-weight:700;color:#1e293b;}
+  .comp-prev{color:#94a3b8;}
+
+  /* PRINT */
+  .print-bar{text-align:center;padding:20px 0;margin-top:10px;}
+  .print-btn{padding:12px 36px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:0.3px;}
+  @media print{.print-bar{display:none;}.page{padding:15px;}.section{break-inside:avoid;}}
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>✈️ FlightPro</h1>
-  <h2>${L.reportTitle || 'Monthly Report'} - ${monthName} ${year}</h2>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="report-header">
+    <h1>✈️ SmartLogBook — דוח חודשי</h1>
+    <h2>${monthName} ${year}</h2>
+    <div class="meta">הופק ב-${today} · ${totalFlights} טיסות · ${hours}:${String(mins).padStart(2,'0')} שעות טיסה</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--c:#3b82f6">
+      <div class="icon">✈️</div>
+      <div class="val">${totalFlights}</div>
+      <div class="lbl">סה"כ טיסות</div>
+      <div class="delta" style="color:${deltaColor(totalFlights,prevFlightCount)}">${delta(totalFlights,prevFlightCount)} לעומת ${prevMonthName}</div>
+    </div>
+    <div class="kpi" style="--c:${totalProfit>=0?'#10b981':'#ef4444'}">
+      <div class="icon">💰</div>
+      <div class="val" style="color:${totalProfit>=0?'#059669':'#dc2626'}">${fmtMoney(totalProfit)}</div>
+      <div class="lbl">רווח נקי</div>
+      <div class="delta" style="color:${deltaColor(totalProfit,prevProfit)}">${delta(totalProfit,prevProfit)} לעומת ${prevMonthName}</div>
+    </div>
+    <div class="kpi" style="--c:#8b5cf6">
+      <div class="icon">👥</div>
+      <div class="val">${totalPax.toLocaleString()}</div>
+      <div class="lbl">סה"כ נוסעים</div>
+      <div class="delta" style="color:${deltaColor(totalPax,prevPax)}">${delta(totalPax,prevPax)} לעומת ${prevMonthName}</div>
+    </div>
+    <div class="kpi" style="--c:#f59e0b">
+      <div class="icon">⛽</div>
+      <div class="val">${(totalFuel/1000).toFixed(1)}T</div>
+      <div class="lbl">דלק שנצרך</div>
+      <div class="delta" style="color:#64748b">~$${costFuel.toLocaleString()}</div>
+    </div>
+    <div class="kpi" style="--c:#14b8a6">
+      <div class="icon">🌍</div>
+      <div class="val">${totalDist.toLocaleString()}</div>
+      <div class="lbl">מרחק כולל (NM)</div>
+      <div class="delta" style="color:#64748b">ממוצע ${Math.round(totalDist/totalFlights).toLocaleString()} NM/טיסה</div>
+    </div>
+    <div class="kpi" style="--c:#6366f1">
+      <div class="icon">📊</div>
+      <div class="val">${profitMargin}%</div>
+      <div class="lbl">מרווח רווח</div>
+      <div class="delta" style="color:#64748b">ROI: ${roi}%</div>
+    </div>
+  </div>
+
+  <!-- COST BREAKDOWN + ROI -->
+  <div class="two-col" style="margin-bottom:20px;">
+    <div class="section">
+      <div class="section-title">💸 פירוט עלויות</div>
+      <div class="cost-item">
+        <div class="cost-row"><span class="cost-name">⛽ דלק</span><span class="cost-val">$${costFuel.toLocaleString()}</span></div>
+        ${costBar(costFuel)}
+      </div>
+      <div class="cost-item">
+        <div class="cost-row"><span class="cost-name">👨‍✈️ צוות</span><span class="cost-val">$${costCrew.toLocaleString()}</span></div>
+        ${costBar(costCrew)}
+      </div>
+      <div class="cost-item">
+        <div class="cost-row"><span class="cost-name">🛬 נחיתות</span><span class="cost-val">$${costLanding.toLocaleString()}</span></div>
+        ${costBar(costLanding)}
+      </div>
+      <div class="cost-item">
+        <div class="cost-row"><span class="cost-name">🔧 תחזוקה</span><span class="cost-val">$${costMaintenance.toLocaleString()}</span></div>
+        ${costBar(costMaintenance)}
+      </div>
+      <div style="border-top:2px solid #e2e8f0;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;font-weight:700;">
+        <span>סך עלויות</span><span>$${totalCosts.toLocaleString()}</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📈 ניתוח רווחיות</div>
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font-size:12px;color:#64748b;margin-bottom:4px;">החזר השקעה (ROI)</div>
+        <div class="roi-badge">${roi}%</div>
+      </div>
+      <div class="comp-row"><span class="comp-metric">הכנסות</span><span class="comp-cur pos">$${totalRevenue.toLocaleString()}</span></div>
+      <div class="comp-row"><span class="comp-metric">עלויות</span><span class="comp-cur neg">$${totalCosts.toLocaleString()}</span></div>
+      <div class="comp-row"><span class="comp-metric">רווח נקי</span><span class="comp-cur" style="color:${totalProfit>=0?'#059669':'#dc2626'}">${fmtMoney(totalProfit)}</span></div>
+      <div class="comp-row"><span class="comp-metric">מרווח רווח</span><span class="comp-cur">${profitMargin}%</span></div>
+      <div class="comp-row"><span class="comp-metric">ממוצע לטיסה</span><span class="comp-cur">${fmtMoney(Math.round(totalProfit/totalFlights))}</span></div>
+      <div class="comp-row"><span class="comp-metric">רווח לשעה</span><span class="comp-cur">${totalMins>0?fmtMoney(Math.round(totalProfit/(totalMins/60))):'—'}</span></div>
+    </div>
+  </div>
+
+  <!-- SAFETY + UTILIZATION -->
+  <div class="two-col" style="margin-bottom:20px;">
+    <div class="section">
+      <div class="section-title">🛡️ בטיחות נחיתות</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+        <div style="text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:#0f172a;">${avgFpm}</div>
+          <div style="font-size:11px;color:#64748b;">FPM ממוצע</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:${safetyScore>=80?'#059669':safetyScore>=60?'#d97706':'#dc2626'}">${safetyScore}%</div>
+          <div style="font-size:11px;color:#64748b;">ציון בטיחות</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:#0f172a;">${fpms.length}</div>
+          <div style="font-size:11px;color:#64748b;">נחיתות עם נתון</div>
+        </div>
+      </div>
+      <div class="safety-label">🟢 רכות (≤250 FPM) — ${soft}</div>
+      ${fpmBar(soft, fpms.length, '#10b981')}
+      <div class="safety-label" style="margin-top:8px;">🟡 רגילות (251–400 FPM) — ${normal}</div>
+      ${fpmBar(normal, fpms.length, '#f59e0b')}
+      <div class="safety-label" style="margin-top:8px;">🔴 קשות (>400 FPM) — ${hard}</div>
+      ${fpmBar(hard, fpms.length, '#ef4444')}
+    </div>
+
+    <div class="section">
+      <div class="section-title">📦 ניצולת קיבולת</div>
+      <div style="margin-bottom:16px;">
+        <div class="util-row">
+          <div class="util-label">👥 נוסעים</div>
+          <div class="util-track"><div class="util-fill" style="width:${avgPaxUtil}%;background:${avgPaxUtil>=80?'#10b981':avgPaxUtil>=50?'#f59e0b':'#ef4444'};"></div></div>
+          <div class="util-pct">${avgPaxUtil}%</div>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;">ממוצע ${Math.round(totalPax/totalFlights)} / ${maxPaxCapacity} נוסעים לטיסה</div>
+        <div class="util-row">
+          <div class="util-label">📦 מטען</div>
+          <div class="util-track"><div class="util-fill" style="width:${Math.min(100,avgCargoUtil)}%;background:${avgCargoUtil>=60?'#10b981':avgCargoUtil>=30?'#f59e0b':'#ef4444'};"></div></div>
+          <div class="util-pct">${Math.min(100,avgCargoUtil)}%</div>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;">ממוצע ${Math.round(totalPayload/totalFlights).toLocaleString()} / 20,468 ק"ג לטיסה</div>
+      </div>
+      <div style="border-top:1px solid #f1f5f9;padding-top:12px;">
+        <div class="comp-row"><span class="comp-metric">🌤️ תנאי מזג אוויר תקינים</span><span class="comp-cur pos">${weatherOk}</span></div>
+        <div class="comp-row"><span class="comp-metric">🌧️ תנאים קשים</span><span class="comp-cur ${weatherBad>0?'neg':''}">${weatherBad}</span></div>
+        <div class="comp-row"><span class="comp-metric">⛽ צריכת דלק ל-NM</span><span class="comp-cur">${totalDist>0?(totalFuel/totalDist).toFixed(2):0} ק"ג/NM</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP ROUTES + AIRCRAFT -->
+  <div class="two-col" style="margin-bottom:20px;">
+    <div class="section">
+      <div class="section-title">🏆 נתיבים מובילים</div>
+      <table>
+        <tr><th>#</th><th>נתיב</th><th>רווח</th></tr>
+        ${topRoutes.map(([r,p],i)=>`<tr><td style="color:#94a3b8;font-weight:700;">${i+1}</td><td>${r}</td><td class="${p>=0?'pos':'neg'}">${fmtMoney(p)}</td></tr>`).join('')}
+      </table>
+    </div>
+    <div class="section">
+      <div class="section-title">✈️ מטוסים מובילים</div>
+      <table>
+        <tr><th>#</th><th>מטוס</th><th>רווח</th></tr>
+        ${topAircraft.map(([ac,p],i)=>`<tr><td style="color:#94a3b8;font-weight:700;">${i+1}</td><td>${ac}</td><td class="${p>=0?'pos':'neg'}">${fmtMoney(p)}</td></tr>`).join('')}
+      </table>
+    </div>
+  </div>
+
+  <!-- FLIGHT LOG -->
+  <div class="section">
+    <div class="section-title">📋 יומן טיסות — ${monthName} ${year}</div>
+    <table>
+      <tr><th>תאריך</th><th>נתיב</th><th>מטוס</th><th>פא"ק</th><th>דלק (ק"ג)</th><th>FPM</th><th>רווח</th></tr>
+      ${monthFlights.map(f => {
+        const d = new Date(f.date);
+        const ds = `${d.getDate()}/${d.getMonth()+1}`;
+        const p = f.profit||0;
+        return `<tr>
+          <td>${ds}</td>
+          <td><strong>${f.origin}</strong> → ${f.destination}</td>
+          <td>${f.aircraft||'—'}</td>
+          <td>${(f.passengers||0)} / ${f.aircraft_max_passengers||180}</td>
+          <td>${(f.fuel||0).toLocaleString()}</td>
+          <td>${Math.abs(f.fpm||0)}</td>
+          <td class="${p>=0?'pos':'neg'}">${fmtMoney(p)}</td>
+        </tr>`;
+      }).join('')}
+    </table>
+  </div>
+
+  <div class="print-bar">
+    <button class="print-btn" onclick="window.print()">🖨️ הדפסה / שמירה כ-PDF</button>
+  </div>
+
 </div>
-
-<div class="stats-grid">
-  <div class="stat-box"><div class="val">${totalFlights}</div><div class="lbl">${L.statFlights || 'Total Flights'}</div></div>
-  <div class="stat-box"><div class="val">${fmtMoney(totalProfit)}</div><div class="lbl">${L.statProfit || 'Total Profit'}</div></div>
-  <div class="stat-box"><div class="val">${hours}:${String(mins).padStart(2,'0')}</div><div class="lbl">${L.statHours || 'Flight Hours'}</div></div>
-  <div class="stat-box"><div class="val">${totalFuel.toLocaleString()}</div><div class="lbl">${L.statFuel || 'Fuel (kg)'}</div></div>
-  <div class="stat-box"><div class="val">${totalPax.toLocaleString()}</div><div class="lbl">${L.statPassengers || 'Passengers'}</div></div>
-  <div class="stat-box"><div class="val">${totalDist.toLocaleString()}</div><div class="lbl">${L.statDistance || 'Distance (NM)'}</div></div>
-</div>
-
-<h3>🏆 ${L.reportTopRoutes || 'Top 5 Routes'}</h3>
-<table>
-  <tr><th>#</th><th>${L.reportRoute || 'Route'}</th><th>${L.netProfit || 'Profit'}</th></tr>
-  ${topRoutes.map(([r, p], i) => `<tr><td>${i+1}</td><td>${r}</td><td class="${p >= 0 ? 'profit-pos' : 'profit-neg'}">${fmtMoney(p)}</td></tr>`).join('')}
-</table>
-
-<h3>✈️ ${L.reportTopAircraft || 'Top 5 Aircraft'}</h3>
-<table>
-  <tr><th>#</th><th>${L.aircraft || 'Aircraft'}</th><th>${L.netProfit || 'Profit'}</th></tr>
-  ${topAircraft.map(([ac, p], i) => `<tr><td>${i+1}</td><td>${ac}</td><td class="${p >= 0 ? 'profit-pos' : 'profit-neg'}">${fmtMoney(p)}</td></tr>`).join('')}
-</table>
-
-<h3>📋 ${L.reportFlightLog || 'Flight Log'}</h3>
-<table>
-  <tr><th>${L.reportDate || 'Date'}</th><th>${L.reportRoute || 'Route'}</th><th>${L.aircraft || 'Aircraft'}</th><th>FPM</th><th>${L.netProfit || 'Profit'}</th></tr>
-  ${monthFlights.map(f => {
-    const d = new Date(f.date);
-    const dateStr = `${d.getDate()}/${d.getMonth()+1}`;
-    const p = f.profit || 0;
-    return `<tr><td>${dateStr}</td><td>${f.origin}-${f.destination}</td><td>${f.aircraft || '-'}</td><td>${f.fpm || 0}</td><td class="${p >= 0 ? 'profit-pos' : 'profit-neg'}">${fmtMoney(p)}</td></tr>`;
-  }).join('')}
-</table>
-
-<button class="print-btn" onclick="window.print()">🖨️ ${L.reportPrint || 'Print / Save as PDF'}</button>
 </body>
 </html>`;
 
