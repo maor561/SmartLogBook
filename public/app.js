@@ -1499,17 +1499,16 @@ function updateUI() {
 // ===== STATS =====
 function updateStats() {
   const total = flights.length;
-  const pax = flights.reduce((s, f) => s + (f.passengers || 0), 0);
-  const dist = flights.reduce((s, f) => s + (f.distance || 0), 0);
-  const mins = flights.reduce((s, f) => s + (f.durationMins || 0), 0);
-  const profit = flights.reduce((s, f) => s + (f.profit || 0), 0);
-  const fuel = flights.reduce((s, f) => s + (f.fuel || 0), 0);
+  const pax   = flights.reduce((s, f) => s + (f.passengers  || 0), 0);
+  const dist  = flights.reduce((s, f) => s + (f.distance    || 0), 0);
+  const mins  = flights.reduce((s, f) => s + (f.durationMins|| 0), 0);
+  const profit= flights.reduce((s, f) => s + (f.profit      || 0), 0);
+  const fuel  = flights.reduce((s, f) => s + (f.fuel        || 0), 0);
   const h = Math.floor(mins / 60), m = mins % 60;
 
   console.log('[Stats] Total flights:', total, 'Pax:', pax, 'Dist:', dist, 'Fuel:', fuel, 'Profit:', profit);
 
-  // Calculate averages
-  const avgPax = total > 0 ? Math.round(pax / total) : 0;
+  const avgPax  = total > 0 ? Math.round(pax  / total) : 0;
   const avgDist = total > 0 ? Math.round(dist / total) : 0;
   const avgFuel = total > 0 ? Math.round(fuel / total) : 0;
 
@@ -1517,34 +1516,74 @@ function updateStats() {
 
   const fmt = (n) => n >= 1e6 ? `${(n/1e6).toFixed(1)}M` : n >= 1000 ? `${(n/1000).toFixed(1)}K` : n.toLocaleString();
 
-  // Update totals
-  document.getElementById('statFlights').textContent = total.toLocaleString();
-  document.getElementById('statPassengers').textContent = fmt(pax);
-  document.getElementById('statDistance').textContent = fmt(dist);
-  document.getElementById('statHours').textContent = `${h}:${String(m).padStart(2,'0')}`;
-  document.getElementById('statProfit').textContent = profit >= 1e6 ? `$${(profit/1e6).toFixed(1)}M` : profit >= 1000 ? `$${Math.round(profit/1000)}K` : `$${profit.toLocaleString()}`;
-  document.getElementById('statFuel').textContent = fmt(fuel);
+  // === TREND: compare last 5 flights vs previous 5 ===
+  function calcTrend(getter) {
+    if (total < 6) return 'flat';
+    const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const recent = sorted.slice(0, 5).reduce((s, f) => s + (getter(f) || 0), 0) / 5;
+    const older  = sorted.slice(5, 10).reduce((s, f) => s + (getter(f) || 0), 0) / Math.max(1, Math.min(5, sorted.length - 5));
+    if (older === 0) return recent > 0 ? 'up' : 'flat';
+    const pct = (recent - older) / Math.abs(older);
+    return pct > 0.03 ? 'up' : pct < -0.03 ? 'down' : 'flat';
+  }
+  const trends = {
+    Flights:    calcTrend(() => 1),
+    Passengers: calcTrend(f => f.passengers),
+    Distance:   calcTrend(f => f.distance),
+    Hours:      calcTrend(f => f.durationMins),
+    Profit:     calcTrend(f => f.profit),
+    Fuel:       calcTrend(f => f.fuel),
+  };
+  const trendSym   = { up: ' ▲', down: ' ▼', flat: '' };
+  const trendColor = { up: '#10b981', down: '#ef4444', flat: 'transparent' };
 
-  // Update averages
-  if (document.getElementById('statPassengersAvgDisplay')) {
+  // === UPDATE VALUES + inject trend span ===
+  function setVal(id, text, trendKey) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    el.appendChild(document.createTextNode(text));
+    if (trendKey) {
+      const span = document.createElement('span');
+      span.className = 'stat-trend';
+      span.style.color = trendColor[trends[trendKey]];
+      span.textContent = trendSym[trends[trendKey]];
+      el.appendChild(span);
+    }
+  }
+
+  setVal('statFlights',    total.toLocaleString(),  'Flights');
+  setVal('statPassengers', fmt(pax),                'Passengers');
+  setVal('statDistance',   fmt(dist),               'Distance');
+  setVal('statHours',      `${h}:${String(m).padStart(2,'0')}`, 'Hours');
+  setVal('statProfit',     profit >= 1e6 ? `$${(profit/1e6).toFixed(1)}M` : profit >= 1000 ? `$${Math.round(profit/1000)}K` : `$${profit.toLocaleString()}`, 'Profit');
+  setVal('statFuel',       fmt(fuel),               'Fuel');
+
+  // === AVERAGES ===
+  if (document.getElementById('statPassengersAvgDisplay'))
     document.getElementById('statPassengersAvgDisplay').textContent = avgPax.toLocaleString();
-  }
-  if (document.getElementById('statDistanceAvgDisplay')) {
+  if (document.getElementById('statDistanceAvgDisplay'))
     document.getElementById('statDistanceAvgDisplay').textContent = avgDist.toLocaleString();
-  }
-  if (document.getElementById('statFuelAvgDisplay')) {
+  if (document.getElementById('statFuelAvgDisplay'))
     document.getElementById('statFuelAvgDisplay').textContent = fmt(avgFuel);
-  }
   if (document.getElementById('statHoursAvgDisplay')) {
     const avgMins = total > 0 ? Math.round(mins / total) : 0;
-    const avgH = Math.floor(avgMins / 60);
-    const avgM = avgMins % 60;
-    document.getElementById('statHoursAvgDisplay').textContent = `${avgH}:${String(avgM).padStart(2,'0')}`;
+    document.getElementById('statHoursAvgDisplay').textContent = `${Math.floor(avgMins/60)}:${String(avgMins%60).padStart(2,'0')}`;
   }
   if (document.getElementById('statProfitAvgDisplay')) {
-    const avgProfit = total > 0 ? Math.round(profit / total) : 0;
-    document.getElementById('statProfitAvgDisplay').textContent = avgProfit >= 1e6 ? `$${(avgProfit/1e6).toFixed(1)}M` : avgProfit >= 1000 ? `$${Math.round(avgProfit/1000)}K` : `$${avgProfit.toLocaleString()}`;
+    const avgP = total > 0 ? Math.round(profit / total) : 0;
+    document.getElementById('statProfitAvgDisplay').textContent = avgP >= 1e6 ? `$${(avgP/1e6).toFixed(1)}M` : avgP >= 1000 ? `$${Math.round(avgP/1000)}K` : `$${avgP.toLocaleString()}`;
   }
+
+  // === RATING BADGES (from cache populated by renderAirlineRating) ===
+  const ratingMap = { Flights:'פעילות', Passengers:'יעילות', Distance:'מוניטין', Hours:'פעילות', Profit:'רווחיות', Fuel:'יעילות' };
+  const scores = window._lastRatingScores || {};
+  Object.entries(ratingMap).forEach(([card, cat]) => {
+    const el = document.getElementById(`statBadge${card}`);
+    if (!el) return;
+    const score = scores[cat];
+    el.textContent = score !== undefined ? `${score.toFixed(1)}★` : '–';
+  });
 }
 
 // ===== ANALYTICS =====
@@ -3045,8 +3084,30 @@ async function renderMissions() {
   );
   const completed = mergedSource.filter(m => completedMissions.includes(m.id));
 
+  // === PROGRESS BAR ===
+  const totalMissionCount = mergedSource.length;
+  const completedCount = completed.length;
+  const progressPct = totalMissionCount > 0 ? Math.round((completedCount / totalMissionCount) * 100) : 0;
+  const progressHTML = `
+    <div class="missions-progress-wrap">
+      <div class="missions-progress-label">
+        <span>🎯 התקדמות משימות</span>
+        <strong>${completedCount} / ${totalMissionCount} הושלמו · ${progressPct}%</strong>
+      </div>
+      <div class="missions-progress-bar-track">
+        <div class="missions-progress-bar-fill" style="width:${progressPct}%"></div>
+      </div>
+    </div>`;
+
   // Render active missions
   if (activeMissionsGrid) {
+    // Remove old progress bar if re-rendering
+    const oldBar = activeMissionsGrid.parentNode.querySelector('.missions-progress-wrap');
+    if (oldBar) oldBar.remove();
+
+    // Insert progress bar above grid
+    activeMissionsGrid.insertAdjacentHTML('beforebegin', progressHTML);
+
     activeMissionsGrid.innerHTML = activeMissions.length === 0
       ? '<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--text-secondary);">✅ כל המשימות הושלמו!</div>'
       : activeMissions.map(mission => renderMissionCard(mission, false)).join('');
@@ -3072,11 +3133,15 @@ function renderMissionCard(mission, isCompleted) {
 
   const bgColor = categoryColors[mission.category] || '#6b7280';
 
+  const statusBadge = isCompleted
+    ? `<div class="mission-status-badge mission-status-badge--done">✅ הושלם</div>`
+    : `<div class="mission-status-badge mission-status-badge--active">⚡ פעיל</div>`;
+
   return `
-    <div class="mission-card" dir="rtl" style="border-right: 4px solid ${bgColor}; text-align: right;">
+    <div class="mission-card ${!isCompleted ? 'mission-card--active' : ''}" dir="rtl" style="border-right: 4px solid ${bgColor}; text-align: right;">
       <div class="mission-header">
         <div class="mission-title">${mission.emoji} ${mission.title}</div>
-        ${isCompleted ? '<div style="color: #10b981; font-weight: bold;">✅ הושלמה</div>' : ''}
+        ${statusBadge}
       </div>
       <p class="mission-description">${mission.description}</p>
       <div class="mission-route">📍 ${mission.origin} ← ${mission.destination}</div>
@@ -3567,6 +3632,16 @@ function renderAirlineRating() {
   // Calculate category scores and overall
   categories.forEach(cat => {
     cat.score = cat.metrics.reduce((s, m) => s + m.score, 0) / cat.metrics.length;
+  });
+
+  // Cache scores globally so updateStats() can show rating badges on stat cards
+  window._lastRatingScores = {};
+  categories.forEach(cat => { window._lastRatingScores[cat.name] = cat.score; });
+  // Refresh stat card badges immediately
+  const _ratingMap = { Flights:'פעילות', Passengers:'יעילות', Distance:'מוניטין', Hours:'פעילות', Profit:'רווחיות', Fuel:'יעילות' };
+  Object.entries(_ratingMap).forEach(([card, cat]) => {
+    const el = document.getElementById(`statBadge${card}`);
+    if (el) el.textContent = window._lastRatingScores[cat] !== undefined ? `${window._lastRatingScores[cat].toFixed(1)}★` : '–';
   });
 
   const overall = categories.reduce((s, cat) => s + cat.score * cat.weight, 0);

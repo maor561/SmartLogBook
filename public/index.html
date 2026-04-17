@@ -139,12 +139,14 @@
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-      <div class="stat-card" onclick="openChartModal('flights')">
+      <div class="stat-card stat-card--flights" onclick="openChartModal('flights')">
+        <div class="stat-rating-badge" id="statBadgeFlights">–</div>
         <div class="stat-emoji">✈️</div>
         <div class="stat-value" id="statFlights">0</div>
         <div class="stat-label" id="statFlightsLabel">סה״כ טיסות</div>
       </div>
-      <div class="stat-card" onclick="openChartModal('passengers')">
+      <div class="stat-card stat-card--passengers" onclick="openChartModal('passengers')">
+        <div class="stat-rating-badge" id="statBadgePassengers">–</div>
         <div class="stat-emoji">👥</div>
         <div class="stat-value" id="statPassengers">0</div>
         <div class="stat-label" id="statPassengersLabel">נוסעים</div>
@@ -152,7 +154,8 @@
           ממוצע: <span id="statPassengersAvgDisplay">0</span>
         </div>
       </div>
-      <div class="stat-card" onclick="openChartModal('distance')">
+      <div class="stat-card stat-card--distance" onclick="openChartModal('distance')">
+        <div class="stat-rating-badge" id="statBadgeDistance">–</div>
         <div class="stat-emoji">🌍</div>
         <div class="stat-value" id="statDistance">0</div>
         <div class="stat-label" id="statDistanceLabel">מרחק (NM)</div>
@@ -160,7 +163,8 @@
           ממוצע: <span id="statDistanceAvgDisplay">0</span>
         </div>
       </div>
-      <div class="stat-card" onclick="openChartModal('duration')">
+      <div class="stat-card stat-card--hours" onclick="openChartModal('duration')">
+        <div class="stat-rating-badge" id="statBadgeHours">–</div>
         <div class="stat-emoji">⏱️</div>
         <div class="stat-value" id="statHours">0:00</div>
         <div class="stat-label" id="statHoursLabel">שעות טיסה</div>
@@ -168,7 +172,8 @@
           ממוצע: <span id="statHoursAvgDisplay">0:00</span>
         </div>
       </div>
-      <div class="stat-card" onclick="openChartModal('profit')">
+      <div class="stat-card stat-card--profit" onclick="openChartModal('profit')">
+        <div class="stat-rating-badge" id="statBadgeProfit">–</div>
         <div class="stat-emoji">💰</div>
         <div class="stat-value" id="statProfit">$0</div>
         <div class="stat-label" id="statProfitLabel">רווח כולל</div>
@@ -176,7 +181,8 @@
           ממוצע: <span id="statProfitAvgDisplay">$0</span>
         </div>
       </div>
-      <div class="stat-card" onclick="openChartModal('fuel')">
+      <div class="stat-card stat-card--fuel" onclick="openChartModal('fuel')">
+        <div class="stat-rating-badge" id="statBadgeFuel">–</div>
         <div class="stat-emoji">⛽</div>
         <div class="stat-value" id="statFuel">0</div>
         <div class="stat-label" id="statFuelLabel">דלק (ק״ג)</div>
