@@ -2767,13 +2767,27 @@ async function loadPricingHistory(days = 30) {
       displayColors: true,
       callbacks: {
         title: ctx => {
-          const f = periodFlights[ctx[0].dataIndex];
-          return f ? `${f.origin}→${f.destination} · ${labels[ctx[0].dataIndex]}` : labels[ctx[0].dataIndex];
+          try {
+            const f = periodFlights && periodFlights[ctx[0].dataIndex];
+            return f ? `${f.origin}→${f.destination} · ${labels[ctx[0].dataIndex]}` : labels[ctx[0].dataIndex];
+          } catch(e) {
+            return labels[ctx[0].dataIndex] || '';
+          }
         },
-        label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}`,
+        label: ctx => {
+          try {
+            return `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}`;
+          } catch(e) {
+            return ctx.dataset.label || '';
+          }
+        },
         afterLabel: ctx => {
-          const f = periodFlights[ctx[0].dataIndex];
-          return f ? `✈️ ${f.aircraft || 'B738'} · ${f.distance || 0}nm` : '';
+          try {
+            const f = periodFlights && periodFlights[ctx[0].dataIndex];
+            return f ? `✈️ ${f.aircraft || 'B738'} · ${f.distance || 0}nm` : '';
+          } catch(e) {
+            return '';
+          }
         }
       }
     }
