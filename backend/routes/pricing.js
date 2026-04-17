@@ -117,13 +117,62 @@ function calculateCargoPrice(distance = 1000) {
   return finalPrice;
 }
 
-// POST - Update dynamic pricing using EIA real fuel + distance-based cargo
+// Calculate maintenance cost based on aircraft type, flight hours, and payload
+function calculateMaintenanceCost(aircraft = 'B738', durationHours = 1, payloadKg = 0) {
+  // Base hourly maintenance cost by aircraft type (industry standard ranges)
+  const baseCosts = {
+    'B738': 3000,    // 737-800 standard
+    'B737': 3000,
+    'B739': 3200,    // 737 MAX
+    'B744': 5500,    // 747 jumbo
+    'B777': 5000,    // 777
+    'B787': 4800,    // 787 Dreamliner
+    'A320': 3300,    // Airbus A320
+    'A321': 3500,    // A321 stretched
+    'A380': 6500,    // A380 super jumbo
+    'A350': 5200,    // A350
+  };
+
+  let baseCost = baseCosts[aircraft] || 3000; // Default to 737 cost if unknown
+
+  // Payload multiplier: heavier loads cause more wear on hydraulics, engines, tires
+  // Max typical payloads: 737=23,000kg, 777=140,000kg, A380=150,000kg
+  const aircraftMaxPayload = {
+    'B738': 23000,
+    'B737': 23000,
+    'B739': 25000,
+    'B744': 140000,
+    'B777': 140000,
+    'B787': 130000,
+    'A320': 27000,
+    'A321': 32000,
+    'A380': 150000,
+    'A350': 130000,
+  };
+
+  const maxPayload = aircraftMaxPayload[aircraft] || 25000;
+  const payloadPercent = Math.min(payloadKg / maxPayload, 1.0); // Cap at 100%
+
+  // Maintenance scales with payload: 0% payload = 1.0x cost, 100% payload = 1.15x cost
+  const payloadMultiplier = 1.0 + (payloadPercent * 0.15);
+
+  const finalCost = Math.round(baseCost * durationHours * payloadMultiplier);
+
+  console.log(`[Maintenance] Aircraft: ${aircraft} | Base: $${baseCost}/hr | Duration: ${durationHours.toFixed(1)}h | Payload: ${(payloadPercent*100).toFixed(0)}% (${payloadKg}kg) | Multiplier: ${payloadMultiplier.toFixed(2)}x | Total: $${finalCost}`);
+  return finalCost;
+}
+
+// POST - Update dynamic pricing using EIA real fuel + distance-based cargo + calculated maintenance
 router.post('/update', async (req, res) => {
   try {
     let realFuelCost = null;
     let cargoPricePerKg = null;
+    let maintenanceCostTotal = null;
     let source = 'simulated';
     const distance = parseInt(req.body?.distance) || 1000; // Default to 1000nm if not provided
+    const aircraft = req.body?.aircraft || 'B738'; // Default to 737
+    const durationHours = parseFloat(req.body?.durationHours) || 1; // Default to 1 hour
+    const payloadKg = parseFloat(req.body?.payloadKg) || 0; // Default to 0kg payload
 
     // Try to fetch real Jet Fuel price from EIA
     try {
@@ -135,6 +184,9 @@ router.post('/update', async (req, res) => {
 
     // Calculate cargo price based on distance & seasonality (no API needed)
     cargoPricePerKg = calculateCargoPrice(distance);
+
+    // Calculate maintenance cost based on aircraft type, flight duration, and payload
+    maintenanceCostTotal = calculateMaintenanceCost(aircraft, durationHours, payloadKg);
 
     // Get last record for ticket/landing variation (no real API for those)
     const db = await getDb();
@@ -153,6 +205,8 @@ router.post('/update', async (req, res) => {
       cost_index:     Math.round(vary(last?.cost_index || 50, 0.05)),
       // Cargo price: distance-based calculation with seasonal variation
       cargo_rate:     cargoPricePerKg,
+      // Maintenance cost: calculated based on aircraft type, flight duration, and payload
+      maintenance_cost: maintenanceCostTotal,
       // Ticket prices: simulated variation based on last known values
       ticket_base:    Math.round(vary(last?.ticket_base || 95)),
       ticket_medium:  Math.round(vary(last?.ticket_medium || 180)),
@@ -174,6 +228,7 @@ router.post('/update', async (req, res) => {
     const camelCaseUpdate = {
       fuelCost: update.fuel_cost,
       cargoRate: update.cargo_rate,
+      maintenanceCost: update.maintenance_cost,
       costIndex: update.cost_index,
       ticketBase: update.ticket_base,
       ticketMedium: update.ticket_medium,
