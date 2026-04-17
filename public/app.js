@@ -1105,9 +1105,14 @@ async function loadFromSimbrief() {
       showToast('⚠️ ' + flightErrors[0], 'warning');
     }
 
-    // Auto-capture real-time pricing for this flight (EIA real fuel price)
+    // Auto-capture real-time pricing for this flight (EIA real fuel + distance-based cargo)
     try {
-      const pricingRes = await fetch('/api/pricing/update', { method: 'POST' });
+      // Pass distance to API so it can calculate distance-based cargo price
+      const pricingRes = await fetch('/api/pricing/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ distance: currentFlightData.distance || 1000 })
+      });
       const pricingData = await pricingRes.json();
       if (pricingData.success && pricingData.update) {
         const pu = pricingData.update;
@@ -1115,6 +1120,7 @@ async function loadFromSimbrief() {
 
         // Save ACTUAL prices captured at this moment with the flight
         currentFlightData.actualFuelCost        = pu.fuelCost;
+        currentFlightData.actualCargoRate       = pu.cargoRate;  // ← New: distance-based cargo price
         currentFlightData.actualTicketPrice     = dist <= 500  ? pu.ticketBase
                                                 : dist <= 2000 ? pu.ticketMedium
                                                 :                pu.ticketLong;
@@ -1123,7 +1129,7 @@ async function loadFromSimbrief() {
         currentFlightData.pricingTimestamp      = new Date().toISOString();
         currentFlightData.pricingSource         = pu.source || 'EIA';
 
-        console.log(`[Pricing] ✅ Auto-captured: fuel $${pu.fuelCost}/kg | ticket $${currentFlightData.actualTicketPrice}/pax | source: ${pu.source}`);
+        console.log(`[Pricing] ✅ Auto-captured: fuel $${pu.fuelCost}/kg | cargo $${pu.cargoRate}/kg | ticket $${currentFlightData.actualTicketPrice}/pax | source: ${pu.source}`);
       }
     } catch (e) {
       console.warn('[Pricing] Auto-capture failed, using defaults:', e);
@@ -1156,6 +1162,7 @@ function displayCurrentFlight() {
 
   // SECTION 1: Dynamic pricing — use ACTUAL captured prices if available, else defaults
   const fuelRate      = d.actualFuelCost        || pricing.fuelCost        || 0.85;
+  const cargoRate     = d.actualCargoRate       || pricing.cargoRate       || 2.0;
   const ticketPrice   = d.actualTicketPrice     || getTicketPrice(d.distance || 0);
   const landingFee    = d.actualLandingFee       || getLandingFee(d.aircraft || 'B738');
   const maintRate     = d.actualMaintenanceCost  || pricing.maintenanceCost || 180;
@@ -1163,7 +1170,7 @@ function displayCurrentFlight() {
 
   const calcFuelCost  = Math.round((d.fuel       || 0) * fuelRate);
   const calcTicketRev = Math.round((d.passengers || 0) * ticketPrice);
-  const calcCargoRev  = Math.round((d.payload    || 0) * (pricing.cargoRate || 2.0));
+  const calcCargoRev  = Math.round((d.payload    || 0) * cargoRate);
   const calcMaintCost = Math.round(durationHours        * maintRate);
 
   const fmtAmt  = n => `$${Math.abs(n).toLocaleString()}`;
@@ -1179,7 +1186,7 @@ function displayCurrentFlight() {
   document.getElementById('cfPricingGrid').innerHTML = [
     { icon: '⛽', label: 'עלות דלק',       value: fmtAmt(calcFuelCost),  sub: `${fuelRate.toFixed(2)}$/kg × ${(d.fuel||0).toLocaleString()}kg`,    color: '#ef4444' },
     { icon: '🪑', label: 'הכנסת כרטיסים',  value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים`,                   color: '#10b981' },
-    { icon: '📦', label: 'הכנסת מטען',     value: fmtAmt(calcCargoRev),  sub: `${pricing.cargoRate||2}$/kg × ${(d.payload||0).toLocaleString()}kg`, color: '#10b981' },
+    { icon: '📦', label: 'הכנסת מטען',     value: fmtAmt(calcCargoRev),  sub: `${cargoRate.toFixed(2)}$/kg × ${(d.payload||0).toLocaleString()}kg`, color: '#10b981' },
     { icon: '🔧', label: 'עלות תחזוקה',    value: fmtAmt(calcMaintCost), sub: `${maintRate}$/h × ${durationHours.toFixed(1)}h`,                     color: '#ef4444' },
   ].map(p => `
     <div class="cf-price-tile">

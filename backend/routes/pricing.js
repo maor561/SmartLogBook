@@ -86,11 +86,44 @@ async function fetchEIAFuelPrice() {
   return pricePerKg;
 }
 
-// POST - Update dynamic pricing using EIA real fuel price
+// Calculate cargo price based on distance and seasonality (no API needed)
+function calculateCargoPrice(distance = 1000) {
+  // Base price: $4/kg for medium haul
+  let basePrice = 4.0;
+
+  // Distance-based premium
+  if (distance > 3000) {
+    basePrice = 6.0;  // Long haul: $6/kg
+  } else if (distance > 1500) {
+    basePrice = 5.0;  // Medium-long: $5/kg
+  } else if (distance < 500) {
+    basePrice = 3.5;  // Short haul: $3.50/kg
+  }
+
+  // Seasonal variation (higher in summer/holidays)
+  const now = new Date();
+  const month = now.getMonth(); // 0-11
+  const isSummer = month >= 5 && month <= 8; // June-September
+  const isHoliday = month === 11; // December
+
+  let multiplier = 1.0;
+  if (isHoliday) multiplier = 1.25;  // +25% in December
+  else if (isSummer) multiplier = 1.15; // +15% in summer
+  else multiplier = 0.95; // -5% in off-season
+
+  const finalPrice = Math.round(basePrice * multiplier * 100) / 100;
+
+  console.log(`[Cargo] Distance: ${distance}nm | Base: $${basePrice}/kg | Season: ${multiplier}x | Final: $${finalPrice}/kg`);
+  return finalPrice;
+}
+
+// POST - Update dynamic pricing using EIA real fuel + distance-based cargo
 router.post('/update', async (req, res) => {
   try {
     let realFuelCost = null;
+    let cargoPricePerKg = null;
     let source = 'simulated';
+    const distance = parseInt(req.body?.distance) || 1000; // Default to 1000nm if not provided
 
     // Try to fetch real Jet Fuel price from EIA
     try {
@@ -99,6 +132,9 @@ router.post('/update', async (req, res) => {
     } catch (eiaErr) {
       console.warn('[Pricing] EIA API failed, using fallback:', eiaErr.message);
     }
+
+    // Calculate cargo price based on distance & seasonality (no API needed)
+    cargoPricePerKg = calculateCargoPrice(distance);
 
     // Get last record for ticket/landing variation (no real API for those)
     const db = await getDb();
@@ -115,6 +151,8 @@ router.post('/update', async (req, res) => {
       // Real fuel price from EIA, or fallback with variation
       fuel_cost:      realFuelCost || vary(last?.fuel_cost || 0.85),
       cost_index:     Math.round(vary(last?.cost_index || 50, 0.05)),
+      // Cargo price: distance-based calculation with seasonal variation
+      cargo_rate:     cargoPricePerKg,
       // Ticket prices: simulated variation based on last known values
       ticket_base:    Math.round(vary(last?.ticket_base || 95)),
       ticket_medium:  Math.round(vary(last?.ticket_medium || 180)),
@@ -135,6 +173,7 @@ router.post('/update', async (req, res) => {
     // Convert response to camelCase for frontend compatibility
     const camelCaseUpdate = {
       fuelCost: update.fuel_cost,
+      cargoRate: update.cargo_rate,
       costIndex: update.cost_index,
       ticketBase: update.ticket_base,
       ticketMedium: update.ticket_medium,
