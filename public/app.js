@@ -2753,12 +2753,26 @@ async function loadPricingHistory(days = 30) {
       labels: { color: textColor, font: { size: 11 }, boxWidth: 12 }
     },
     tooltip: {
+      enabled: true,
+      backgroundColor: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
+      titleColor: isDark ? '#f1f5f9' : '#0f172a',
+      bodyColor: isDark ? '#cbd5e1' : '#334155',
+      borderColor: isDark ? '#475569' : '#cbd5e1',
+      borderWidth: 1,
+      padding: 12,
+      titleFont: { size: 13, weight: '600' },
+      bodyFont: { size: 12 },
+      displayColors: true,
       callbacks: {
         title: ctx => {
           const f = periodFlights[ctx[0].dataIndex];
-          return `${f.origin}→${f.destination} · ${labels[ctx[0].dataIndex]}`;
+          return f ? `${f.origin}→${f.destination} · ${labels[ctx[0].dataIndex]}` : labels[ctx[0].dataIndex];
         },
-        label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}`
+        label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}`,
+        afterLabel: ctx => {
+          const f = periodFlights[ctx[0].dataIndex];
+          return f ? `✈️ ${f.aircraft || 'B738'} · ${f.distance || 0}nm` : '';
+        }
       }
     }
   });
