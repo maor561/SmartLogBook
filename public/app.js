@@ -1378,6 +1378,119 @@ function updateFpmFeedback() {
   }
 }
 
+// ===== UPDATE CURRENT FLIGHT WITH REAL-TIME PRICING =====
+async function updateCurrentFlightPricing() {
+  if (!currentFlightData) return;
+
+  const btn = document.querySelector('[onclick="updateCurrentFlightPricing()"]');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ מעדכן מחירים...';
+  }
+
+  try {
+    // Fetch real-time pricing from API
+    const res = await fetch('/api/pricing/update', { method: 'POST' });
+    const data = await res.json();
+
+    if (!data.success) {
+      showToast('❌ שגיאה בעדכון מחירים', 'error');
+      return;
+    }
+
+    const pricing_update = data.update;
+
+    // Store actual prices in currentFlightData
+    const distance = currentFlightData.distance || 0;
+    currentFlightData.actualFuelCost = pricing_update.fuel_cost;
+    currentFlightData.actualTicketPrice = distance <= 500 ? pricing_update.ticket_base
+                                         : distance <= 2000 ? pricing_update.ticket_medium
+                                         : pricing_update.ticket_long;
+    currentFlightData.actualLandingFee = getLandingFeeFromUpdate(currentFlightData.aircraft || 'B738', pricing_update);
+    currentFlightData.actualMaintenanceCost = 180; // Will be updated if API provides it
+    currentFlightData.pricingTimestamp = new Date().toISOString();
+
+    // Refresh display with new prices
+    displayCurrentFlightWithDynamicPricing();
+
+    showToast('✅ מחירים עודכנו לזמן אמת!', 'success');
+  } catch (err) {
+    console.error('[Update Pricing Error]', err);
+    showToast('❌ שגיאה בעדכון מחירים', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🔄 עדכן מחירים לזמן אמת';
+    }
+  }
+}
+
+// Helper: get landing fee from pricing update
+function getLandingFeeFromUpdate(aircraft, pricingUpdate) {
+  const code = (aircraft || '').toUpperCase();
+  if (LARGE_AIRCRAFT.some(a => code.includes(a))) return pricingUpdate.landing_large || 600;
+  if (SMALL_AIRCRAFT.some(a => code.includes(a))) return pricingUpdate.landing_small || 150;
+  return pricingUpdate.landing_medium || 350;
+}
+
+// Display flight with DYNAMIC pricing (actual prices from API)
+function displayCurrentFlightWithDynamicPricing() {
+  if (!currentFlightData) return;
+  const d = currentFlightData;
+  const L = TRANSLATIONS[currentLang];
+
+  // Use ACTUAL prices if available, otherwise use default pricing
+  const fuelCostRate = d.actualFuelCost || (pricing.fuelCost || 0.85);
+  const ticketPrice = d.actualTicketPrice || getTicketPrice(d.distance || 0);
+  const durationHours = (d.durationMins || 0) / 60;
+  const landingFee = d.actualLandingFee || getLandingFee(d.aircraft || 'B738');
+  const maintRate = d.actualMaintenanceCost || (pricing.maintenanceCost || 180);
+
+  // Calculate with ACTUAL prices
+  const calcFuelCost = Math.round((d.fuel || 0) * fuelCostRate);
+  const calcTicketRev = Math.round((d.passengers || 0) * ticketPrice);
+  const calcCargoRev = Math.round((d.payload || 0) * (pricing.cargoRate || 2.0));
+  const calcMaintCost = Math.round(durationHours * maintRate);
+
+  const fmtAmt = n => `$${Math.abs(n).toLocaleString()}`;
+
+  // Mark pricing as dynamic if actual prices are set
+  const isDynamic = !!d.actualFuelCost;
+  const dynamicBadge = isDynamic ? ' <span style="color:#10b981;font-size:0.8rem">✓ בזמן אמת</span>' : '';
+
+  document.getElementById('cfPricingGrid').innerHTML = [
+    { icon: '⛽', label: 'עלות דלק',    value: fmtAmt(calcFuelCost),  sub: `${fuelCostRate.toFixed(2)}$/kg × ${(d.fuel||0).toLocaleString()}kg`,  color: '#ef4444' },
+    { icon: '🪑', label: 'הכנסת כרטיסים', value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים`,               color: '#10b981' },
+    { icon: '📦', label: 'הכנסת מטען',  value: fmtAmt(calcCargoRev),  sub: `${pricing.cargoRate||2}$/kg × ${(d.payload||0).toLocaleString()}kg`,  color: '#10b981' },
+    { icon: '🔧', label: 'עלות תחזוקה', value: fmtAmt(calcMaintCost), sub: `${maintRate.toFixed(0)}$/h × ${durationHours.toFixed(1)}h`,   color: '#ef4444' },
+  ].map(p => `
+    <div class="cf-price-tile">
+      <div class="cf-price-tile-icon">${p.icon}</div>
+      <div class="cf-price-tile-value" style="color:${p.color}">${p.value}</div>
+      <div class="cf-price-tile-label">${p.label}${p === ('📊' ? dynamicBadge : '')}</div>
+      <div class="cf-price-tile-sub">${p.sub}</div>
+    </div>
+  `).join('');
+
+  // Update financial section with dynamic prices
+  const fin = {
+    ticketRevenue: calcTicketRev,
+    cargoRevenue: calcCargoRev,
+    totalIncome: calcTicketRev + calcCargoRev,
+    fuelExpense: calcFuelCost,
+    crewExpense: pricing.crewCost,
+    landingExpense: landingFee,
+    maintenanceExpense: calcMaintCost,
+    penalty: 0,
+    totalExpenses: calcFuelCost + pricing.crewCost + landingFee + calcMaintCost,
+    netProfit: (calcTicketRev + calcCargoRev) - (calcFuelCost + pricing.crewCost + landingFee + calcMaintCost),
+    ticketPrice,
+    landingFee
+  };
+
+  document.getElementById('finAnalysisContent').innerHTML = buildFinancialHTML(d, fin, false);
+}
+
 // ===== UPDATE FLIGHT PRICING =====
 async function updateFlightPricing() {
   const statusEl = document.getElementById('flightPricingStatus');
@@ -1467,6 +1580,13 @@ async function confirmFlight() {
     visibility: d.visibility || 10,
     ceiling: d.ceiling || 5000,
     weatherConditions: d.weatherConditions || 'CAVOK',
+
+    // Dynamic pricing - captured at time of flight creation
+    actualFuelCost: d.actualFuelCost || null,
+    actualTicketPrice: d.actualTicketPrice || null,
+    actualLandingFee: d.actualLandingFee || null,
+    actualMaintenanceCost: d.actualMaintenanceCost || null,
+    pricingTimestamp: d.pricingTimestamp || null,
   };
 
   try {
@@ -2502,16 +2622,34 @@ async function loadPricingHistory(days = 30) {
   container.style.display     = 'grid';
   summaryRow.style.display    = 'grid';
 
-  // --- Per-flight calculations ---
-  const fuelRate        = pricing.fuelCost        || 0.85;
-  const cargoRate       = pricing.cargoRate        || 2.0;
-  const maintRate       = pricing.maintenanceCost  || 180;
+  // --- Per-flight calculations (using ACTUAL prices when available) ---
+  const defaultFuelRate   = pricing.fuelCost        || 0.85;
+  const defaultCargoRate  = pricing.cargoRate        || 2.0;
+  const defaultMaintRate  = pricing.maintenanceCost  || 180;
 
-  const fuelCosts       = periodFlights.map(f => Math.round((f.fuel     || 0) * fuelRate));
-  const ticketRevenues  = periodFlights.map(f => Math.round((f.passengers || 0) * getTicketPrice(f.distance || 0)));
-  const cargoRevenues   = periodFlights.map(f => Math.round((f.payload   || 0) * cargoRate));
-  const maintCosts      = periodFlights.map(f => Math.round(((f.durationMins || 0) / 60) * maintRate));
-  const landingFees     = periodFlights.map(f => getLandingFee(f.aircraft || 'B738'));
+  // Use actualFuelCost from flight if available, otherwise use default
+  const fuelCosts       = periodFlights.map(f => {
+    const fuelRate = f.actualFuelCost || defaultFuelRate;
+    return Math.round((f.fuel || 0) * fuelRate);
+  });
+
+  // Use actualTicketPrice from flight if available, otherwise use default based on distance
+  const ticketRevenues  = periodFlights.map(f => {
+    const ticketPrice = f.actualTicketPrice || getTicketPrice(f.distance || 0);
+    return Math.round((f.passengers || 0) * ticketPrice);
+  });
+
+  // Use default cargo rate (no actual capture for cargo)
+  const cargoRevenues   = periodFlights.map(f => Math.round((f.payload || 0) * defaultCargoRate));
+
+  // Use actualMaintenanceCost from flight if available, otherwise use default
+  const maintCosts      = periodFlights.map(f => {
+    const maintRate = f.actualMaintenanceCost || defaultMaintRate;
+    return Math.round(((f.durationMins || 0) / 60) * maintRate);
+  });
+
+  // Use actualLandingFee from flight if available, otherwise use default
+  const landingFees     = periodFlights.map(f => f.actualLandingFee || getLandingFee(f.aircraft || 'B738'));
 
   const totalRevenues   = periodFlights.map((_, i) => ticketRevenues[i] + cargoRevenues[i]);
   const totalOpCosts    = periodFlights.map((_, i) => maintCosts[i] + landingFees[i]);
