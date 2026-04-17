@@ -117,7 +117,35 @@ function calculateCargoPrice(distance = 1000) {
   return finalPrice;
 }
 
-// Calculate maintenance cost based on aircraft type, flight hours, and payload
+// Calculate crew requirement based on aircraft size
+function getCrewRequirements(aircraft = 'B738') {
+  // Crew: 2 pilots + flight attendants based on aircraft seating capacity
+  const maxSeats = {
+    'B738': 189,
+    'B737': 189,
+    'B739': 210,    // MAX variant
+    'B744': 416,    // 747
+    'B777': 350,    // 777
+    'B787': 280,    // 787
+    'A320': 194,
+    'A321': 236,    // Stretched A320
+    'A380': 555,    // A380
+    'A350': 315,
+  };
+
+  const seats = maxSeats[aircraft] || 189;
+
+  // Flight attendants: ~1 per 50 passengers + 1 leader
+  const flightAttendants = Math.max(2, Math.ceil(seats / 50));
+
+  return {
+    captains: 1,
+    firstOfficers: 1,
+    flightAttendants: flightAttendants
+  };
+}
+
+// Calculate maintenance & crew cost based on aircraft type, flight hours, and payload
 function calculateMaintenanceCost(aircraft = 'B738', durationHours = 1, payloadKg = 0) {
   // Base hourly maintenance cost by aircraft type (industry standard ranges)
   const baseCosts = {
@@ -155,10 +183,20 @@ function calculateMaintenanceCost(aircraft = 'B738', durationHours = 1, payloadK
 
   // Maintenance scales with payload: 0% payload = 1.0x cost, 100% payload = 1.15x cost
   const payloadMultiplier = 1.0 + (payloadPercent * 0.15);
+  const maintenanceCost = baseCost * durationHours * payloadMultiplier;
 
-  const finalCost = Math.round(baseCost * durationHours * payloadMultiplier);
+  // === CREW COST ===
+  // Pilots: Captain $200/hr, First Officer $120/hr
+  // Flight Attendants: $35/hr each
+  const crew = getCrewRequirements(aircraft);
+  const captainCost = 200 * durationHours * crew.captains;
+  const firstOfficerCost = 120 * durationHours * crew.firstOfficers;
+  const flightAttendantCost = 35 * durationHours * crew.flightAttendants;
+  const totalCrewCost = captainCost + firstOfficerCost + flightAttendantCost;
 
-  console.log(`[Maintenance] Aircraft: ${aircraft} | Base: $${baseCost}/hr | Duration: ${durationHours.toFixed(1)}h | Payload: ${(payloadPercent*100).toFixed(0)}% (${payloadKg}kg) | Multiplier: ${payloadMultiplier.toFixed(2)}x | Total: $${finalCost}`);
+  const finalCost = Math.round(maintenanceCost + totalCrewCost);
+
+  console.log(`[Maintenance] Aircraft: ${aircraft} | Maint: $${Math.round(maintenanceCost)} | Crew: $${Math.round(totalCrewCost)} (${crew.captains}C + ${crew.firstOfficers}F/O + ${crew.flightAttendants}FA × ${durationHours.toFixed(1)}h) | Total: $${finalCost}`);
   return finalCost;
 }
 
