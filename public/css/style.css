@@ -399,9 +399,10 @@ body {
   text-align: center;
 }
 .cf-price-tile-icon { font-size: 1.3rem; margin-bottom: 4px; }
-.cf-price-tile-value { font-size: 1rem; font-weight: 800; color: #f97316; }
+.cf-price-tile-value { font-size: 1.1rem; font-weight: 800; }
 .cf-price-tile-unit { font-size: 0.6rem; color: var(--text-muted); font-weight: 400; display: block; }
 .cf-price-tile-label { font-size: 0.63rem; color: var(--text-muted); margin-top: 3px; }
+.cf-price-tile-sub { font-size: 0.58rem; color: var(--text-muted); margin-top: 4px; opacity: 0.7; }
 
 /* Section 2: 5-column stats inside the card */
 .cf-section-flight .cf-stats-row {

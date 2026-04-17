@@ -1145,18 +1145,28 @@ function displayCurrentFlight() {
     ? `${d.originName} → ${d.destName}` : '';
   document.getElementById('cfAircraftTag').textContent = d.aircraft;
 
-  // SECTION 1: Dynamic pricing — 4 tiles
-  const ticketPriceNow = getTicketPrice(d.distance || 0);
+  // SECTION 1: Dynamic pricing — calculated in real-time for THIS flight
+  const ticketPriceNow  = getTicketPrice(d.distance || 0);
+  const durationHours   = (d.durationMins || 0) / 60;
+
+  const calcFuelCost    = Math.round((d.fuel        || 0) * (pricing.fuelCost        || 0.85));
+  const calcTicketRev   = Math.round((d.passengers  || 0) * ticketPriceNow);
+  const calcCargoRev    = Math.round((d.payload      || 0) * (pricing.cargoRate       || 2.0));
+  const calcMaintCost   = Math.round(durationHours          * (pricing.maintenanceCost || 180));
+
+  const fmtAmt = n => `$${Math.abs(n).toLocaleString()}`;
+
   document.getElementById('cfPricingGrid').innerHTML = [
-    { icon: '⛽', label: 'עלות דלק',    value: `$${pricing.fuelCost}`,         unit: '/kg' },
-    { icon: '🪑', label: 'מחיר כרטיס', value: `$${ticketPriceNow}`,            unit: '/pax' },
-    { icon: '📦', label: 'תעריף מטען',  value: `$${pricing.cargoRate}`,         unit: '/kg' },
-    { icon: '🔧', label: 'תחזוקה',      value: `$${pricing.maintenanceCost}`,   unit: '/שעה' },
+    { icon: '⛽', label: 'עלות דלק',    value: fmtAmt(calcFuelCost),  sub: `${pricing.fuelCost||0.85}$/kg × ${(d.fuel||0).toLocaleString()}kg`,  color: '#ef4444' },
+    { icon: '🪑', label: 'הכנסת כרטיסים', value: fmtAmt(calcTicketRev), sub: `${ticketPriceNow}$/pax × ${d.passengers||0} נוסעים`,               color: '#10b981' },
+    { icon: '📦', label: 'הכנסת מטען',  value: fmtAmt(calcCargoRev),  sub: `${pricing.cargoRate||2}$/kg × ${(d.payload||0).toLocaleString()}kg`,  color: '#10b981' },
+    { icon: '🔧', label: 'עלות תחזוקה', value: fmtAmt(calcMaintCost), sub: `${pricing.maintenanceCost||180}$/h × ${durationHours.toFixed(1)}h`,   color: '#ef4444' },
   ].map(p => `
     <div class="cf-price-tile">
       <div class="cf-price-tile-icon">${p.icon}</div>
-      <div class="cf-price-tile-value">${p.value}<span class="cf-price-tile-unit">${p.unit}</span></div>
+      <div class="cf-price-tile-value" style="color:${p.color}">${p.value}</div>
       <div class="cf-price-tile-label">${p.label}</div>
+      <div class="cf-price-tile-sub">${p.sub}</div>
     </div>
   `).join('');
 
