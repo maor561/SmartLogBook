@@ -2749,6 +2749,11 @@ async function loadPricingHistory(days = 30) {
     x: { ticks: makeXTicks(), grid: { color: gridColor } },
     y: { ticks: makeYTicks(), grid: { color: gridColor } }
   });
+
+  const baseInteraction = () => ({
+    mode: 'index',
+    intersect: false
+  });
   const basePlugins = (legendDisplay = false) => ({
     legend: {
       display: legendDisplay,
@@ -2813,7 +2818,7 @@ async function loadPricingHistory(days = 30) {
           borderRadius: 4
         }]
       },
-      options: { responsive: false, plugins: basePlugins(), scales: baseScales() }
+      options: { responsive: true, maintainAspectRatio: true, interaction: baseInteraction(), plugins: basePlugins(), scales: baseScales() }
     }
   );
 
@@ -2844,7 +2849,9 @@ async function loadPricingHistory(days = 30) {
         ]
       },
       options: {
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: true,
+        interaction: baseInteraction(),
         plugins: basePlugins(true),
         scales: { ...baseScales(), x: { ...baseScales().x, stacked: true }, y: { ...baseScales().y, stacked: true } }
       }
@@ -2869,7 +2876,7 @@ async function loadPricingHistory(days = 30) {
           borderRadius: 4
         }]
       },
-      options: { responsive: false, plugins: basePlugins(), scales: baseScales() }
+      options: { responsive: true, maintainAspectRatio: true, interaction: baseInteraction(), plugins: basePlugins(), scales: baseScales() }
     }
   );
 
@@ -2900,7 +2907,9 @@ async function loadPricingHistory(days = 30) {
         ]
       },
       options: {
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: true,
+        interaction: baseInteraction(),
         plugins: basePlugins(true),
         scales: { ...baseScales(), x: { ...baseScales().x, stacked: true }, y: { ...baseScales().y, stacked: true } }
       }
