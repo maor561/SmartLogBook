@@ -1118,8 +1118,8 @@ async function loadFromSimbrief() {
           aircraft:      currentFlightData.aircraft || 'B738',
           durationHours: (currentFlightData.durationMins || 60) / 60,
           payloadKg:     currentFlightData.payload || 0,
-          originIata:    currentFlightData.originIata || '',   // ← Travelport
-          destIata:      currentFlightData.destIata   || '',   // ← Travelport
+          originIata:    currentFlightData.destIata   || '',   // ← SWAPPED: destIata is origin
+          destIata:      currentFlightData.originIata || '',   // ← SWAPPED: originIata is dest
           passengers:    currentFlightData.passengers || 1     // ← Travelport
         })
       });
