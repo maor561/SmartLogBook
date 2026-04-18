@@ -1124,9 +1124,9 @@ async function loadFromSimbrief() {
         const pu   = pricingData.update;
         const dist = currentFlightData.distance || 0;
 
-        // Ticket price: use Travelport real price if available, else distance-based formula
+        // Ticket price: distance-based formula
         const ticketPrice = pu.ticketPrice != null
-          ? pu.ticketPrice   // Real market price from Travelport (per-pax)
+          ? pu.ticketPrice   // Distance-based formula (per-pax)
           : dist <= 500  ? pu.ticketBase
           : dist <= 2000 ? pu.ticketMedium
           :                pu.ticketLong;
@@ -1199,7 +1199,7 @@ function displayCurrentFlight() {
 
   document.getElementById('cfPricingGrid').innerHTML = [
     { icon: '⛽', label: 'עלות דלק',       value: fmtAmt(calcFuelCost),  sub: `${fuelRate.toFixed(2)}$/kg × ${(d.fuel||0).toLocaleString()}kg`,    color: '#ef4444' },
-    { icon: '🪑', label: 'הכנסת כרטיסים',  value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים (${ticketSrc === 'Travelport' ? '🌐 שוק אמת' : '📐 נוסחה'})`, color: '#10b981' },
+    { icon: '🪑', label: 'הכנסת כרטיסים',  value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים`, color: '#10b981' },
     { icon: '📦', label: 'הכנסת מטען',     value: fmtAmt(calcCargoRev),  sub: `${cargoRate.toFixed(2)}$/kg × ${actualCargoKg.toLocaleString()}kg מטען`, color: '#10b981' },
     { icon: '🔧', label: 'עלות תחזוקה',    value: fmtAmt(calcMaintCost), sub: d.actualMaintenanceCost ? `${(d.aircraft||'B738')} | ${durationHours.toFixed(1)}h | ${((d.payload||0)/1000).toFixed(1)}T` : `${maintRate}$/h × ${durationHours.toFixed(1)}h`, color: '#ef4444' },
   ].map(p => `
