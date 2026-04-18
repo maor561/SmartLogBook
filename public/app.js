@@ -1175,7 +1175,9 @@ function displayCurrentFlight() {
 
   const calcFuelCost  = Math.round((d.fuel       || 0) * fuelRate);
   const calcTicketRev = Math.round((d.passengers || 0) * ticketPrice);
-  const calcCargoRev  = Math.round((d.payload    || 0) * cargoRate);
+  // Actual cargo = payload minus passenger weight (SimBrief payload includes passengers)
+  const actualCargoKg = Math.max(0, (d.payload || 0) - (d.passengers || 0) * 95);
+  const calcCargoRev  = Math.round(actualCargoKg * cargoRate);
   // Use actualMaintenanceCost if captured (includes aircraft type + payload), else calculate from hourly rate
   const calcMaintCost = d.actualMaintenanceCost || Math.round(durationHours * maintRate);
 
@@ -1192,7 +1194,7 @@ function displayCurrentFlight() {
   document.getElementById('cfPricingGrid').innerHTML = [
     { icon: '⛽', label: 'עלות דלק',       value: fmtAmt(calcFuelCost),  sub: `${fuelRate.toFixed(2)}$/kg × ${(d.fuel||0).toLocaleString()}kg`,    color: '#ef4444' },
     { icon: '🪑', label: 'הכנסת כרטיסים',  value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים`,                   color: '#10b981' },
-    { icon: '📦', label: 'הכנסת מטען',     value: fmtAmt(calcCargoRev),  sub: `${cargoRate.toFixed(2)}$/kg × ${(d.payload||0).toLocaleString()}kg`, color: '#10b981' },
+    { icon: '📦', label: 'הכנסת מטען',     value: fmtAmt(calcCargoRev),  sub: `${cargoRate.toFixed(2)}$/kg × ${actualCargoKg.toLocaleString()}kg מטען`, color: '#10b981' },
     { icon: '🔧', label: 'עלות תחזוקה',    value: fmtAmt(calcMaintCost), sub: d.actualMaintenanceCost ? `${(d.aircraft||'B738')} | ${durationHours.toFixed(1)}h | ${((d.payload||0)/1000).toFixed(1)}T` : `${maintRate}$/h × ${durationHours.toFixed(1)}h`, color: '#ef4444' },
   ].map(p => `
     <div class="cf-price-tile">
@@ -1283,7 +1285,9 @@ function calcFinancials(d, fpm) {
   const fuelCost = d.actualFuelCost || pricing.fuelCost;
 
   const ticketRevenue = d.passengers * ticketPrice;
-  const cargoRevenue = (d.payload || 0) * cargoRate;
+  // Cargo: subtract passenger weight from total payload to get actual cargo only
+  const actualCargoKg = Math.max(0, (d.payload || 0) - (d.passengers || 0) * 95);
+  const cargoRevenue = actualCargoKg * cargoRate;
   const totalIncome = ticketRevenue + cargoRevenue;
 
   const fuelExpense = d.fuel * fuelCost;
@@ -2691,8 +2695,14 @@ async function loadPricingHistory(days = 30) {
     return Math.round((f.passengers || 0) * ticketPrice);
   });
 
-  // Use default cargo rate (no actual capture for cargo)
-  const cargoRevenues   = periodFlights.map(f => Math.round((f.payload || 0) * defaultCargoRate));
+  // Cargo revenue: use actual cargo only (payload minus passenger weight)
+  // payload from SimBrief = total payload (passengers + baggage + cargo)
+  // Actual cargo = payload - (passengers × 95kg average per person)
+  const cargoRevenues   = periodFlights.map(f => {
+    const actualCargoKg = Math.max(0, (f.payload || 0) - (f.passengers || 0) * 95);
+    const cargoRate = f.actualCargoRate || 4.5;  // Use dynamic rate, fallback to $4.5/kg
+    return Math.round(actualCargoKg * cargoRate);
+  });
 
   // Use actualMaintenanceCost from flight if available (it's already total, not hourly)
   // Otherwise fall back to hourly rate calculation
