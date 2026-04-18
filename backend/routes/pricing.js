@@ -17,24 +17,23 @@ async function getTravelportToken() {
 
   if (!clientId || !clientSecret) throw new Error('Travelport credentials not configured');
 
-  console.log(`[Travelport] client_id length=${clientId?.length} secret_length=${clientSecret?.length} user=${username} pass_length=${password?.length}`);
+  console.log(`[Travelport] Auth attempt | client_id=${clientId?.slice(0,6)}... | user=${username} | pass_len=${password?.length}`);
 
-  // Try both auth formats - some Travelport sandbox endpoints require client credentials in body
+  // Travelport sandbox: Basic auth with username:password + client credentials in body
+  const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+
   const body = new URLSearchParams({
     grant_type:    'client_credentials',
     client_id:     clientId,
     client_secret: clientSecret,
   });
-  if (username && password) {
-    body.append('username', username);
-    body.append('password', password);
-  }
-
-  console.log(`[Travelport] Requesting token for client: ${clientId?.slice(0,8)}...`);
 
   const res = await fetch('https://oauth.pp.travelport.com/oauth/oauth20/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Authorization': `Basic ${basicAuth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
     body,
     signal: AbortSignal.timeout(10000)
   });
