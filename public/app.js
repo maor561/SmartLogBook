@@ -1075,6 +1075,8 @@ async function loadFromSimbrief() {
     currentFlightData = {
       origin: (origin.icao_code || '????').toUpperCase(),
       destination: (destination.icao_code || '????').toUpperCase(),
+      originIata: (origin.iata_code || '').toUpperCase(),   // ← For Travelport pricing
+      destIata: (destination.iata_code || '').toUpperCase(), // ← For Travelport pricing
       originName: origin.name || '',
       destName: destination.name || '',
       originLat: parseFloat(origin.pos_lat || 0),
@@ -1107,34 +1109,43 @@ async function loadFromSimbrief() {
 
     // Auto-capture real-time pricing for this flight (EIA real fuel + distance-based cargo + calculated maintenance)
     try {
-      // Pass flight details to API for dynamic pricing calculations
+      // Pass flight details to API for dynamic pricing calculations (incl. IATA for Travelport)
       const pricingRes = await fetch('/api/pricing/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          distance: currentFlightData.distance || 1000,
-          aircraft: currentFlightData.aircraft || 'B738',
+          distance:      currentFlightData.distance || 1000,
+          aircraft:      currentFlightData.aircraft || 'B738',
           durationHours: (currentFlightData.durationMins || 60) / 60,
-          payloadKg: currentFlightData.payload || 0
+          payloadKg:     currentFlightData.payload || 0,
+          originIata:    currentFlightData.originIata || '',   // ← Travelport
+          destIata:      currentFlightData.destIata   || '',   // ← Travelport
+          passengers:    currentFlightData.passengers || 1     // ← Travelport
         })
       });
       const pricingData = await pricingRes.json();
       if (pricingData.success && pricingData.update) {
-        const pu = pricingData.update;
+        const pu   = pricingData.update;
         const dist = currentFlightData.distance || 0;
+
+        // Ticket price: use Travelport real price if available, else distance-based formula
+        const ticketPrice = pu.ticketPrice != null
+          ? pu.ticketPrice   // Real market price from Travelport (per-pax)
+          : dist <= 500  ? pu.ticketBase
+          : dist <= 2000 ? pu.ticketMedium
+          :                pu.ticketLong;
 
         // Save ACTUAL prices captured at this moment with the flight
         currentFlightData.actualFuelCost        = pu.fuelCost;
-        currentFlightData.actualCargoRate       = pu.cargoRate;  // Distance-based cargo price
-        currentFlightData.actualTicketPrice     = dist <= 500  ? pu.ticketBase
-                                                : dist <= 2000 ? pu.ticketMedium
-                                                :                pu.ticketLong;
+        currentFlightData.actualCargoRate       = pu.cargoRate;
+        currentFlightData.actualTicketPrice     = ticketPrice;
+        currentFlightData.ticketPriceSource     = pu.ticketSource || 'formula'; // 'Travelport' | 'formula'
         currentFlightData.actualLandingFee      = getLandingFeeFromUpdateCamelCase(currentFlightData.aircraft || 'B738', pu);
-        currentFlightData.actualMaintenanceCost = pu.maintenanceCost;  // ← Now from API calculation
+        currentFlightData.actualMaintenanceCost = pu.maintenanceCost;
         currentFlightData.pricingTimestamp      = new Date().toISOString();
         currentFlightData.pricingSource         = pu.source || 'EIA';
 
-        console.log(`[Pricing] ✅ Auto-captured: fuel $${pu.fuelCost}/kg | cargo $${pu.cargoRate}/kg | maintenance $${pu.maintenanceCost} | ticket $${currentFlightData.actualTicketPrice}/pax | source: ${pu.source}`);
+        console.log(`[Pricing] ✅ Auto-captured: fuel $${pu.fuelCost}/kg | cargo $${pu.cargoRate}/kg | maintenance $${pu.maintenanceCost} | ticket $${ticketPrice}/pax (${pu.ticketSource || 'formula'}) | source: ${pu.source}`);
       }
     } catch (e) {
       console.warn('[Pricing] Auto-capture failed, using defaults:', e);
@@ -1183,8 +1194,12 @@ function displayCurrentFlight() {
 
   const fmtAmt  = n => `$${Math.abs(n).toLocaleString()}`;
   const isReal  = !!d.actualFuelCost;
+  const ticketSrc = d.ticketPriceSource || 'formula';
+  const ticketBadge = ticketSrc === 'Travelport'
+    ? `🌐 Travelport`
+    : `📐 נוסחה`;
   const srcBadge = isReal
-    ? `<span style="color:#10b981;font-size:0.75rem;font-weight:600">✅ ${d.pricingSource || 'EIA'} - בזמן אמת</span>`
+    ? `<span style="color:#10b981;font-size:0.75rem;font-weight:600">✅ ${d.pricingSource || 'EIA'} - בזמן אמת | כרטיס: ${ticketBadge}</span>`
     : `<span style="color:#f59e0b;font-size:0.75rem">⏳ טוען מחירים...</span>`;
 
   // Update badge in section header
@@ -1193,7 +1208,7 @@ function displayCurrentFlight() {
 
   document.getElementById('cfPricingGrid').innerHTML = [
     { icon: '⛽', label: 'עלות דלק',       value: fmtAmt(calcFuelCost),  sub: `${fuelRate.toFixed(2)}$/kg × ${(d.fuel||0).toLocaleString()}kg`,    color: '#ef4444' },
-    { icon: '🪑', label: 'הכנסת כרטיסים',  value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים`,                   color: '#10b981' },
+    { icon: '🪑', label: 'הכנסת כרטיסים',  value: fmtAmt(calcTicketRev), sub: `${ticketPrice}$/pax × ${d.passengers||0} נוסעים (${ticketSrc === 'Travelport' ? '🌐 שוק אמת' : '📐 נוסחה'})`, color: '#10b981' },
     { icon: '📦', label: 'הכנסת מטען',     value: fmtAmt(calcCargoRev),  sub: `${cargoRate.toFixed(2)}$/kg × ${actualCargoKg.toLocaleString()}kg מטען`, color: '#10b981' },
     { icon: '🔧', label: 'עלות תחזוקה',    value: fmtAmt(calcMaintCost), sub: d.actualMaintenanceCost ? `${(d.aircraft||'B738')} | ${durationHours.toFixed(1)}h | ${((d.payload||0)/1000).toFixed(1)}T` : `${maintRate}$/h × ${durationHours.toFixed(1)}h`, color: '#ef4444' },
   ].map(p => `
@@ -1642,6 +1657,7 @@ async function confirmFlight() {
     actualTicketPrice: d.actualTicketPrice || null,
     actualLandingFee: d.actualLandingFee || null,
     actualMaintenanceCost: d.actualMaintenanceCost || null,
+    ticketPriceSource: d.ticketPriceSource || 'formula',  // 'Travelport' | 'formula'
     pricingTimestamp: d.pricingTimestamp || null,
   };
 

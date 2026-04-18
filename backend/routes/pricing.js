@@ -3,6 +3,124 @@ import getDb from '../db.js';
 
 const router = express.Router();
 
+// ===== TRAVELPORT TRIPSERVICES - TICKET PRICING =====
+let _tpToken = null;
+let _tpTokenExpiry = 0;
+
+async function getTravelportToken() {
+  if (_tpToken && Date.now() < _tpTokenExpiry) return _tpToken;
+
+  const clientId     = process.env.TRAVELPORT_CLIENT_ID;
+  const clientSecret = process.env.TRAVELPORT_CLIENT_SECRET;
+  const username     = process.env.TRAVELPORT_USERNAME;
+  const password     = process.env.TRAVELPORT_PASSWORD;
+
+  if (!clientId || !clientSecret) throw new Error('Travelport credentials not configured');
+
+  // Basic auth header = base64(client_id:client_secret)
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+  const body = new URLSearchParams({ grant_type: 'client_credentials' });
+  if (username && password) {
+    body.append('username', username);
+    body.append('password', password);
+  }
+
+  const res = await fetch('https://oauth.travelport.com/oauth/oauth20/token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${basicAuth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body,
+    signal: AbortSignal.timeout(10000)
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Travelport auth failed (${res.status}): ${err.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  _tpToken = data.access_token;
+  _tpTokenExpiry = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
+
+  console.log(`[Travelport] ✅ Token acquired, expires in ${data.expires_in}s`);
+  return _tpToken;
+}
+
+async function fetchTravelportTicketPrice(originIata, destIata, passengers = 1) {
+  const token = await getTravelportToken();
+  const pcc   = process.env.TRAVELPORT_PCC || '7K99';
+
+  // Use a date 7 days from now for sandbox pricing
+  const departureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString().split('T')[0];
+
+  const requestBody = {
+    CatalogProductOfferingsQueryRequest: {
+      CatalogProductOfferingsRequest: {
+        '@type': 'CatalogProductOfferingsRequestAir',
+        contentSourceList: ['GDS'],
+        PassengerCriteria: [{ number: Math.min(passengers, 9), passengerTypeCode: 'ADT' }],
+        SearchCriteriaFlight: [{
+          departureDate,
+          From: { value: originIata },
+          To:   { value: destIata }
+        }],
+        SearchModifiersAir: { cabinPreferenceList: ['Economy'] }
+      }
+    }
+  };
+
+  const res = await fetch(
+    'https://api.pp.travelport.net/11/air/catalog/search/catalogproductofferings',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type':  'application/json',
+        'Accept':        'application/json',
+        'PCC':           pcc
+      },
+      body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(20000)
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Travelport search failed (${res.status}): ${err.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+
+  // Parse response - extract cheapest economy price per passenger
+  const offerings = data?.CatalogProductOfferingsResponse?.CatalogProductOfferings
+    ?.CatalogProductOffering || [];
+
+  if (!offerings.length) throw new Error(`No offers found for ${originIata}→${destIata}`);
+
+  // Collect all per-passenger prices
+  const prices = [];
+  for (const offering of offerings) {
+    const products = offering.CatalogProductOffering?.Product || [];
+    for (const product of products) {
+      const price = product?.Price?.TotalPrice || product?.Price?.Base;
+      if (price && price > 0) {
+        const perPax = Math.round(price / Math.max(passengers, 1));
+        prices.push(perPax);
+      }
+    }
+  }
+
+  if (!prices.length) throw new Error('No prices in Travelport response');
+
+  const cheapest = Math.min(...prices);
+  console.log(`[Travelport] ✅ ${originIata}→${destIata} | Cheapest: $${cheapest}/pax (${prices.length} offers)`);
+  return cheapest;
+}
+
 // GET pricing history
 router.get('/history', async (req, res) => {
   try {
@@ -206,76 +324,99 @@ router.post('/update', async (req, res) => {
     let realFuelCost = null;
     let cargoPricePerKg = null;
     let maintenanceCostTotal = null;
+    let travelportTicketPrice = null;
+    let ticketSource = 'formula';
     let source = 'simulated';
-    const distance = parseInt(req.body?.distance) || 1000; // Default to 1000nm if not provided
-    const aircraft = req.body?.aircraft || 'B738'; // Default to 737
-    const durationHours = parseFloat(req.body?.durationHours) || 1; // Default to 1 hour
-    const payloadKg = parseFloat(req.body?.payloadKg) || 0; // Default to 0kg payload
 
-    // Try to fetch real Jet Fuel price from EIA
+    const distance      = parseInt(req.body?.distance)      || 1000;
+    const aircraft      = req.body?.aircraft                || 'B738';
+    const durationHours = parseFloat(req.body?.durationHours) || 1;
+    const payloadKg     = parseFloat(req.body?.payloadKg)   || 0;
+    const passengers    = parseInt(req.body?.passengers)    || 1;
+    const originIata    = req.body?.originIata              || null;  // e.g. "TLV"
+    const destIata      = req.body?.destIata                || null;  // e.g. "ZRH"
+
+    // 1. Real Jet Fuel price from EIA
     try {
       realFuelCost = await fetchEIAFuelPrice();
       source = 'EIA';
     } catch (eiaErr) {
-      console.warn('[Pricing] EIA API failed, using fallback:', eiaErr.message);
+      console.warn('[Pricing] EIA failed, using fallback:', eiaErr.message);
     }
 
-    // Calculate cargo price based on distance & seasonality (no API needed)
+    // 2. Cargo price (distance-based formula)
     cargoPricePerKg = calculateCargoPrice(distance);
 
-    // Calculate maintenance cost based on aircraft type, flight duration, and payload
+    // 3. Maintenance + crew cost (aircraft-based formula)
     maintenanceCostTotal = calculateMaintenanceCost(aircraft, durationHours, payloadKg);
 
-    // Get last record for ticket/landing variation (no real API for those)
+    // 4. Ticket price from Travelport TripServices (real market price)
+    //    Falls back to distance-based formula if API fails or IATA codes missing
+    if (originIata && destIata) {
+      try {
+        travelportTicketPrice = await fetchTravelportTicketPrice(originIata, destIata, passengers);
+        ticketSource = 'Travelport';
+      } catch (tpErr) {
+        console.warn(`[Travelport] Failed for ${originIata}→${destIata}, using formula fallback:`, tpErr.message);
+      }
+    } else {
+      console.log('[Travelport] No IATA codes provided, using formula fallback');
+    }
+
+    // Fallback ticket prices (distance-based formula)
+    const ticketFallback = (dist) => {
+      if (dist <= 500)  return 95  + Math.round(dist * 0.05);   // Short haul
+      if (dist <= 2000) return 150 + Math.round(dist * 0.08);   // Medium haul
+      return 250 + Math.round(dist * 0.07);                      // Long haul
+    };
+    const fallbackTicketPrice = ticketFallback(distance);
+
+    // Get last record for landing fee variation
     const db = await getDb();
     const last = db ? await db.collection('pricing_history')
       .findOne({}, { sort: { recorded_at: -1 } }) : null;
 
-    // Small ±3% variation for ticket/landing fees (market fluctuation simulation)
     const vary = (base, pct = 0.03) => {
       const change = base * pct * (Math.random() * 2 - 1);
       return Math.round((base + change) * 100) / 100;
     };
 
     const update = {
-      // Real fuel price from EIA, or fallback with variation
-      fuel_cost:      realFuelCost || vary(last?.fuel_cost || 0.85),
-      cost_index:     Math.round(vary(last?.cost_index || 50, 0.05)),
-      // Cargo price: distance-based calculation with seasonal variation
-      cargo_rate:     cargoPricePerKg,
-      // Maintenance cost: calculated based on aircraft type, flight duration, and payload
+      fuel_cost:        realFuelCost || vary(last?.fuel_cost || 0.85),
+      cost_index:       Math.round(vary(last?.cost_index || 50, 0.05)),
+      cargo_rate:       cargoPricePerKg,
       maintenance_cost: maintenanceCostTotal,
-      // Ticket prices: simulated variation based on last known values
-      ticket_base:    Math.round(vary(last?.ticket_base || 95)),
-      ticket_medium:  Math.round(vary(last?.ticket_medium || 180)),
-      ticket_long:    Math.round(vary(last?.ticket_long || 320)),
-      // Landing fees: simulated variation based on last known values
-      landing_small:  Math.round(vary(last?.landing_small || 25)),
-      landing_medium: Math.round(vary(last?.landing_medium || 45)),
-      landing_large:  Math.round(vary(last?.landing_large || 85)),
-      recorded_at:    new Date(),
+      // Ticket: use Travelport real price per pax, or fallback formula
+      ticket_price:     travelportTicketPrice || fallbackTicketPrice,
+      ticket_source:    ticketSource,
+      // Legacy ticket tiers (kept for backward compat)
+      ticket_base:      Math.round(vary(last?.ticket_base || 95)),
+      ticket_medium:    Math.round(vary(last?.ticket_medium || 180)),
+      ticket_long:      Math.round(vary(last?.ticket_long || 320)),
+      landing_small:    Math.round(vary(last?.landing_small || 25)),
+      landing_medium:   Math.round(vary(last?.landing_medium || 45)),
+      landing_large:    Math.round(vary(last?.landing_large || 85)),
+      recorded_at:      new Date(),
       source
     };
 
-    // Save to database if available
-    if (db) {
-      await db.collection('pricing_history').insertOne(update);
-    }
+    if (db) await db.collection('pricing_history').insertOne(update);
 
-    // Convert response to camelCase for frontend compatibility
     const camelCaseUpdate = {
-      fuelCost: update.fuel_cost,
-      cargoRate: update.cargo_rate,
-      maintenanceCost: update.maintenance_cost,
-      costIndex: update.cost_index,
-      ticketBase: update.ticket_base,
-      ticketMedium: update.ticket_medium,
-      ticketLong: update.ticket_long,
-      landingSmall: update.landing_small,
-      landingMedium: update.landing_medium,
-      landingLarge: update.landing_large,
-      timestamp: update.recorded_at.toISOString(),
-      source: update.source
+      fuelCost:         update.fuel_cost,
+      cargoRate:        update.cargo_rate,
+      maintenanceCost:  update.maintenance_cost,
+      ticketPrice:      update.ticket_price,       // ← Real price from Travelport or formula
+      ticketSource:     update.ticket_source,      // 'Travelport' or 'formula'
+      costIndex:        update.cost_index,
+      ticketBase:       update.ticket_base,
+      ticketMedium:     update.ticket_medium,
+      ticketLong:       update.ticket_long,
+      landingSmall:     update.landing_small,
+      landingMedium:    update.landing_medium,
+      landingLarge:     update.landing_large,
+      timestamp:        update.recorded_at.toISOString(),
+      source:           update.source
     };
 
     res.json({
