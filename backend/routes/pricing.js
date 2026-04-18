@@ -17,6 +17,8 @@ async function getTravelportToken() {
 
   if (!clientId || !clientSecret) throw new Error('Travelport credentials not configured');
 
+  console.log(`[Travelport] client_id length=${clientId?.length} secret_length=${clientSecret?.length} user=${username} pass_length=${password?.length}`);
+
   // Try both auth formats - some Travelport sandbox endpoints require client credentials in body
   const body = new URLSearchParams({
     grant_type:    'client_credentials',
