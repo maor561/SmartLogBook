@@ -1075,8 +1075,6 @@ async function loadFromSimbrief() {
     currentFlightData = {
       origin: (origin.icao_code || '????').toUpperCase(),
       destination: (destination.icao_code || '????').toUpperCase(),
-      originIata: (origin.iata_code || '').toUpperCase(),   // ← For Travelport pricing
-      destIata: (destination.iata_code || '').toUpperCase(), // ← For Travelport pricing
       originName: origin.name || '',
       destName: destination.name || '',
       originLat: parseFloat(origin.pos_lat || 0),
@@ -1109,7 +1107,7 @@ async function loadFromSimbrief() {
 
     // Auto-capture real-time pricing for this flight (EIA real fuel + distance-based cargo + calculated maintenance)
     try {
-      // Pass flight details to API for dynamic pricing calculations (incl. IATA for Travelport)
+      // Pass flight details to API for dynamic pricing calculations
       const pricingRes = await fetch('/api/pricing/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1118,9 +1116,7 @@ async function loadFromSimbrief() {
           aircraft:      currentFlightData.aircraft || 'B738',
           durationHours: (currentFlightData.durationMins || 60) / 60,
           payloadKg:     currentFlightData.payload || 0,
-          originIata:    currentFlightData.destIata   || '',   // ← SWAPPED: destIata is origin
-          destIata:      currentFlightData.originIata || '',   // ← SWAPPED: originIata is dest
-          passengers:    currentFlightData.passengers || 1     // ← Travelport
+          passengers:    currentFlightData.passengers || 1
         })
       });
       const pricingData = await pricingRes.json();
@@ -1139,13 +1135,12 @@ async function loadFromSimbrief() {
         currentFlightData.actualFuelCost        = pu.fuelCost;
         currentFlightData.actualCargoRate       = pu.cargoRate;
         currentFlightData.actualTicketPrice     = ticketPrice;
-        currentFlightData.ticketPriceSource     = pu.ticketSource || 'formula'; // 'Travelport' | 'formula'
         currentFlightData.actualLandingFee      = getLandingFeeFromUpdateCamelCase(currentFlightData.aircraft || 'B738', pu);
         currentFlightData.actualMaintenanceCost = pu.maintenanceCost;
         currentFlightData.pricingTimestamp      = new Date().toISOString();
         currentFlightData.pricingSource         = pu.source || 'EIA';
 
-        console.log(`[Pricing] ✅ Auto-captured: fuel $${pu.fuelCost}/kg | cargo $${pu.cargoRate}/kg | maintenance $${pu.maintenanceCost} | ticket $${ticketPrice}/pax (${pu.ticketSource || 'formula'}) | source: ${pu.source}`);
+        console.log(`[Pricing] ✅ Auto-captured: fuel $${pu.fuelCost}/kg | cargo $${pu.cargoRate}/kg | maintenance $${pu.maintenanceCost} | ticket $${ticketPrice}/pax | source: ${pu.source}`);
       }
     } catch (e) {
       console.warn('[Pricing] Auto-capture failed, using defaults:', e);
@@ -1194,12 +1189,8 @@ function displayCurrentFlight() {
 
   const fmtAmt  = n => `$${Math.abs(n).toLocaleString()}`;
   const isReal  = !!d.actualFuelCost;
-  const ticketSrc = d.ticketPriceSource || 'formula';
-  const ticketBadge = ticketSrc === 'Travelport'
-    ? `🌐 Travelport`
-    : `📐 נוסחה`;
   const srcBadge = isReal
-    ? `<span style="color:#10b981;font-size:0.75rem;font-weight:600">✅ ${d.pricingSource || 'EIA'} - בזמן אמת | כרטיס: ${ticketBadge}</span>`
+    ? `<span style="color:#10b981;font-size:0.75rem;font-weight:600">✅ ${d.pricingSource || 'EIA'} - בזמן אמת</span>`
     : `<span style="color:#f59e0b;font-size:0.75rem">⏳ טוען מחירים...</span>`;
 
   // Update badge in section header
@@ -1657,7 +1648,6 @@ async function confirmFlight() {
     actualTicketPrice: d.actualTicketPrice || null,
     actualLandingFee: d.actualLandingFee || null,
     actualMaintenanceCost: d.actualMaintenanceCost || null,
-    ticketPriceSource: d.ticketPriceSource || 'formula',  // 'Travelport' | 'formula'
     pricingTimestamp: d.pricingTimestamp || null,
   };
 

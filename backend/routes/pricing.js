@@ -3,122 +3,6 @@ import getDb from '../db.js';
 
 const router = express.Router();
 
-// ===== TRAVELPORT TRIPSERVICES - TICKET PRICING =====
-let _tpToken = null;
-let _tpTokenExpiry = 0;
-
-async function getTravelportToken() {
-  if (_tpToken && Date.now() < _tpTokenExpiry) return _tpToken;
-
-  const clientId     = process.env.TRAVELPORT_CLIENT_ID;
-  const clientSecret = process.env.TRAVELPORT_CLIENT_SECRET;
-  const username     = process.env.TRAVELPORT_USERNAME;
-  const password     = process.env.TRAVELPORT_PASSWORD;
-
-  if (!clientId || !clientSecret) throw new Error('Travelport credentials not configured');
-
-  console.log(`[Travelport] Auth attempt | client_id=${clientId?.slice(0,6)}... | user=${username}`);
-
-  // Travelport OAuth: Basic Auth with CLIENT_ID:CLIENT_SECRET, production OAuth server
-  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-  const body = new URLSearchParams({ grant_type: 'client_credentials' });
-
-  const res = await fetch('https://oauth.travelport.com/oauth/oauth20/token', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${basicAuth}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body,
-    signal: AbortSignal.timeout(10000)
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Travelport auth failed (${res.status}): ${err.slice(0, 200)}`);
-  }
-
-  const data = await res.json();
-  _tpToken = data.access_token;
-  _tpTokenExpiry = Date.now() + ((data.expires_in || 3600) - 60) * 1000;
-
-  console.log(`[Travelport] ✅ Token acquired, expires in ${data.expires_in}s`);
-  return _tpToken;
-}
-
-async function fetchTravelportTicketPrice(originIata, destIata, passengers = 1) {
-  const token = await getTravelportToken();
-  const pcc   = process.env.TRAVELPORT_PCC || '7K99';
-
-  // Use a date 7 days from now for sandbox pricing
-  const departureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString().split('T')[0];
-
-  const requestBody = {
-    CatalogProductOfferingsQueryRequest: {
-      CatalogProductOfferingsRequest: {
-        '@type': 'CatalogProductOfferingsRequestAir',
-        contentSourceList: ['GDS'],
-        PassengerCriteria: [{ number: Math.min(passengers, 9), passengerTypeCode: 'ADT' }],
-        SearchCriteriaFlight: [{
-          departureDate,
-          From: { value: originIata },
-          To:   { value: destIata }
-        }],
-        SearchModifiersAir: { cabinPreferenceList: ['Economy'] }
-      }
-    }
-  };
-
-  const res = await fetch(
-    'https://api.pp.travelport.net/11/air/catalog/search/catalogproductofferings',
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type':  'application/json',
-        'Accept':        'application/json',
-        'PCC':           pcc
-      },
-      body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(20000)
-    }
-  );
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Travelport search failed (${res.status}): ${err.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
-
-  // Parse response - extract cheapest economy price per passenger
-  const offerings = data?.CatalogProductOfferingsResponse?.CatalogProductOfferings
-    ?.CatalogProductOffering || [];
-
-  if (!offerings.length) throw new Error(`No offers found for ${originIata}→${destIata}`);
-
-  // Collect all per-passenger prices
-  const prices = [];
-  for (const offering of offerings) {
-    const products = offering.CatalogProductOffering?.Product || [];
-    for (const product of products) {
-      const price = product?.Price?.TotalPrice || product?.Price?.Base;
-      if (price && price > 0) {
-        const perPax = Math.round(price / Math.max(passengers, 1));
-        prices.push(perPax);
-      }
-    }
-  }
-
-  if (!prices.length) throw new Error('No prices in Travelport response');
-
-  const cheapest = Math.min(...prices);
-  console.log(`[Travelport] ✅ ${originIata}→${destIata} | Cheapest: $${cheapest}/pax (${prices.length} offers)`);
-  return cheapest;
-}
-
 // GET pricing history
 router.get('/history', async (req, res) => {
   try {
@@ -322,8 +206,6 @@ router.post('/update', async (req, res) => {
     let realFuelCost = null;
     let cargoPricePerKg = null;
     let maintenanceCostTotal = null;
-    let travelportTicketPrice = null;
-    let ticketSource = 'formula';
     let source = 'simulated';
 
     const distance      = parseInt(req.body?.distance)      || 1000;
@@ -331,8 +213,6 @@ router.post('/update', async (req, res) => {
     const durationHours = parseFloat(req.body?.durationHours) || 1;
     const payloadKg     = parseFloat(req.body?.payloadKg)   || 0;
     const passengers    = parseInt(req.body?.passengers)    || 1;
-    const originIata    = req.body?.originIata              || null;  // e.g. "TLV"
-    const destIata      = req.body?.destIata                || null;  // e.g. "ZRH"
 
     // 1. Real Jet Fuel price from EIA
     try {
@@ -347,19 +227,6 @@ router.post('/update', async (req, res) => {
 
     // 3. Maintenance + crew cost (aircraft-based formula)
     maintenanceCostTotal = calculateMaintenanceCost(aircraft, durationHours, payloadKg);
-
-    // 4. Ticket price from Travelport TripServices (real market price)
-    //    Falls back to distance-based formula if API fails or IATA codes missing
-    if (originIata && destIata) {
-      try {
-        travelportTicketPrice = await fetchTravelportTicketPrice(originIata, destIata, passengers);
-        ticketSource = 'Travelport';
-      } catch (tpErr) {
-        console.warn(`[Travelport] Failed for ${originIata}→${destIata}, using formula fallback:`, tpErr.message);
-      }
-    } else {
-      console.log('[Travelport] No IATA codes provided, using formula fallback');
-    }
 
     // Fallback ticket prices (distance-based formula)
     const ticketFallback = (dist) => {
@@ -384,9 +251,7 @@ router.post('/update', async (req, res) => {
       cost_index:       Math.round(vary(last?.cost_index || 50, 0.05)),
       cargo_rate:       cargoPricePerKg,
       maintenance_cost: maintenanceCostTotal,
-      // Ticket: use Travelport real price per pax, or fallback formula
-      ticket_price:     travelportTicketPrice || fallbackTicketPrice,
-      ticket_source:    ticketSource,
+      ticket_price:     fallbackTicketPrice,
       // Legacy ticket tiers (kept for backward compat)
       ticket_base:      Math.round(vary(last?.ticket_base || 95)),
       ticket_medium:    Math.round(vary(last?.ticket_medium || 180)),
@@ -404,8 +269,7 @@ router.post('/update', async (req, res) => {
       fuelCost:         update.fuel_cost,
       cargoRate:        update.cargo_rate,
       maintenanceCost:  update.maintenance_cost,
-      ticketPrice:      update.ticket_price,       // ← Real price from Travelport or formula
-      ticketSource:     update.ticket_source,      // 'Travelport' or 'formula'
+      ticketPrice:      update.ticket_price,
       costIndex:        update.cost_index,
       ticketBase:       update.ticket_base,
       ticketMedium:     update.ticket_medium,
