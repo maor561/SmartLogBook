@@ -2694,10 +2694,14 @@ async function loadPricingHistory(days = 30) {
   // Use default cargo rate (no actual capture for cargo)
   const cargoRevenues   = periodFlights.map(f => Math.round((f.payload || 0) * defaultCargoRate));
 
-  // Use actualMaintenanceCost from flight if available, otherwise use default
+  // Use actualMaintenanceCost from flight if available (it's already total, not hourly)
+  // Otherwise fall back to hourly rate calculation
   const maintCosts      = periodFlights.map(f => {
-    const maintRate = f.actualMaintenanceCost || defaultMaintRate;
-    return Math.round(((f.durationMins || 0) / 60) * maintRate);
+    if (f.actualMaintenanceCost) {
+      return Math.round(f.actualMaintenanceCost);  // Already total cost including crew
+    } else {
+      return Math.round(((f.durationMins || 0) / 60) * defaultMaintRate);  // Fallback hourly
+    }
   });
 
   // Use actualLandingFee from flight if available, otherwise use default
