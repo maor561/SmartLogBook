@@ -26,7 +26,7 @@ async function getTravelportToken() {
     body.append('password', password);
   }
 
-  const res = await fetch('https://oauth.travelport.com/oauth/oauth20/token', {
+  const res = await fetch('https://oauth.pp.travelport.com/oauth/oauth20/token', {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${basicAuth}`,
