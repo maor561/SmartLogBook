@@ -4104,11 +4104,11 @@ function renderAirlineRating() {
       weight: 0.20,
       metrics: [
         {
-          name: 'צריכת דלק (מתואמת)', value: calculateAvgFuelEfficiency().toFixed(3),
-          score: (() => { const v = calculateAvgFuelEfficiency(); return Math.max(1, Math.min(5, 5 - (v - 0.020) / (0.070 - 0.020) * 4)); })(),
-          tips: flightsByDate.filter(f => (f.fuel||0) > 0 && (f.durationMins||0) > 0).map(f => {
-            const eff = calculateFuelEfficiency(f, avgCI, avgPax / actualCapacity.pax * 100);
-            return { label: flLabel(f), val: `${eff.toFixed(3)}` };
+          name: 'צריכת דלק (מתואמת)', value: calculateAvgFuelEfficiency().toFixed(2),
+          score: calculateAvgFuelEfficiency(),
+          tips: flightsByDate.map(f => {
+            const eff = calculateFuelEfficiency(f);
+            return { label: flLabel(f), val: `${eff.toFixed(2)} ⭐` };
           })
         },
         {
@@ -4672,69 +4672,69 @@ async function updateDynamicPricing() {
 }
 
 // ===== FUEL EFFICIENCY CALCULATION =====
+// Score occupancy based on percentage
+function scoreOccupancy(occupancyPercent) {
+  if (occupancyPercent < 40) return 1;
+  if (occupancyPercent < 60) return 2;
+  if (occupancyPercent < 75) return 3;
+  if (occupancyPercent < 90) return 4;
+  return 5;
+}
+
+// Score Flight Level
+function scoreFlightLevel(flightLevel) {
+  if (flightLevel < 180) return 2;
+  if (flightLevel < 300) return 2;
+  if (flightLevel < 340) return 3;
+  if (flightLevel < 370) return 5; // 340-370 = optimal
+  if (flightLevel < 390) return 4;
+  return 3; // >390
+}
+
+// Score Cost Index
+function scoreCostIndex(costIndex) {
+  if (costIndex < 10) return 3; // חסכוני אבל איטי
+  if (costIndex < 30) return 5; // אופטימלי
+  if (costIndex < 60) return 4;
+  if (costIndex < 100) return 3;
+  return 1; // יקר מאוד
+}
+
 // Calculate fuel efficiency score for a single flight
-function calculateFuelEfficiency(flight, avgCI, avgOccupancy) {
+function calculateFuelEfficiency(flight) {
   // Default score if missing data
-  if (!flight || !flight.fuel || !flight.durationMins || (flight.durationMins || 0) === 0) {
-    return 4; // Default score of 4
-  }
+  if (!flight) return 3;
 
-  // Get OEW (Operating Empty Weight) from aircraft type - default 41000 for B738
-  const aircraftOEWMap = {
-    'B738': 41413, 'B737': 41413, 'B739': 41413,  // 737 variants
-    'B744': 178756, 'B77W': 179757, 'B777': 179757, // 777/744
-    'B787': 242592, 'A320': 42900, 'A321': 48578, // 787/A320/A321
-    'A380': 276800, 'A350': 280000, 'CRJ': 21065, 'E145': 20610
-  };
-  const oew = aircraftOEWMap[flight.aircraft] || 41413; // Default to B737 OEW
+  // 1. Occupancy Score (Passengers)
+  const maxPax = flight.aircraft_max_passengers || 189;
+  const occupancyPercent = maxPax > 0 ? (flight.passengers || 0) / maxPax * 100 : 50;
+  const occupancyScore = scoreOccupancy(occupancyPercent);
 
-  // Total weight = OEW + passengers (avg 80kg) + payload
-  const totalWeightKg = oew + (flight.passengers || 0) * 80 + (flight.payload || 0);
+  // 2. Cargo Score
+  const maxCargo = flight.aircraft_max_cargo || 20468;
+  const cargoPercent = maxCargo > 0 ? (flight.payload || 0) / maxCargo * 100 : 50;
+  const cargoScore = scoreOccupancy(cargoPercent); // Use same scale as occupancy
 
-  // Flight duration in hours
-  const flightHours = (flight.durationMins || 0) / 60;
+  // 3. Flight Level Score
+  const flightLevelNumber = (flight.cruiseAltitude || 35000) / 100; // Convert feet to FL
+  const flScore = scoreFlightLevel(flightLevelNumber);
 
-  // 1. Base consumption = (fuel_kg / weight_kg) / hours
-  const baseConsumption = (flight.fuel / totalWeightKg) / flightHours;
+  // 4. Cost Index Score
+  const ciScore = scoreCostIndex(flight.costIndex || 75);
 
-  // 2. CI Adjustment = avg_CI / flight_CI (higher CI = more lenient)
-  const flightCI = flight.costIndex || avgCI || 75;
-  const avgCIVal = avgCI || 75;
-  const ciAdjustment = avgCIVal / flightCI;
-
-  // 3. Occupancy Adjustment = avg_occupancy / flight_occupancy
-  // For flights with missing data, assume default occupancy of 50%
-  const flightOccupancy = flight.passengers && flight.aircraft_max_passengers
-    ? (flight.passengers / flight.aircraft_max_passengers) * 100
-    : 50; // Default if no capacity data
-  const avgOccupancyVal = avgOccupancy || 50;
-  const occupancyAdjustment = avgOccupancyVal / Math.max(1, flightOccupancy);
-
-  // 4. Altitude Adjustment = 1.15 - (altitude_feet / 100000)
-  // Default cruise altitude = 35000 feet if not available
-  const altitudeFeet = flight.cruiseAltitude || 35000;
-  const altitudeAdjustment = 1.15 - (altitudeFeet / 100000);
-
-  // Final efficiency score (lower is better)
-  const efficiencyScore = baseConsumption * ciAdjustment * occupancyAdjustment * altitudeAdjustment;
-
-  return Math.max(0.001, efficiencyScore); // Return at least 0.001 to avoid division by zero
+  // Return average of all 4 scores
+  return (occupancyScore + cargoScore + flScore + ciScore) / 4;
 }
 
 // Calculate average fuel efficiency across all flights
 function calculateAvgFuelEfficiency() {
-  if (!flights || flights.length === 0) return 4; // Default if no flights
-
-  const totalFlights = flights.length;
-  const totalPax = flights.reduce((s, f) => s + (f.passengers || 0), 0);
-  const avgOccupancy = totalFlights > 0 ? (totalPax / totalFlights) / 189 * 100 : 50; // 189 = typical B737 capacity
-  const avgCI = flights.reduce((s, f) => s + (f.costIndex || 0), 0) / Math.max(1, totalFlights);
+  if (!flights || flights.length === 0) return 3; // Default if no flights
 
   const efficiencies = flights
-    .filter(f => (f.fuel || 0) > 0 && (f.durationMins || 0) > 0)
-    .map(f => calculateFuelEfficiency(f, avgCI, avgOccupancy));
+    .filter(f => f && f.aircraft_max_passengers)
+    .map(f => calculateFuelEfficiency(f));
 
-  if (efficiencies.length === 0) return 4; // Default if no valid data
+  if (efficiencies.length === 0) return 3; // Default if no valid data
 
   // Return average efficiency score
   return efficiencies.reduce((a, b) => a + b, 0) / efficiencies.length;
