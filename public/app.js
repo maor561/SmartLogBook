@@ -4006,15 +4006,16 @@ function renderAirlineRating() {
   const currentMonth = monthKeys[monthKeys.length - 1] || '2024-01';
   const currentMonthData = monthlyData[currentMonth] || { flights: 0, hours: 0, passengers: 0, cargo: 0, fuel: 0, dayFlights: 0, nightFlights: 0 };
 
-  // Calculate averages
+  // Calculate averages (EXCLUDING current month - only previous months)
+  const previousMonths = monthKeys.slice(0, -1).map(k => monthlyData[k]);
   const monthlyAvg = {
-    flights: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.flights, 0) / monthKeys.length : 0,
-    hours: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.hours, 0) / monthKeys.length : 0,
-    passengers: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.passengers, 0) / monthKeys.length / Math.max(1, Object.values(monthlyData).reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight
-    cargo: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.cargo, 0) / monthKeys.length / Math.max(1, Object.values(monthlyData).reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight
-    fuel: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.fuel, 0) / monthKeys.length / Math.max(1, Object.values(monthlyData).reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight
-    dayFlights: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.dayFlights, 0) / monthKeys.length : 0,
-    nightFlights: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.nightFlights, 0) / monthKeys.length : 0,
+    flights: previousMonths.length > 0 ? previousMonths.reduce((s, m) => s + m.flights, 0) / previousMonths.length : 0,
+    hours: previousMonths.length > 0 ? previousMonths.reduce((s, m) => s + m.hours, 0) / previousMonths.length : 0,
+    passengers: previousMonths.length > 0 ? (previousMonths.reduce((s, m) => s + m.passengers, 0) / previousMonths.reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight across previous months
+    cargo: previousMonths.length > 0 ? (previousMonths.reduce((s, m) => s + m.cargo, 0) / previousMonths.reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight across previous months
+    fuel: previousMonths.length > 0 ? (previousMonths.reduce((s, m) => s + m.fuel, 0) / previousMonths.reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight across previous months
+    dayFlights: previousMonths.length > 0 ? previousMonths.reduce((s, m) => s + m.dayFlights, 0) / previousMonths.length : 0,
+    nightFlights: previousMonths.length > 0 ? previousMonths.reduce((s, m) => s + m.nightFlights, 0) / previousMonths.length : 0,
   };
 
   // Scoring function: compare current to average
@@ -4157,32 +4158,50 @@ function renderAirlineRating() {
         {
           name: 'ממוצע נוסעים לטיסה (חודש)', value: `${(currentMonthData.passengers / Math.max(1, currentMonthData.flights)).toFixed(0)}`,
           score: scoreMonthly(currentMonthData.passengers / Math.max(1, currentMonthData.flights), monthlyAvg.passengers),
-          tips: monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].passengers / Math.max(1, monthlyData[k].flights)).toFixed(0)}` }))
+          tips: [
+            ...monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].passengers / Math.max(1, monthlyData[k].flights)).toFixed(0)}` })),
+            { label: 'ממוצע חודשי', val: `${monthlyAvg.passengers.toFixed(0)}` }
+          ]
         },
         {
           name: 'ממוצע מטען לטיסה (חודש)', value: `${(currentMonthData.cargo / Math.max(1, currentMonthData.flights)).toFixed(0)}kg`,
           score: scoreMonthly(currentMonthData.cargo / Math.max(1, currentMonthData.flights), monthlyAvg.cargo),
-          tips: monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].cargo / Math.max(1, monthlyData[k].flights)).toFixed(0)}kg` }))
+          tips: [
+            ...monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].cargo / Math.max(1, monthlyData[k].flights)).toFixed(0)}kg` })),
+            { label: 'ממוצע חודשי', val: `${monthlyAvg.cargo.toFixed(0)}kg` }
+          ]
         },
         {
           name: 'ממוצע צריכת דלק (חודש)', value: `${(currentMonthData.fuel / Math.max(1, currentMonthData.flights)).toFixed(0)}kg`,
           score: scoreMonthly(currentMonthData.fuel / Math.max(1, currentMonthData.flights), monthlyAvg.fuel, true), // inverse - lower is better
-          tips: monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].fuel / Math.max(1, monthlyData[k].flights)).toFixed(0)}kg` }))
+          tips: [
+            ...monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].fuel / Math.max(1, monthlyData[k].flights)).toFixed(0)}kg` })),
+            { label: 'ממוצע חודשי', val: `${monthlyAvg.fuel.toFixed(0)}kg` }
+          ]
         },
         {
           name: 'סה"כ שעות טיסה (חודש)', value: `${currentMonthData.hours.toFixed(1)}h`,
           score: scoreMonthly(currentMonthData.hours, monthlyAvg.hours),
-          tips: monthKeys.map(k => ({ label: k, val: `${monthlyData[k].hours.toFixed(1)}h` }))
+          tips: [
+            ...monthKeys.map(k => ({ label: k, val: `${monthlyData[k].hours.toFixed(1)}h` })),
+            { label: 'ממוצע חודשי', val: `${monthlyAvg.hours.toFixed(1)}h` }
+          ]
         },
         {
           name: 'טיסות לילה (חודש)', value: currentMonthData.nightFlights,
           score: scoreMonthly(currentMonthData.nightFlights, monthlyAvg.nightFlights),
-          tips: monthKeys.map(k => ({ label: k, val: monthlyData[k].nightFlights }))
+          tips: [
+            ...monthKeys.map(k => ({ label: k, val: monthlyData[k].nightFlights })),
+            { label: 'ממוצע חודשי', val: `${monthlyAvg.nightFlights.toFixed(1)}` }
+          ]
         },
         {
           name: 'טיסות יום (חודש)', value: currentMonthData.dayFlights,
           score: scoreMonthly(currentMonthData.dayFlights, monthlyAvg.dayFlights),
-          tips: monthKeys.map(k => ({ label: k, val: monthlyData[k].dayFlights }))
+          tips: [
+            ...monthKeys.map(k => ({ label: k, val: monthlyData[k].dayFlights })),
+            { label: 'ממוצע חודשי', val: `${monthlyAvg.dayFlights.toFixed(1)}` }
+          ]
         }
       ]
     }
