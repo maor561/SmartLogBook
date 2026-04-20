@@ -4690,13 +4690,12 @@ function calculateFuelEfficiency(flight, avgCI, avgOccupancy) {
 
   // Total weight = OEW + passengers (avg 80kg) + payload
   const totalWeightKg = oew + (flight.passengers || 0) * 80 + (flight.payload || 0);
-  const totalWeightTons = totalWeightKg / 1000;
 
   // Flight duration in hours
   const flightHours = (flight.durationMins || 0) / 60;
 
-  // 1. Base consumption = (fuel_kg / weight_tons) / hours
-  const baseConsumption = (flight.fuel / totalWeightTons) / flightHours;
+  // 1. Base consumption = (fuel_kg / weight_kg) / hours
+  const baseConsumption = (flight.fuel / totalWeightKg) / flightHours;
 
   // 2. CI Adjustment = avg_CI / flight_CI (higher CI = more lenient)
   const flightCI = flight.costIndex || avgCI || 75;
