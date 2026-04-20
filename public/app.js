@@ -4104,9 +4104,12 @@ function renderAirlineRating() {
       weight: 0.20,
       metrics: [
         {
-          name: 'צריכת דלק (kg/NM)', value: fuelPerNM.toFixed(1),
-          score: ratingScoreInverse(fuelPerNM, 3.0, 8.0),
-          tips: flightsByDate.filter(f => (f.distance||0) > 0).map(f => ({ label: flLabel(f), val: `${(f.fuel/f.distance).toFixed(1)} kg/NM` }))
+          name: 'צריכת דלק (מתואמת)', value: calculateAvgFuelEfficiency().toFixed(3),
+          score: ratingScore(calculateAvgFuelEfficiency(), 0.020, 0.070),
+          tips: flightsByDate.filter(f => (f.fuel||0) > 0 && (f.durationMins||0) > 0).map(f => {
+            const eff = calculateFuelEfficiency(f, avgCI, avgPax / actualCapacity.pax * 100);
+            return { label: flLabel(f), val: `${eff.toFixed(3)}` };
+          })
         },
         {
           name: `ניצול נוסעים`, value: `${(avgPax / actualCapacity.pax * 100).toFixed(1)}%`,
@@ -4117,11 +4120,6 @@ function renderAirlineRating() {
           name: `ניצול מטען`, value: `${(avgPayload / actualCapacity.cargo * 100).toFixed(1)}%`,
           score: ratingScore(avgPayload / actualCapacity.cargo * 100, 15, 80),
           tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.payload||0}/${actualCapacity.cargo}kg (${(f.payload/actualCapacity.cargo*100).toFixed(0)}%)` }))
-        },
-        {
-          name: 'מרחק ממוצע (NM)', value: avgDist.toFixed(0),
-          score: ratingScore(avgDist, 300, 2000),
-          tips: flightsByDate.map(f => ({ label: flLabel(f), val: `${f.distance||0} NM` }))
         }
       ]
     },
@@ -4671,6 +4669,76 @@ async function updateDynamicPricing() {
   } catch (err) {
     console.log('[Pricing Auto-Update] Skipped (DB not available)');
   }
+}
+
+// ===== FUEL EFFICIENCY CALCULATION =====
+// Calculate fuel efficiency score for a single flight
+function calculateFuelEfficiency(flight, avgCI, avgOccupancy) {
+  // Default score if missing data
+  if (!flight || !flight.fuel || !flight.durationMins || (flight.durationMins || 0) === 0) {
+    return 4; // Default score of 4
+  }
+
+  // Get OEW (Operating Empty Weight) from aircraft type - default 41000 for B738
+  const aircraftOEWMap = {
+    'B738': 41413, 'B737': 41413, 'B739': 41413,  // 737 variants
+    'B744': 178756, 'B77W': 179757, 'B777': 179757, // 777/744
+    'B787': 242592, 'A320': 42900, 'A321': 48578, // 787/A320/A321
+    'A380': 276800, 'A350': 280000, 'CRJ': 21065, 'E145': 20610
+  };
+  const oew = aircraftOEWMap[flight.aircraft] || 41413; // Default to B737 OEW
+
+  // Total weight = OEW + passengers (avg 80kg) + payload
+  const totalWeightKg = oew + (flight.passengers || 0) * 80 + (flight.payload || 0);
+  const totalWeightTons = totalWeightKg / 1000;
+
+  // Flight duration in hours
+  const flightHours = (flight.durationMins || 0) / 60;
+
+  // 1. Base consumption = (fuel_kg / weight_tons) / hours
+  const baseConsumption = (flight.fuel / totalWeightTons) / flightHours;
+
+  // 2. CI Adjustment = avg_CI / flight_CI (higher CI = more lenient)
+  const flightCI = flight.costIndex || avgCI || 75;
+  const avgCIVal = avgCI || 75;
+  const ciAdjustment = avgCIVal / flightCI;
+
+  // 3. Occupancy Adjustment = avg_occupancy / flight_occupancy
+  // For flights with missing data, assume default occupancy of 50%
+  const flightOccupancy = flight.passengers && flight.aircraft_max_passengers
+    ? (flight.passengers / flight.aircraft_max_passengers) * 100
+    : 50; // Default if no capacity data
+  const avgOccupancyVal = avgOccupancy || 50;
+  const occupancyAdjustment = avgOccupancyVal / Math.max(1, flightOccupancy);
+
+  // 4. Altitude Adjustment = 1.15 - (altitude_feet / 100000)
+  // Default cruise altitude = 35000 feet if not available
+  const altitudeFeet = flight.cruiseAltitude || 35000;
+  const altitudeAdjustment = 1.15 - (altitudeFeet / 100000);
+
+  // Final efficiency score (lower is better)
+  const efficiencyScore = baseConsumption * ciAdjustment * occupancyAdjustment * altitudeAdjustment;
+
+  return Math.max(0.001, efficiencyScore); // Return at least 0.001 to avoid division by zero
+}
+
+// Calculate average fuel efficiency across all flights
+function calculateAvgFuelEfficiency() {
+  if (!flights || flights.length === 0) return 4; // Default if no flights
+
+  const totalFlights = flights.length;
+  const totalPax = flights.reduce((s, f) => s + (f.passengers || 0), 0);
+  const avgOccupancy = totalFlights > 0 ? (totalPax / totalFlights) / 189 * 100 : 50; // 189 = typical B737 capacity
+  const avgCI = flights.reduce((s, f) => s + (f.costIndex || 0), 0) / Math.max(1, totalFlights);
+
+  const efficiencies = flights
+    .filter(f => (f.fuel || 0) > 0 && (f.durationMins || 0) > 0)
+    .map(f => calculateFuelEfficiency(f, avgCI, avgOccupancy));
+
+  if (efficiencies.length === 0) return 4; // Default if no valid data
+
+  // Return average efficiency score
+  return efficiencies.reduce((a, b) => a + b, 0) / efficiencies.length;
 }
 
 // Auto-update pricing every hour
