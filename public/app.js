@@ -4063,11 +4063,6 @@ function renderAirlineRating() {
           name: 'רווח/שעת טיסה', value: `$${(profitPerHour/1000).toFixed(1)}K`,
           score: ratingScore(profitPerHour, 2000, 10000),
           tips: flightsByDate.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `$${Math.round((f.profit||0)/((f.durationMins||60)/60)).toLocaleString()}/h` }))
-        },
-        {
-          name: 'עמידה ביעד', value: `${goalAchievement.toFixed(0)}%`,
-          score: ratingScore(goalAchievement, 20, 100),
-          tips: [{ label: 'סה"כ טיסות', val: totalFlights }, { label: 'יעד', val: document.getElementById('goalFlights')?.value || '—' }]
         }
       ]
     },
