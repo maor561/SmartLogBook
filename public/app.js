@@ -52,35 +52,8 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Install Prompt
-let deferredPrompt = null;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  const banner = document.getElementById('installBanner');
-  if (banner) banner.style.display = 'block';
-});
-
-function installPWA() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(choice => {
-    if (choice.outcome === 'accepted') {
-      console.log('[PWA] App installed');
-    }
-    deferredPrompt = null;
-    const banner = document.getElementById('installBanner');
-    if (banner) banner.style.display = 'none';
-  });
-}
-
-window.addEventListener('appinstalled', () => {
-  console.log('[PWA] App installed successfully');
-  deferredPrompt = null;
-  const banner = document.getElementById('installBanner');
-  if (banner) banner.style.display = 'none';
-});
+// Install Prompt - Disabled
+// (PWA install banner removed)
 
 // Offline/Online Detection
 window.addEventListener('online', () => {
