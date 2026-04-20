@@ -4105,7 +4105,7 @@ function renderAirlineRating() {
       metrics: [
         {
           name: 'צריכת דלק (מתואמת)', value: calculateAvgFuelEfficiency().toFixed(3),
-          score: ratingScore(calculateAvgFuelEfficiency(), 0.020, 0.070),
+          score: ratingScoreInverse(calculateAvgFuelEfficiency(), 0.070, 0.020),
           tips: flightsByDate.filter(f => (f.fuel||0) > 0 && (f.durationMins||0) > 0).map(f => {
             const eff = calculateFuelEfficiency(f, avgCI, avgPax / actualCapacity.pax * 100);
             return { label: flLabel(f), val: `${eff.toFixed(3)}` };
