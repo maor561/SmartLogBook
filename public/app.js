@@ -3967,6 +3967,64 @@ function renderAirlineRating() {
   // Completed missions
   const completedCount = completedMissions ? completedMissions.length : 0;
 
+  // Monthly statistics for Activity category
+  const getMonthlyStats = () => {
+    const monthlyData = {};
+    flights.forEach(f => {
+      const date = new Date(f.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = {
+          flights: 0,
+          hours: 0,
+          passengers: 0,
+          cargo: 0,
+          fuel: 0,
+          dayFlights: 0,
+          nightFlights: 0,
+        };
+      }
+      monthlyData[monthKey].flights++;
+      monthlyData[monthKey].hours += (f.durationMins || 0) / 60;
+      monthlyData[monthKey].passengers += f.passengers || 0;
+      monthlyData[monthKey].cargo += f.payload || 0;
+      monthlyData[monthKey].fuel += f.fuel || 0;
+
+      // Check if flight is night (between 22:00 and 06:00)
+      const hour = date.getHours();
+      if (hour >= 22 || hour < 6) {
+        monthlyData[monthKey].nightFlights++;
+      } else {
+        monthlyData[monthKey].dayFlights++;
+      }
+    });
+    return monthlyData;
+  };
+
+  const monthlyData = getMonthlyStats();
+  const monthKeys = Object.keys(monthlyData).sort();
+  const currentMonth = monthKeys[monthKeys.length - 1] || '2024-01';
+  const currentMonthData = monthlyData[currentMonth] || { flights: 0, hours: 0, passengers: 0, cargo: 0, fuel: 0, dayFlights: 0, nightFlights: 0 };
+
+  // Calculate averages
+  const monthlyAvg = {
+    flights: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.flights, 0) / monthKeys.length : 0,
+    hours: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.hours, 0) / monthKeys.length : 0,
+    passengers: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.passengers, 0) / monthKeys.length / Math.max(1, Object.values(monthlyData).reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight
+    cargo: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.cargo, 0) / monthKeys.length / Math.max(1, Object.values(monthlyData).reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight
+    fuel: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.fuel, 0) / monthKeys.length / Math.max(1, Object.values(monthlyData).reduce((s, m) => s + m.flights, 0)) : 0, // avg per flight
+    dayFlights: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.dayFlights, 0) / monthKeys.length : 0,
+    nightFlights: monthKeys.length > 0 ? Object.values(monthlyData).reduce((s, m) => s + m.nightFlights, 0) / monthKeys.length : 0,
+  };
+
+  // Scoring function: compare current to average
+  const scoreMonthly = (current, average, inverse = false) => {
+    if (average === 0) return 3;
+    if (current > average) return inverse ? 1 : 5;
+    if (current < average) return inverse ? 5 : 1;
+    return 3; // equal
+  };
+
   // Rank - calculate from flight hours (same logic as updateRank)
   let rankIdx = 0;
   for (let i = RANK_THRESHOLDS.length - 1; i >= 0; i--) {
@@ -4092,46 +4150,39 @@ function renderAirlineRating() {
       ]
     },
     {
-      name: 'מוניטין',
-      emoji: '🌍',
-      weight: 0.15,
-      metrics: [
-        {
-          name: 'יעדים ייחודיים', value: uniqueDests,
-          score: ratingScore(uniqueDests, 3, 20),
-          tips: [...new Set(flights.map(f => f.destination))].map(d => ({ label: d, val: `${flights.filter(f => f.destination === d).length} טיסות` }))
-        },
-        {
-          name: 'יבשות', value: continents.size,
-          score: ratingScore(continents.size, 1, 5),
-          tips: [...continents].map(c => ({ label: c, val: `${flights.filter(f => continentMap[(f.destination||'').charAt(0).toUpperCase()] === c).length} טיסות` }))
-        },
-        {
-          name: 'משימות שהושלמו', value: completedCount,
-          score: ratingScore(completedCount, 0, 10),
-          tips: completedMissions && completedMissions.length ? completedMissions.map(m => ({ label: m, val: '✅' })) : [{ label: 'אין משימות שהושלמו', val: '' }]
-        }
-      ]
-    },
-    {
       name: 'פעילות',
-      emoji: '📊',
-      weight: 0.15,
+      emoji: '⚙️',
+      weight: 0.20,
       metrics: [
         {
-          name: 'סה"כ טיסות', value: totalFlights,
-          score: ratingScore(totalFlights, 5, 100),
-          tips: flightsByDate.map(f => ({ label: flLabel(f), val: new Date(f.date).toLocaleDateString('he-IL') }))
+          name: 'ממוצע נוסעים לטיסה (חודש)', value: `${(currentMonthData.passengers / Math.max(1, currentMonthData.flights)).toFixed(0)}`,
+          score: scoreMonthly(currentMonthData.passengers / Math.max(1, currentMonthData.flights), monthlyAvg.passengers),
+          tips: monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].passengers / Math.max(1, monthlyData[k].flights)).toFixed(0)}` }))
         },
         {
-          name: 'שעות טיסה', value: totalHours.toFixed(0),
-          score: ratingScore(totalHours, 10, 500),
-          tips: flightsByDate.filter(f => (f.durationMins||0) > 0).map(f => ({ label: flLabel(f), val: `${Math.floor((f.durationMins||0)/60)}:${String((f.durationMins||0)%60).padStart(2,'0')}h` }))
+          name: 'ממוצע מטען לטיסה (חודש)', value: `${(currentMonthData.cargo / Math.max(1, currentMonthData.flights)).toFixed(0)}kg`,
+          score: scoreMonthly(currentMonthData.cargo / Math.max(1, currentMonthData.flights), monthlyAvg.cargo),
+          tips: monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].cargo / Math.max(1, monthlyData[k].flights)).toFixed(0)}kg` }))
         },
         {
-          name: 'דרגת טייס', value: rankName,
-          score: ratingScore(rankIdx, 0, 5),
-          tips: RANK_THRESHOLDS.map((h, i) => ({ label: (t('ranks')||['סטודנט','טייס מתחיל','טייס','טייס בכיר','קברניט','קברניט בכיר','אגדי'])[i], val: `${h}h` }))
+          name: 'ממוצע צריכת דלק (חודש)', value: `${(currentMonthData.fuel / Math.max(1, currentMonthData.flights)).toFixed(0)}kg`,
+          score: scoreMonthly(currentMonthData.fuel / Math.max(1, currentMonthData.flights), monthlyAvg.fuel, true), // inverse - lower is better
+          tips: monthKeys.map(k => ({ label: k, val: `${(monthlyData[k].fuel / Math.max(1, monthlyData[k].flights)).toFixed(0)}kg` }))
+        },
+        {
+          name: 'סה"כ שעות טיסה (חודש)', value: `${currentMonthData.hours.toFixed(1)}h`,
+          score: scoreMonthly(currentMonthData.hours, monthlyAvg.hours),
+          tips: monthKeys.map(k => ({ label: k, val: `${monthlyData[k].hours.toFixed(1)}h` }))
+        },
+        {
+          name: 'טיסות לילה (חודש)', value: currentMonthData.nightFlights,
+          score: scoreMonthly(currentMonthData.nightFlights, monthlyAvg.nightFlights),
+          tips: monthKeys.map(k => ({ label: k, val: monthlyData[k].nightFlights }))
+        },
+        {
+          name: 'טיסות יום (חודש)', value: currentMonthData.dayFlights,
+          score: scoreMonthly(currentMonthData.dayFlights, monthlyAvg.dayFlights),
+          tips: monthKeys.map(k => ({ label: k, val: monthlyData[k].dayFlights }))
         }
       ]
     }
