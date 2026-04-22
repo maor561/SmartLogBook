@@ -3026,14 +3026,18 @@ function generateReport() {
 
   // ── VARIABLE COSTS ANALYSIS ──
   const fuelCosts = costDetails.map(c => c.fuelExpense);
-  const cargoRates = revenueDetails.map(r => r.fuelCost);
+  const fuelRates = revenueDetails.map(r => r.fuelCost);
   const ticketPrices = revenueDetails.map(r => r.ticketPrice);
-  const minFuelCostPerKg = Math.min(...cargoRates);
-  const maxFuelCostPerKg = Math.max(...cargoRates);
-  const avgFuelCostPerKg = cargoRates.length > 0 ? (cargoRates.reduce((a,b)=>a+b)/cargoRates.length).toFixed(2) : fuelCost.toFixed(2);
+  const cargoRatesPerKg = monthFlights.map(f => f.actualCargoRate || cargoRate);
+  const minFuelCostPerKg = Math.min(...fuelRates);
+  const maxFuelCostPerKg = Math.max(...fuelRates);
+  const avgFuelCostPerKg = fuelRates.length > 0 ? (fuelRates.reduce((a,b)=>a+b)/fuelRates.length).toFixed(2) : fuelCost.toFixed(2);
   const minTicketPrice = Math.min(...ticketPrices);
   const maxTicketPrice = Math.max(...ticketPrices);
   const avgTicketPrice = ticketPrices.length > 0 ? Math.round(ticketPrices.reduce((a,b)=>a+b)/ticketPrices.length) : 0;
+  const minCargoRate = Math.min(...cargoRatesPerKg).toFixed(2);
+  const maxCargoRate = Math.max(...cargoRatesPerKg).toFixed(2);
+  const avgCargoRate = (cargoRatesPerKg.reduce((a,b)=>a+b)/cargoRatesPerKg.length).toFixed(2);
 
   const costBar = (val) => {
     const pct = totalCosts > 0 ? Math.round((val / totalCosts) * 100) : 0;
@@ -3276,7 +3280,7 @@ function generateReport() {
   <!-- VARIABLE COSTS ANALYSIS -->
   <div class="section" style="margin-bottom:20px;">
     <div class="section-title">📊 ניתוח עלויות משתנות</div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
       <div style="padding:12px;background:#f8fafc;border-radius:8px;border-left:4px solid #f59e0b;">
         <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:8px;">⛽ מחיר דלק / ק"ג</div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מינימום:</span><span style="font-weight:600;">$${minFuelCostPerKg}</span></div>
@@ -3284,10 +3288,16 @@ function generateReport() {
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>ממוצע:</span><span style="font-weight:600;">$${avgFuelCostPerKg}</span></div>
       </div>
       <div style="padding:12px;background:#f8fafc;border-radius:8px;border-left:4px solid #8b5cf6;">
-        <div style="font-size:12px;font-weight:600;color:#6b21a8;margin-bottom:8px;">🎫 מחיר כרטיס ממוצע</div>
+        <div style="font-size:12px;font-weight:600;color:#6b21a8;margin-bottom:8px;">🎫 מחיר כרטיס</div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מינימום:</span><span style="font-weight:600;">$${minTicketPrice}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מקסימום:</span><span style="font-weight:600;">$${maxTicketPrice}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>ממוצע:</span><span style="font-weight:600;">$${avgTicketPrice}</span></div>
+      </div>
+      <div style="padding:12px;background:#f8fafc;border-radius:8px;border-left:4px solid #10b981;">
+        <div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:8px;">📦 מחיר מטען / ק"ג</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מינימום:</span><span style="font-weight:600;">$${minCargoRate}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מקסימום:</span><span style="font-weight:600;">$${maxCargoRate}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>ממוצע:</span><span style="font-weight:600;">$${avgCargoRate}</span></div>
       </div>
     </div>
   </div>
