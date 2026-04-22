@@ -2980,25 +2980,60 @@ function generateReport() {
   };
   const deltaColor = (cur, prev) => cur >= prev ? '#16a34a' : '#dc2626';
 
-  // ── Cost breakdown (dynamic pricing model) ──
-  // Use actual captured costs from flights when available, else calculate
-  const totalActualFuel = flights.reduce((s, f) => s + (f.actualFuelCost ? f.fuel * f.actualFuelCost : f.fuel * (pricing.fuelCost || 0.85)), 0);
-  const totalActualMaintenance = flights.reduce((s, f) => s + (f.actualMaintenanceCost || Math.round((f.durationMins / 60) * (pricing.maintenanceCost || 180))), 0);
-  const totalActualCargo = flights.reduce((s, f) => s + (f.payload * (f.actualCargoRate || pricing.cargoRate || 2.0)), 0);
+  // ── REVENUE BREAKDOWN ──
+  const fuelCost = pricing.fuelCost || 0.85;
+  const cargoRate = pricing.cargoRate || 2.0;
+  const landingFee = pricing.landingFee || 500;
 
-  // For backward compatibility, also calculate with old method
-  const fuelCostPerKg = 0.85;
-  const crewCostPerHour = 450;
-  const landingFeeBase = 800;
+  // Calculate revenues for each flight
+  const revenueDetails = monthFlights.map(f => {
+    const ticketPrice = f.actualTicketPrice || getTicketPrice(f.distance || 0);
+    const actualCargoKg = Math.max(0, (f.payload || 0) - (f.passengers || 0) * 95);
+    const ticketRev = f.passengers * ticketPrice;
+    const cargoRev = actualCargoKg * cargoRate;
+    return { ticketPrice, actualCargoKg, ticketRev, cargoRev, fuelCost: f.actualFuelCost || fuelCost };
+  });
 
-  const costFuel        = Math.round(totalActualFuel > 0 ? totalActualFuel : (totalFuel * fuelCostPerKg));
-  const costCrew        = 0;  // Already included in actualMaintenanceCost
-  const costLanding     = Math.round(totalFlights * landingFeeBase);
-  const costMaintenance = Math.round(totalActualMaintenance > 0 ? totalActualMaintenance : Math.round((totalMins / 60) * (pricing.maintenanceCost || 180)));
-  const totalCosts      = costFuel + costCrew + costLanding + costMaintenance;
-  const totalRevenue    = totalProfit + totalCosts;
-  const profitMargin    = totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0;
-  const roi             = totalCosts > 0 ? ((totalProfit / totalCosts) * 100).toFixed(1) : '0';
+  const totalTicketRevenue = revenueDetails.reduce((s, r) => s + r.ticketRev, 0);
+  const totalCargoRevenue = revenueDetails.reduce((s, r) => s + r.cargoRev, 0);
+  const totalRevenueCalculated = totalTicketRevenue + totalCargoRevenue;
+
+  // ── COST BREAKDOWN ──
+  const costDetails = monthFlights.map((f, idx) => {
+    const fCost = revenueDetails[idx].fuelCost;
+    const actualCargoKg = revenueDetails[idx].actualCargoKg;
+    const maint = f.actualMaintenanceCost || Math.round((f.durationMins / 60) * (pricing.maintenanceCost || 3000));
+    const fuelExpense = f.fuel * fCost;
+    const cargoExpense = actualCargoKg * cargoRate;
+    const landingExpense = landingFee;
+    const penalty = Math.abs(f.fpm || 0) > 400 ? (pricing.landingPenalty || 500) : 0;
+    const total = fuelExpense + maint + cargoExpense + landingExpense + penalty;
+    return { fuelExpense, maint, cargoExpense, landingExpense, penalty, total, fCost };
+  });
+
+  const costFuel = Math.round(costDetails.reduce((s, c) => s + c.fuelExpense, 0));
+  const costMaintenance = Math.round(costDetails.reduce((s, c) => s + c.maint, 0));
+  const costCargo = Math.round(costDetails.reduce((s, c) => s + c.cargoExpense, 0));
+  const costLanding = Math.round(costDetails.reduce((s, c) => s + c.landingExpense, 0));
+  const costPenalty = Math.round(costDetails.reduce((s, c) => s + c.penalty, 0));
+  const totalCosts = costFuel + costMaintenance + costCargo + costLanding + costPenalty;
+
+  // Use calculated revenue instead of profit + costs (more accurate)
+  const totalRevenue = totalRevenueCalculated;
+  const netProfit = totalRevenue - totalCosts;
+  const profitMargin = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
+  const roi = totalCosts > 0 ? ((netProfit / totalCosts) * 100).toFixed(1) : '0';
+
+  // ── VARIABLE COSTS ANALYSIS ──
+  const fuelCosts = costDetails.map(c => c.fuelExpense);
+  const cargoRates = revenueDetails.map(r => r.fuelCost);
+  const ticketPrices = revenueDetails.map(r => r.ticketPrice);
+  const minFuelCostPerKg = Math.min(...cargoRates);
+  const maxFuelCostPerKg = Math.max(...cargoRates);
+  const avgFuelCostPerKg = cargoRates.length > 0 ? (cargoRates.reduce((a,b)=>a+b)/cargoRates.length).toFixed(2) : fuelCost.toFixed(2);
+  const minTicketPrice = Math.min(...ticketPrices);
+  const maxTicketPrice = Math.max(...ticketPrices);
+  const avgTicketPrice = ticketPrices.length > 0 ? Math.round(ticketPrices.reduce((a,b)=>a+b)/ticketPrices.length) : 0;
 
   const costBar = (val) => {
     const pct = totalCosts > 0 ? Math.round((val / totalCosts) * 100) : 0;
@@ -3172,28 +3207,54 @@ function generateReport() {
     </div>
   </div>
 
-  <!-- COST BREAKDOWN + ROI -->
+  <!-- REVENUE BREAKDOWN -->
+  <div class="section" style="margin-bottom:20px;">
+    <div class="section-title">💰 פירוט הכנסות</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:12px;color:#15803d;margin-bottom:4px;">🎫 כרטיסים</div>
+        <div style="font-size:20px;font-weight:700;color:#059669;">$${totalTicketRevenue.toLocaleString()}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">${totalPax.toLocaleString()} נוסעים</div>
+      </div>
+      <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:12px;color:#7c3aed;margin-bottom:4px;">📦 מטען</div>
+        <div style="font-size:20px;font-weight:700;color:#6366f1;">$${totalCargoRevenue.toLocaleString()}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">~${(totalPayload/1000).toFixed(1)}T</div>
+      </div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:12px;color:#1e40af;margin-bottom:4px;">📊 סה"כ הכנסות</div>
+        <div style="font-size:20px;font-weight:700;color:#2563eb;">$${totalRevenue.toLocaleString()}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COST & PROFITABILITY BREAKDOWN -->
   <div class="two-col" style="margin-bottom:20px;">
     <div class="section">
       <div class="section-title">💸 פירוט עלויות</div>
       <div class="cost-item">
         <div class="cost-row"><span class="cost-name">⛽ דלק</span><span class="cost-val">$${costFuel.toLocaleString()}</span></div>
         ${costBar(costFuel)}
+        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">₪ $${minFuelCostPerKg} - $${maxFuelCostPerKg}/ק"ג (ממוצע: $${avgFuelCostPerKg}/ק"ג)</div>
       </div>
       <div class="cost-item">
-        <div class="cost-row"><span class="cost-name">👨‍✈️ צוות</span><span class="cost-val">$${costCrew.toLocaleString()}</span></div>
-        ${costBar(costCrew)}
+        <div class="cost-row"><span class="cost-name">🔧 תחזוקה + צוות</span><span class="cost-val">$${costMaintenance.toLocaleString()}</span></div>
+        ${costBar(costMaintenance)}
+      </div>
+      <div class="cost-item">
+        <div class="cost-row"><span class="cost-name">📦 מטען (עלות)</span><span class="cost-val">$${costCargo.toLocaleString()}</span></div>
+        ${costBar(costCargo)}
       </div>
       <div class="cost-item">
         <div class="cost-row"><span class="cost-name">🛬 נחיתות</span><span class="cost-val">$${costLanding.toLocaleString()}</span></div>
         ${costBar(costLanding)}
       </div>
-      <div class="cost-item">
-        <div class="cost-row"><span class="cost-name">🔧 תחזוקה</span><span class="cost-val">$${costMaintenance.toLocaleString()}</span></div>
-        ${costBar(costMaintenance)}
-      </div>
-      <div style="border-top:2px solid #e2e8f0;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;font-weight:700;">
-        <span>סך עלויות</span><span>$${totalCosts.toLocaleString()}</span>
+      ${costPenalty > 0 ? `<div class="cost-item">
+        <div class="cost-row"><span class="cost-name">⚠️ קנסות נחיתה</span><span class="cost-val" style="color:#dc2626;">-$${costPenalty.toLocaleString()}</span></div>
+        ${costBar(costPenalty)}
+      </div>` : ''}
+      <div style="border-top:2px solid #e2e8f0;margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;font-weight:700;font-size:14px;">
+        <span>💼 סך עלויות</span><span style="color:#dc2626;">-$${totalCosts.toLocaleString()}</span>
       </div>
     </div>
 
@@ -3203,12 +3264,31 @@ function generateReport() {
         <div style="font-size:12px;color:#64748b;margin-bottom:4px;">החזר השקעה (ROI)</div>
         <div class="roi-badge">${roi}%</div>
       </div>
-      <div class="comp-row"><span class="comp-metric">הכנסות</span><span class="comp-cur pos">$${totalRevenue.toLocaleString()}</span></div>
-      <div class="comp-row"><span class="comp-metric">עלויות</span><span class="comp-cur neg">$${totalCosts.toLocaleString()}</span></div>
-      <div class="comp-row"><span class="comp-metric">רווח נקי</span><span class="comp-cur" style="color:${totalProfit>=0?'#059669':'#dc2626'}">${fmtMoney(totalProfit)}</span></div>
-      <div class="comp-row"><span class="comp-metric">מרווח רווח</span><span class="comp-cur">${profitMargin}%</span></div>
-      <div class="comp-row"><span class="comp-metric">ממוצע לטיסה</span><span class="comp-cur">${fmtMoney(Math.round(totalProfit/totalFlights))}</span></div>
-      <div class="comp-row"><span class="comp-metric">רווח לשעה</span><span class="comp-cur">${totalMins>0?fmtMoney(Math.round(totalProfit/(totalMins/60))):'—'}</span></div>
+      <div class="comp-row"><span class="comp-metric">💰 הכנסות כוללות</span><span class="comp-cur pos">$${totalRevenue.toLocaleString()}</span></div>
+      <div class="comp-row"><span class="comp-metric">💸 עלויות כוללות</span><span class="comp-cur neg">-$${totalCosts.toLocaleString()}</span></div>
+      <div class="comp-row" style="border-top:2px solid #f1f5f9;margin-top:8px;padding-top:8px;"><span class="comp-metric" style="font-weight:700;">🎯 רווח נקי</span><span class="comp-cur" style="color:${netProfit>=0?'#059669':'#dc2626'};font-weight:700;font-size:16px;">${fmtMoney(netProfit)}</span></div>
+      <div class="comp-row"><span class="comp-metric">% מרווח רווח</span><span class="comp-cur">${profitMargin}%</span></div>
+      <div class="comp-row"><span class="comp-metric">💵 ממוצע לטיסה</span><span class="comp-cur">${fmtMoney(Math.round(netProfit/totalFlights))}</span></div>
+      <div class="comp-row"><span class="comp-metric">⏱️ רווח לשעה</span><span class="comp-cur">${totalMins>0?fmtMoney(Math.round(netProfit/(totalMins/60))):'—'}</span></div>
+    </div>
+  </div>
+
+  <!-- VARIABLE COSTS ANALYSIS -->
+  <div class="section" style="margin-bottom:20px;">
+    <div class="section-title">📊 ניתוח עלויות משתנות</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+      <div style="padding:12px;background:#f8fafc;border-radius:8px;border-left:4px solid #f59e0b;">
+        <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:8px;">⛽ מחיר דלק / ק"ג</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מינימום:</span><span style="font-weight:600;">$${minFuelCostPerKg}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מקסימום:</span><span style="font-weight:600;">$${maxFuelCostPerKg}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>ממוצע:</span><span style="font-weight:600;">$${avgFuelCostPerKg}</span></div>
+      </div>
+      <div style="padding:12px;background:#f8fafc;border-radius:8px;border-left:4px solid #8b5cf6;">
+        <div style="font-size:12px;font-weight:600;color:#6b21a8;margin-bottom:8px;">🎫 מחיר כרטיס ממוצע</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מינימום:</span><span style="font-weight:600;">$${minTicketPrice}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>מקסימום:</span><span style="font-weight:600;">$${maxTicketPrice}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569;margin:4px 0;"><span>ממוצע:</span><span style="font-weight:600;">$${avgTicketPrice}</span></div>
+      </div>
     </div>
   </div>
 
