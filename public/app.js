@@ -2935,7 +2935,7 @@ function openReportDialog() {
   openModal('reportModal');
 }
 
-function generateReport() {
+async function generateReport() {
   const L = TRANSLATIONS[currentLang];
   const selected = document.getElementById('reportMonthSelect').value;
   const [year, month] = selected.split('-').map(Number);
@@ -2949,6 +2949,19 @@ function generateReport() {
     showToast('❌ ' + (L.reportNoFlights || 'No flights this month'), 'error');
     return;
   }
+
+  // ── Fetch pricing history for this month from backend ──
+  let pricingHistory = [];
+  try {
+    const r = await fetch('/api/pricing/history?days=365');
+    if (r.ok) {
+      const data = await r.json();
+      pricingHistory = (data.history || []).filter(h => {
+        const d = new Date(h.recorded_at);
+        return d.getFullYear() === year && d.getMonth() + 1 === month;
+      });
+    }
+  } catch(e) { console.warn('[Report] Could not fetch pricing history', e); }
 
   // ── Previous month for comparison ──
   const prevMonth = month === 1 ? 12 : month - 1;
@@ -3031,19 +3044,37 @@ function generateReport() {
 
   // ── VARIABLE COSTS ANALYSIS ──
   const fuelCosts = costDetails.map(c => c.fuelExpense);
-  // ── Variable prices: always use actual per-flight values stored at time of flight ──
-  const fuelRates    = monthFlights.map(f => f.actualFuelCost  || pricing.fuelCost  || 0.85);
-  const cargoRatesPerKg = monthFlights.map(f => f.actualCargoRate || pricing.cargoRate || 2.0);
+  // ── Variable prices: use pricing history from DB (real data), fallback to per-flight values ──
   const ticketPrices = monthFlights.map(f => f.actualTicketPrice || getTicketPrice(f.distance || 0));
-  const minFuelCostPerKg  = Math.min(...fuelRates).toFixed(2);
-  const maxFuelCostPerKg  = Math.max(...fuelRates).toFixed(2);
-  const avgFuelCostPerKg  = (fuelRates.reduce((a,b)=>a+b,0) / fuelRates.length).toFixed(2);
-  const minTicketPrice    = Math.min(...ticketPrices);
-  const maxTicketPrice    = Math.max(...ticketPrices);
-  const avgTicketPrice    = Math.round(ticketPrices.reduce((a,b)=>a+b,0) / ticketPrices.length);
-  const minCargoRate      = Math.min(...cargoRatesPerKg).toFixed(2);
-  const maxCargoRate      = Math.max(...cargoRatesPerKg).toFixed(2);
-  const avgCargoRate      = (cargoRatesPerKg.reduce((a,b)=>a+b,0) / cargoRatesPerKg.length).toFixed(2);
+  const minTicketPrice = Math.min(...ticketPrices);
+  const maxTicketPrice = Math.max(...ticketPrices);
+  const avgTicketPrice = Math.round(ticketPrices.reduce((a,b)=>a+b,0) / ticketPrices.length);
+
+  // Fuel & cargo: prefer pricing history records (real historical data) over per-flight fallback
+  let minFuelCostPerKg, maxFuelCostPerKg, avgFuelCostPerKg;
+  let minCargoRate, maxCargoRate, avgCargoRate;
+  const historySource = pricingHistory.length > 0;
+
+  if (historySource) {
+    const hFuel  = pricingHistory.map(h => h.fuel_cost).filter(Boolean);
+    const hCargo = pricingHistory.map(h => h.cargo_rate).filter(Boolean);
+    minFuelCostPerKg = hFuel.length ? Math.min(...hFuel).toFixed(2) : (pricing.fuelCost || 0.85).toFixed(2);
+    maxFuelCostPerKg = hFuel.length ? Math.max(...hFuel).toFixed(2) : (pricing.fuelCost || 0.85).toFixed(2);
+    avgFuelCostPerKg = hFuel.length ? (hFuel.reduce((a,b)=>a+b,0)/hFuel.length).toFixed(2) : (pricing.fuelCost || 0.85).toFixed(2);
+    minCargoRate = hCargo.length ? Math.min(...hCargo).toFixed(2) : (pricing.cargoRate || 2.0).toFixed(2);
+    maxCargoRate = hCargo.length ? Math.max(...hCargo).toFixed(2) : (pricing.cargoRate || 2.0).toFixed(2);
+    avgCargoRate = hCargo.length ? (hCargo.reduce((a,b)=>a+b,0)/hCargo.length).toFixed(2) : (pricing.cargoRate || 2.0).toFixed(2);
+  } else {
+    // Fallback: per-flight actual values (for new flights) or current settings
+    const fuelRates   = monthFlights.map(f => f.actualFuelCost  || pricing.fuelCost  || 0.85);
+    const cargoRates  = monthFlights.map(f => f.actualCargoRate || pricing.cargoRate || 2.0);
+    minFuelCostPerKg  = Math.min(...fuelRates).toFixed(2);
+    maxFuelCostPerKg  = Math.max(...fuelRates).toFixed(2);
+    avgFuelCostPerKg  = (fuelRates.reduce((a,b)=>a+b,0)/fuelRates.length).toFixed(2);
+    minCargoRate      = Math.min(...cargoRates).toFixed(2);
+    maxCargoRate      = Math.max(...cargoRates).toFixed(2);
+    avgCargoRate      = (cargoRates.reduce((a,b)=>a+b,0)/cargoRates.length).toFixed(2);
+  }
 
   const costBar = (val) => {
     const pct = totalCosts > 0 ? Math.round((val / totalCosts) * 100) : 0;
@@ -3285,7 +3316,7 @@ function generateReport() {
 
   <!-- VARIABLE COSTS ANALYSIS -->
   <div class="section" style="margin-bottom:20px;">
-    <div class="section-title">📊 ניתוח עלויות משתנות</div>
+    <div class="section-title">📊 ניתוח עלויות משתנות <span style="font-size:11px;font-weight:400;color:${historySource?'#059669':'#94a3b8'};margin-right:8px;">${historySource?'✅ נתוני היסטוריית תמחור אמיתיים':'⚠️ נתוני הגדרות (אין היסטוריה לחודש זה)'}</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
       <div style="padding:12px;background:#f8fafc;border-radius:8px;border-left:4px solid #f59e0b;">
         <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:8px;">⛽ מחיר דלק / ק"ג</div>
