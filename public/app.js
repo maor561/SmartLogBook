@@ -1616,12 +1616,13 @@ async function confirmFlight() {
     ceiling: d.ceiling || 5000,
     weatherConditions: d.weatherConditions || 'CAVOK',
 
-    // Dynamic pricing - captured at time of flight creation
-    actualFuelCost: d.actualFuelCost || null,
-    actualTicketPrice: d.actualTicketPrice || null,
-    actualLandingFee: d.actualLandingFee || null,
+    // Dynamic pricing - captured at time of flight creation (always store real values)
+    actualFuelCost: d.actualFuelCost || pricing.fuelCost,
+    actualCargoRate: d.actualCargoRate || pricing.cargoRate,
+    actualTicketPrice: d.actualTicketPrice || getTicketPrice(d.distance || 0),
+    actualLandingFee: d.actualLandingFee || getLandingFee(d.aircraft || ''),
     actualMaintenanceCost: d.actualMaintenanceCost || null,
-    pricingTimestamp: d.pricingTimestamp || null,
+    pricingTimestamp: d.pricingTimestamp || new Date().toISOString(),
   };
 
   try {
@@ -2985,27 +2986,31 @@ function generateReport() {
   const cargoRate = pricing.cargoRate || 2.0;
   const landingFee = pricing.landingFee || 500;
 
-  // Calculate revenues for each flight
+  // Calculate revenues for each flight — always use actual per-flight prices
   const revenueDetails = monthFlights.map(f => {
-    const ticketPrice = f.actualTicketPrice || getTicketPrice(f.distance || 0);
+    const ticketPrice   = f.actualTicketPrice || getTicketPrice(f.distance || 0);
+    const flightCargoRate = f.actualCargoRate || cargoRate;
+    const flightFuelCost  = f.actualFuelCost  || fuelCost;
     const actualCargoKg = Math.max(0, (f.payload || 0) - (f.passengers || 0) * 95);
     const ticketRev = f.passengers * ticketPrice;
-    const cargoRev = actualCargoKg * cargoRate;
-    return { ticketPrice, actualCargoKg, ticketRev, cargoRev, fuelCost: f.actualFuelCost || fuelCost };
+    const cargoRev  = actualCargoKg * flightCargoRate;
+    return { ticketPrice, actualCargoKg, ticketRev, cargoRev, fuelCost: flightFuelCost, cargoRate: flightCargoRate };
   });
 
   const totalTicketRevenue = revenueDetails.reduce((s, r) => s + r.ticketRev, 0);
-  const totalCargoRevenue = revenueDetails.reduce((s, r) => s + r.cargoRev, 0);
+  const totalCargoRevenue  = revenueDetails.reduce((s, r) => s + r.cargoRev, 0);
   const totalRevenueCalculated = totalTicketRevenue + totalCargoRevenue;
 
   // ── COST BREAKDOWN ──
   const costDetails = monthFlights.map((f, idx) => {
-    const fCost = revenueDetails[idx].fuelCost;
+    const fCost         = revenueDetails[idx].fuelCost;
+    const fCargoRate    = revenueDetails[idx].cargoRate;
     const actualCargoKg = revenueDetails[idx].actualCargoKg;
+    const flightLandingFee = f.actualLandingFee || getLandingFee(f.aircraft || '');
     const maint = f.actualMaintenanceCost || Math.round((f.durationMins / 60) * (pricing.maintenanceCost || 3000));
-    const fuelExpense = f.fuel * fCost;
-    const cargoExpense = actualCargoKg * cargoRate;
-    const landingExpense = landingFee;
+    const fuelExpense    = f.fuel * fCost;
+    const cargoExpense   = actualCargoKg * fCargoRate;
+    const landingExpense = flightLandingFee;
     const penalty = Math.abs(f.fpm || 0) > 400 ? (pricing.landingPenalty || 500) : 0;
     const total = fuelExpense + maint + cargoExpense + landingExpense + penalty;
     return { fuelExpense, maint, cargoExpense, landingExpense, penalty, total, fCost };
@@ -3026,18 +3031,19 @@ function generateReport() {
 
   // ── VARIABLE COSTS ANALYSIS ──
   const fuelCosts = costDetails.map(c => c.fuelExpense);
-  const fuelRates = revenueDetails.map(r => r.fuelCost);
-  const ticketPrices = revenueDetails.map(r => r.ticketPrice);
-  const cargoRatesPerKg = monthFlights.map(f => f.actualCargoRate || cargoRate);
-  const minFuelCostPerKg = Math.min(...fuelRates);
-  const maxFuelCostPerKg = Math.max(...fuelRates);
-  const avgFuelCostPerKg = fuelRates.length > 0 ? (fuelRates.reduce((a,b)=>a+b)/fuelRates.length).toFixed(2) : fuelCost.toFixed(2);
-  const minTicketPrice = Math.min(...ticketPrices);
-  const maxTicketPrice = Math.max(...ticketPrices);
-  const avgTicketPrice = ticketPrices.length > 0 ? Math.round(ticketPrices.reduce((a,b)=>a+b)/ticketPrices.length) : 0;
-  const minCargoRate = Math.min(...cargoRatesPerKg).toFixed(2);
-  const maxCargoRate = Math.max(...cargoRatesPerKg).toFixed(2);
-  const avgCargoRate = (cargoRatesPerKg.reduce((a,b)=>a+b)/cargoRatesPerKg.length).toFixed(2);
+  // ── Variable prices: always use actual per-flight values stored at time of flight ──
+  const fuelRates    = monthFlights.map(f => f.actualFuelCost  || pricing.fuelCost  || 0.85);
+  const cargoRatesPerKg = monthFlights.map(f => f.actualCargoRate || pricing.cargoRate || 2.0);
+  const ticketPrices = monthFlights.map(f => f.actualTicketPrice || getTicketPrice(f.distance || 0));
+  const minFuelCostPerKg  = Math.min(...fuelRates).toFixed(2);
+  const maxFuelCostPerKg  = Math.max(...fuelRates).toFixed(2);
+  const avgFuelCostPerKg  = (fuelRates.reduce((a,b)=>a+b,0) / fuelRates.length).toFixed(2);
+  const minTicketPrice    = Math.min(...ticketPrices);
+  const maxTicketPrice    = Math.max(...ticketPrices);
+  const avgTicketPrice    = Math.round(ticketPrices.reduce((a,b)=>a+b,0) / ticketPrices.length);
+  const minCargoRate      = Math.min(...cargoRatesPerKg).toFixed(2);
+  const maxCargoRate      = Math.max(...cargoRatesPerKg).toFixed(2);
+  const avgCargoRate      = (cargoRatesPerKg.reduce((a,b)=>a+b,0) / cargoRatesPerKg.length).toFixed(2);
 
   const costBar = (val) => {
     const pct = totalCosts > 0 ? Math.round((val / totalCosts) * 100) : 0;
