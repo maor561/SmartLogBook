@@ -804,6 +804,13 @@ body {
   min-width: 75px;
   text-align: end;
 }
+.history-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
 
 /* ===== MAP ===== */
 #map {
@@ -1111,11 +1118,21 @@ body {
   .settings-grid { grid-template-columns: 1fr; }
   .history-item {
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }
   .history-stats {
     flex-direction: row;
-    gap: 16px;
+    gap: 12px;
+  }
+  .history-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    width: 100%;
+  }
+  .history-actions .btn {
+    flex: 1;
+    justify-content: center;
   }
 }
 
@@ -1173,14 +1190,14 @@ body {
   body { font-size: 14px; }
   .main { padding: 8px; }
 
-  .stats-grid { grid-template-columns: 1fr; grid-gap: 8px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); grid-gap: 8px; }
   .stat-card {
-    padding: 12px;
+    padding: 10px 8px;
     border-radius: 8px;
   }
-  .stat-emoji { font-size: 1.4rem; }
-  .stat-value { font-size: 1.2rem; }
-  .stat-label { font-size: 0.75rem; }
+  .stat-emoji { font-size: 1.3rem; }
+  .stat-value { font-size: 1.1rem; }
+  .stat-label { font-size: 0.7rem; }
 
   .header {
     padding: 8px 10px;
@@ -1295,7 +1312,9 @@ body {
   margin-top: 4px;
 }
 @media (max-width: 480px) {
-  .analytics-grid { grid-template-columns: 1fr; }
+  .analytics-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .analytics-card { padding: 10px 8px; }
+  .analytics-card .analytics-value { font-size: 1.1rem; }
 }
 
 /* Number inputs */
@@ -1366,28 +1385,47 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
     overflow-y: auto;
   }
 
-  /* Stats cards - Single column */
+  /* Stats cards - 2 columns on mobile */
   .stats-grid {
-    grid-template-columns: 1fr;
-    grid-gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 8px;
   }
   .stat-card {
-    padding: 14px;
-    min-height: 90px;
+    padding: 12px 8px;
+    min-height: 80px;
+  }
+  .stat-value { font-size: 1.2rem; }
+  .stat-label { font-size: 0.72rem; }
+
+  /* History list */
+  .history-item {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .history-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    width: 100%;
+  }
+  .history-actions .btn {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 0.78rem;
+    min-height: 38px;
   }
 
-  /* History list - Better spacing */
-  .history-item {
-    padding: 12px;
-    gap: 10px;
-    min-height: 75px;
-  }
+  /* Map - shorter on mobile */
+  #map { height: 260px; }
 
   /* Current flight panel */
   .current-flight {
-    padding: 12px;
-    margin-bottom: 12px;
+    padding: 10px;
+    margin-bottom: 10px;
   }
+
+  /* Override inputs - prevent iOS zoom */
+  .override-field input { font-size: 16px; }
 
   /* Pricing charts - Stack on mobile */
   #pricingChartsContainer {

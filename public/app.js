@@ -1987,9 +1987,11 @@ function updateHistory() {
           <div class="history-stat">⛽ ${(f.fuel||0).toLocaleString()}</div>
         </div>
         <div class="history-profit" style="color:${pc}">${ps}$${Math.abs(f.profit||0).toLocaleString()}</div>
-        <button class="btn btn-info" onclick="openBoardingPassModal('${f.id}')">🎫 Pass</button>
-        <button class="btn btn-primary" onclick="openEditFlight('${f.id}')">✏️ Edit</button>
-        <button class="btn btn-danger" onclick="deleteFlight('${f.id}')">${L.deleteBtn}</button>
+        <div class="history-actions">
+          <button class="btn btn-info" onclick="openBoardingPassModal('${f.id}')">🎫 Pass</button>
+          <button class="btn btn-primary" onclick="openEditFlight('${f.id}')">✏️ Edit</button>
+          <button class="btn btn-danger" onclick="deleteFlight('${f.id}')">${L.deleteBtn}</button>
+        </div>
       </div>
     `;
   }).join('');
