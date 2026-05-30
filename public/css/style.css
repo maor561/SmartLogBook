@@ -357,6 +357,41 @@ body {
 .cf-section-flight::before   { background: #3b82f6; }
 .cf-section-rating::before   { background: #8b5cf6; }
 .cf-section-financial::before { background: #10b981; }
+.cf-section-overrides::before { background: #f59e0b; }
+
+/* Manual expense overrides */
+.overrides-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.override-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  font-weight: 500;
+}
+.override-field input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.override-field input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245,158,11,0.15);
+}
+.override-badge {
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
 
 .cf-panel-section-header {
   display: flex;

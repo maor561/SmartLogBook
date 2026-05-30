@@ -124,6 +124,14 @@ const TRANSLATIONS = {
     landing: 'נחיתה',
     maintenance: 'תחזוקה',
     penalty: 'קנס נחיתה קשה',
+    catering: 'קייטרינג',
+    groundServices: 'שירותי קרקע',
+    cleaning: 'ניקיון מטוס',
+    manualOverrides: 'עדכון הוצאות ידני',
+    manualFuelOverride: '⛽ עלות דלק ($)',
+    manualCatering: '🍽️ קייטרינג ($)',
+    manualGroundServices: '🚌 שירותי קרקע ($)',
+    manualCleaning: '🧹 ניקיון מטוס ($)',
     totalRevenues: 'סה״כ הכנסות',
     totalExpenses: 'סה״כ הוצאות',
     netProfit: 'רווח נקי',
@@ -271,6 +279,14 @@ const TRANSLATIONS = {
     landing: 'Landing',
     maintenance: 'Maintenance',
     penalty: 'Hard Landing Penalty',
+    catering: 'Catering',
+    groundServices: 'Ground Services',
+    cleaning: 'Aircraft Cleaning',
+    manualOverrides: 'Manual Expense Overrides',
+    manualFuelOverride: '⛽ Fuel Cost ($)',
+    manualCatering: '🍽️ Catering ($)',
+    manualGroundServices: '🚌 Ground Services ($)',
+    manualCleaning: '🧹 Aircraft Cleaning ($)',
     totalRevenues: 'Total Revenue',
     totalExpenses: 'Total Expenses',
     netProfit: 'Net Profit',
@@ -969,6 +985,11 @@ function applyTranslations() {
   set('closeChartBtn', L.closeBtns);
   set('closeRankBtn', L.closeBtns);
   set('finAnalysisTitle', L.finAnalysis);
+  set('manualOverridesTitle', L.manualOverrides);
+  set('overrideFuelLabel', L.manualFuelOverride);
+  set('overrideCateringLabel', L.manualCatering);
+  set('overrideGroundLabel', L.manualGroundServices);
+  set('overrideCleaningLabel', L.manualCleaning);
   set('periodDay', L.periodDay);
   set('periodWeek', L.periodWeek);
   set('periodMonth', L.periodMonth);
@@ -1248,7 +1269,7 @@ function displayCurrentFlight() {
   `;
 
   // SECTION 4: Financial
-  const fin = calcFinancials(d, 0);
+  const fin = calcFinancials(d, 0, getManualOverrides());
   document.getElementById('finAnalysisContent').innerHTML = buildFinancialHTML(d, fin, false);
 
   const panel = document.getElementById('currentFlightPanel');
@@ -1256,8 +1277,30 @@ function displayCurrentFlight() {
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function updateFinancialLive() {
+  if (!currentFlightData) return;
+  const fin = calcFinancials(currentFlightData, 0, getManualOverrides());
+  document.getElementById('finAnalysisContent').innerHTML = buildFinancialHTML(currentFlightData, fin, false);
+}
+
 // ===== FINANCIAL CALCULATIONS =====
-function calcFinancials(d, fpm) {
+function getManualOverrides() {
+  const val = (id) => {
+    const el = document.getElementById(id);
+    if (!el || el.value === '') return null;
+    const n = parseFloat(el.value);
+    return isNaN(n) ? null : n;
+  };
+  return {
+    fuelCostOverride: val('overrideFuelCost'),
+    cateringCost: val('overrideCatering') ?? 0,
+    groundServicesCost: val('overrideGroundServices') ?? 0,
+    cleaningCost: val('overrideCleaning') ?? 0,
+  };
+}
+
+function calcFinancials(d, fpm, overrides) {
+  const ov = overrides || {};
   const ticketPrice = d.actualTicketPrice || getTicketPrice(d.distance || 0);
   const landingFee = d.actualLandingFee || getLandingFee(d.aircraft || '');
   const cargoRate = d.actualCargoRate || pricing.cargoRate;
@@ -1269,17 +1312,21 @@ function calcFinancials(d, fpm) {
   const cargoRevenue = actualCargoKg * cargoRate;
   const totalIncome = ticketRevenue + cargoRevenue;
 
-  const fuelExpense = d.fuel * fuelCost;
+  const fuelExpense = ov.fuelCostOverride != null ? ov.fuelCostOverride : d.fuel * fuelCost;
+  const fuelIsOverride = ov.fuelCostOverride != null;
   const landingExpense = landingFee;
   // Use actualMaintenanceCost if captured (includes crew costs), else calculate from hourly rate
   const maintenanceExpense = d.actualMaintenanceCost || ((d.durationMins / 60) * pricing.maintenanceCost);
   // crewExpense is only added if using fallback hourly calculation (not included in actualMaintenanceCost)
   const crewExpense = d.actualMaintenanceCost ? 0 : pricing.crewCost;
+  const cateringExpense = ov.cateringCost || 0;
+  const groundServicesExpense = ov.groundServicesCost || 0;
+  const cleaningExpense = ov.cleaningCost || 0;
   const penalty = Math.abs(fpm) > 400 ? pricing.landingPenalty : 0;
-  const totalExpenses = fuelExpense + crewExpense + landingExpense + maintenanceExpense + penalty;
+  const totalExpenses = fuelExpense + crewExpense + landingExpense + maintenanceExpense + cateringExpense + groundServicesExpense + cleaningExpense + penalty;
   const netProfit = Math.round(totalIncome - totalExpenses);
 
-  return { ticketRevenue, cargoRevenue, totalIncome, fuelExpense, crewExpense, landingExpense, maintenanceExpense, penalty, totalExpenses, netProfit, ticketPrice, landingFee };
+  return { ticketRevenue, cargoRevenue, totalIncome, fuelExpense, fuelIsOverride, crewExpense, landingExpense, maintenanceExpense, cateringExpense, groundServicesExpense, cleaningExpense, penalty, totalExpenses, netProfit, ticketPrice, landingFee };
 }
 
 function buildFinancialHTML(d, fin, showPenalty) {
@@ -1307,7 +1354,7 @@ function buildFinancialHTML(d, fin, showPenalty) {
       <div class="cf-fin-col">
         <div class="cf-fin-col-title cf-expense-title">📉 ${L.expenses}</div>
         <div class="cf-fin-row">
-          <span>⛽ ${L.fuel}</span>
+          <span>⛽ ${L.fuel}${fin.fuelIsOverride ? ' <span class="override-badge">✏️</span>' : ''}</span>
           <span class="value-negative">-${fmt(fin.fuelExpense)}</span>
         </div>
         ${fin.crewExpense > 0 ? `<div class="cf-fin-row">
@@ -1322,6 +1369,18 @@ function buildFinancialHTML(d, fin, showPenalty) {
           <span>🔧 ${L.maintenance}</span>
           <span class="value-negative">-${fmt(fin.maintenanceExpense)}</span>
         </div>
+        ${fin.cateringExpense > 0 ? `<div class="cf-fin-row">
+          <span>🍽️ ${L.catering} <span class="override-badge">✏️</span></span>
+          <span class="value-negative">-${fmt(fin.cateringExpense)}</span>
+        </div>` : ''}
+        ${fin.groundServicesExpense > 0 ? `<div class="cf-fin-row">
+          <span>🚌 ${L.groundServices} <span class="override-badge">✏️</span></span>
+          <span class="value-negative">-${fmt(fin.groundServicesExpense)}</span>
+        </div>` : ''}
+        ${fin.cleaningExpense > 0 ? `<div class="cf-fin-row">
+          <span>🧹 ${L.cleaning} <span class="override-badge">✏️</span></span>
+          <span class="value-negative">-${fmt(fin.cleaningExpense)}</span>
+        </div>` : ''}
         ${showPenalty && fin.penalty > 0 ? `<div class="cf-fin-row">
           <span>💥 ${L.penalty}</span>
           <span class="value-negative">-${fmt(fin.penalty)}</span>
@@ -1587,7 +1646,8 @@ async function confirmFlight() {
   }
 
   const d = currentFlightData;
-  const fin = calcFinancials(d, fpm);
+  const ov = getManualOverrides();
+  const fin = calcFinancials(d, fpm, ov);
 
   const flight = {
     date: new Date().toISOString(),
@@ -1623,6 +1683,10 @@ async function confirmFlight() {
     actualLandingFee: d.actualLandingFee || getLandingFee(d.aircraft || ''),
     actualMaintenanceCost: d.actualMaintenanceCost || null,
     pricingTimestamp: d.pricingTimestamp || new Date().toISOString(),
+    fuelCostOverride: ov.fuelCostOverride,
+    cateringCost: ov.cateringCost,
+    groundServicesCost: ov.groundServicesCost,
+    cleaningCost: ov.cleaningCost,
   };
 
   try {
@@ -1632,6 +1696,10 @@ async function confirmFlight() {
 
     closeModal('confirmModal');
     document.getElementById('currentFlightPanel').style.display = 'none';
+    ['overrideFuelCost','overrideCatering','overrideGroundServices','overrideCleaning'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
     currentFlightData = null;
 
     // Check if this flight completes any mission

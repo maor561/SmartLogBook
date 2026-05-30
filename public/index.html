@@ -124,7 +124,33 @@
         <div class="cf-conditions" id="cfConditions"></div>
       </div>
 
-      <!-- SECTION 4: Financial Calculation -->
+      <!-- SECTION 4: Manual Expense Overrides -->
+      <div class="cf-panel-section cf-section-overrides">
+        <div class="cf-panel-section-header">
+          <span class="cf-panel-section-icon">✏️</span>
+          <span class="cf-panel-section-title" id="manualOverridesTitle">עדכון הוצאות ידני</span>
+        </div>
+        <div class="overrides-grid">
+          <div class="override-field">
+            <label id="overrideFuelLabel">⛽ עלות דלק ($)</label>
+            <input type="number" id="overrideFuelCost" placeholder="אוטומטי" min="0" oninput="updateFinancialLive()">
+          </div>
+          <div class="override-field">
+            <label id="overrideCateringLabel">🍽️ קייטרינג ($)</label>
+            <input type="number" id="overrideCatering" placeholder="0" min="0" oninput="updateFinancialLive()">
+          </div>
+          <div class="override-field">
+            <label id="overrideGroundLabel">🚌 שירותי קרקע ($)</label>
+            <input type="number" id="overrideGroundServices" placeholder="0" min="0" oninput="updateFinancialLive()">
+          </div>
+          <div class="override-field">
+            <label id="overrideCleaningLabel">🧹 ניקיון מטוס ($)</label>
+            <input type="number" id="overrideCleaning" placeholder="0" min="0" oninput="updateFinancialLive()">
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 5: Financial Calculation -->
       <div class="cf-panel-section cf-section-financial">
         <div class="cf-panel-section-header">
           <span class="cf-panel-section-icon">💰</span>

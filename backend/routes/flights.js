@@ -34,7 +34,8 @@ router.post('/', async (req, res) => {
       distance, duration, durationMins, passengers, fuel, payload, fpm, profit,
       originLat, originLon, destLat, destLon,
       costIndex, windSpeed, visibility, ceiling, weatherConditions,
-      aircraft_max_passengers, aircraft_max_cargo
+      aircraft_max_passengers, aircraft_max_cargo,
+      fuelCostOverride, cateringCost, groundServicesCost, cleaningCost
     } = req.body;
 
     const result = await db.collection('flights').insertOne({
@@ -51,6 +52,10 @@ router.post('/', async (req, res) => {
       weather_conditions: weatherConditions || 'CAVOK',
       aircraft_max_passengers: req.body.aircraft_max_passengers || 189,
       aircraft_max_cargo: req.body.aircraft_max_cargo || 5000,
+      fuel_cost_override: fuelCostOverride ?? null,
+      catering_cost: cateringCost || 0,
+      ground_services_cost: groundServicesCost || 0,
+      cleaning_cost: cleaningCost || 0,
       created_at: new Date()
     });
 
