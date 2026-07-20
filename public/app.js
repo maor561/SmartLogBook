@@ -2764,8 +2764,11 @@ async function loadPricingHistory(days = 30) {
   const defaultCargoRate  = pricing.cargoRate        || 2.0;
   const defaultMaintRate  = pricing.maintenanceCost  || 180;
 
-  // Use actualFuelCost from flight if available, otherwise use default
+  // Use actualFuelCost from flight if available, otherwise use default.
+  // A manual fuel override (set on the flight panel) always wins — it's a flat
+  // dollar amount, not a per-kg rate.
   const fuelCosts       = periodFlights.map(f => {
+    if (f.fuelCostOverride != null) return Math.round(f.fuelCostOverride);
     const fuelRate = f.actualFuelCost || defaultFuelRate;
     return Math.round((f.fuel || 0) * fuelRate);
   });
@@ -2781,25 +2784,30 @@ async function loadPricingHistory(days = 30) {
   // Actual cargo = payload - (passengers × 95kg average per person)
   const cargoRevenues   = periodFlights.map(f => {
     const actualCargoKg = Math.max(0, (f.payload || 0) - (f.passengers || 0) * 95);
-    const cargoRate = f.actualCargoRate || 4.5;  // Use dynamic rate, fallback to $4.5/kg
+    const cargoRate = f.actualCargoRate || defaultCargoRate;
     return Math.round(actualCargoKg * cargoRate);
   });
 
-  // Use actualMaintenanceCost from flight if available (it's already total, not hourly)
-  // Otherwise fall back to hourly rate calculation
+  // Use actualMaintenanceCost from flight if available (it's already total, including crew).
+  // Otherwise fall back to hourly rate + crew cost, matching calcFinancials().
   const maintCosts      = periodFlights.map(f => {
     if (f.actualMaintenanceCost) {
       return Math.round(f.actualMaintenanceCost);  // Already total cost including crew
     } else {
-      return Math.round(((f.durationMins || 0) / 60) * defaultMaintRate);  // Fallback hourly
+      const hourly = ((f.durationMins || 0) / 60) * defaultMaintRate;
+      return Math.round(hourly + (pricing.crewCost || 0));  // Fallback hourly + crew
     }
   });
 
   // Use actualLandingFee from flight if available, otherwise use default
   const landingFees     = periodFlights.map(f => f.actualLandingFee || getLandingFee(f.aircraft || 'B738'));
 
+  // Manual expense overrides (catering / ground services / cleaning) captured on the flight panel
+  const otherCosts      = periodFlights.map(f =>
+    (f.cateringCost || 0) + (f.groundServicesCost || 0) + (f.cleaningCost || 0));
+
   const totalRevenues   = periodFlights.map((_, i) => ticketRevenues[i] + cargoRevenues[i]);
-  const totalOpCosts    = periodFlights.map((_, i) => maintCosts[i] + landingFees[i]);
+  const totalOpCosts    = periodFlights.map((_, i) => maintCosts[i] + landingFees[i] + otherCosts[i]);
   const netProfits      = periodFlights.map((_, i) => totalRevenues[i] - fuelCosts[i] - totalOpCosts[i]);
 
   // --- KPI Summary ---
@@ -2975,8 +2983,9 @@ async function loadPricingHistory(days = 30) {
     }
   );
 
-  // === CHART 4: Operating costs (maintenance + landing stacked) ===
+  // === CHART 4: Operating costs (maintenance + landing + manual overrides stacked) ===
   document.getElementById('pcUnitCosts').textContent = `ממוצע: ${fmt(Math.round(sumOpCosts / periodFlights.length))}`;
+  const hasOtherCosts = otherCosts.some(v => v > 0);
   pricingCharts.costs = new Chart(
     document.getElementById('landingFeesChart').getContext('2d'), {
       type: 'bar',
@@ -2997,8 +3006,16 @@ async function loadPricingHistory(days = 30) {
             backgroundColor: 'rgba(245,158,11,0.75)',
             borderColor: '#f59e0b',
             borderWidth: 1,
+            borderRadius: hasOtherCosts ? 0 : 4
+          },
+          ...(hasOtherCosts ? [{
+            label: 'קייטרינג/קרקע/ניקיון',
+            data: otherCosts,
+            backgroundColor: 'rgba(236,72,153,0.75)',
+            borderColor: '#ec4899',
+            borderWidth: 1,
             borderRadius: 4
-          }
+          }] : [])
         ]
       },
       options: {
@@ -3116,26 +3133,30 @@ async function generateReport() {
   const totalRevenueCalculated = totalTicketRevenue + totalCargoRevenue;
 
   // ── COST BREAKDOWN ──
+  // Note: cargo is revenue only (see revenueDetails above) — it has no matching
+  // "cargo cost" line, so it must not be subtracted again here.
   const costDetails = monthFlights.map((f, idx) => {
     const fCost         = revenueDetails[idx].fuelCost;
-    const fCargoRate    = revenueDetails[idx].cargoRate;
-    const actualCargoKg = revenueDetails[idx].actualCargoKg;
     const flightLandingFee = f.actualLandingFee || getLandingFee(f.aircraft || '');
-    const maint = f.actualMaintenanceCost || Math.round((f.durationMins / 60) * (pricing.maintenanceCost || 3000));
-    const fuelExpense    = f.fuel * fCost;
-    const cargoExpense   = actualCargoKg * fCargoRate;
+    // actualMaintenanceCost already includes crew; the hourly fallback needs crew added
+    // separately, matching calcFinancials() — same logic used when the flight was saved.
+    const maint = f.actualMaintenanceCost
+      || Math.round((f.durationMins / 60) * (pricing.maintenanceCost || 180) + (pricing.crewCost || 0));
+    // A manual fuel override (flat dollar amount) always wins over the per-kg rate
+    const fuelExpense    = f.fuelCostOverride != null ? f.fuelCostOverride : f.fuel * fCost;
     const landingExpense = flightLandingFee;
+    const otherExpense   = (f.cateringCost || 0) + (f.groundServicesCost || 0) + (f.cleaningCost || 0);
     const penalty = Math.abs(f.fpm || 0) > 400 ? (pricing.landingPenalty || 500) : 0;
-    const total = fuelExpense + maint + cargoExpense + landingExpense + penalty;
-    return { fuelExpense, maint, cargoExpense, landingExpense, penalty, total, fCost };
+    const total = fuelExpense + maint + landingExpense + otherExpense + penalty;
+    return { fuelExpense, maint, landingExpense, otherExpense, penalty, total, fCost };
   });
 
   const costFuel = Math.round(costDetails.reduce((s, c) => s + c.fuelExpense, 0));
   const costMaintenance = Math.round(costDetails.reduce((s, c) => s + c.maint, 0));
-  const costCargo = Math.round(costDetails.reduce((s, c) => s + c.cargoExpense, 0));
   const costLanding = Math.round(costDetails.reduce((s, c) => s + c.landingExpense, 0));
+  const costOther = Math.round(costDetails.reduce((s, c) => s + c.otherExpense, 0));
   const costPenalty = Math.round(costDetails.reduce((s, c) => s + c.penalty, 0));
-  const totalCosts = costFuel + costMaintenance + costCargo + costLanding + costPenalty;
+  const totalCosts = costFuel + costMaintenance + costLanding + costOther + costPenalty;
 
   // Use calculated revenue instead of profit + costs (more accurate)
   const totalRevenue = totalRevenueCalculated;
@@ -3384,13 +3405,13 @@ async function generateReport() {
         ${costBar(costMaintenance)}
       </div>
       <div class="cost-item">
-        <div class="cost-row"><span class="cost-name">📦 מטען (עלות)</span><span class="cost-val">$${costCargo.toLocaleString()}</span></div>
-        ${costBar(costCargo)}
-      </div>
-      <div class="cost-item">
         <div class="cost-row"><span class="cost-name">🛬 נחיתות</span><span class="cost-val">$${costLanding.toLocaleString()}</span></div>
         ${costBar(costLanding)}
       </div>
+      ${costOther > 0 ? `<div class="cost-item">
+        <div class="cost-row"><span class="cost-name">🍽️ קייטרינג/קרקע/ניקיון</span><span class="cost-val">$${costOther.toLocaleString()}</span></div>
+        ${costBar(costOther)}
+      </div>` : ''}
       ${costPenalty > 0 ? `<div class="cost-item">
         <div class="cost-row"><span class="cost-name">⚠️ קנסות נחיתה</span><span class="cost-val" style="color:#dc2626;">-$${costPenalty.toLocaleString()}</span></div>
         ${costBar(costPenalty)}

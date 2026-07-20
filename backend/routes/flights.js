@@ -16,7 +16,11 @@ router.get('/', async (req, res) => {
       windSpeed: f.wind_speed || 0,
       visibility: f.visibility || 10,
       ceiling: f.ceiling || 5000,
-      weatherConditions: f.weather_conditions || 'CAVOK'
+      weatherConditions: f.weather_conditions || 'CAVOK',
+      fuelCostOverride: f.fuel_cost_override ?? null,
+      cateringCost: f.catering_cost || 0,
+      groundServicesCost: f.ground_services_cost || 0,
+      cleaningCost: f.cleaning_cost || 0
     }));
     res.json({ flights: mapped });
   } catch (err) {
