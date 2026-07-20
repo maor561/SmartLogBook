@@ -1715,6 +1715,7 @@ async function confirmFlight() {
 
 // ===== UI UPDATE =====
 function updateUI() {
+  renderAirlineRating(true);  // warm the score cache so stat-card badges render
   updateStats();
   updateAnalytics();
   updateHistory();
@@ -1810,7 +1811,7 @@ function updateStats() {
   }
 
   // === RATING BADGES (from cache populated by renderAirlineRating) ===
-  const ratingMap = { Flights:'פעילות', Passengers:'יעילות', Distance:'מוניטין', Hours:'פעילות', Profit:'רווחיות', Fuel:'יעילות' };
+  const ratingMap = { Flights:'פעילות', Passengers:'יעילות', Distance:'פעילות', Hours:'פעילות', Profit:'רווחיות', Fuel:'יעילות' };
   const scores = window._lastRatingScores || {};
   Object.entries(ratingMap).forEach(([card, cat]) => {
     const el = document.getElementById(`statBadge${card}`);
@@ -2256,40 +2257,58 @@ function renderChart(type, period = 'day') {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
   const ctx = document.getElementById('mainChart').getContext('2d');
-  const sorted = [...flights].sort((a, b) => new Date(b.date) - new Date(a.date));
   const L = TRANSLATIONS[currentLang];
 
-  // ── Key functions by period ──────────────────────────────────────────────
-  const dayKey = (f) => {
-    const d = new Date(f.date);
-    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)}`;
+  // ── Key functions by period (take a Date) ────────────────────────────────
+  const dayKey = (d) =>
+    `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)}`;
+
+  const weekKey = (d) => {
+    const t = new Date(d);
+    t.setHours(0,0,0,0);
+    t.setDate(t.getDate() + 3 - (t.getDay()+6)%7);
+    const week1 = new Date(t.getFullYear(), 0, 4);
+    const weekNum = 1 + Math.round(((t - week1) / 86400000 - 3 + (week1.getDay()+6)%7) / 7);
+    return `W${weekNum}/${String(t.getFullYear()).slice(-2)}`;
   };
 
-  const weekKey = (f) => {
-    const d = new Date(f.date);
-    d.setHours(0,0,0,0);
-    d.setDate(d.getDate() + 3 - (d.getDay()+6)%7);
-    const week1 = new Date(d.getFullYear(), 0, 4);
-    const weekNum = 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay()+6)%7) / 7);
-    return `W${weekNum}/${String(d.getFullYear()).slice(-2)}`;
-  };
-
-  const monthKey = (f) => {
-    const d = new Date(f.date);
-    return `${L.monthNames[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
-  };
+  const monthKey = (d) => `${L.monthNames[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
 
   const keyFn = period === 'month' ? monthKey : period === 'week' ? weekKey : dayKey;
 
-  // Build ordered map: periodKey → [flights...]
+  // ── Seed every period between the first and last flight, including ones
+  //    with no flights at all — those render as 0 instead of being skipped ──
+  const times = flights.map(f => new Date(f.date).getTime());
+  const cursor = new Date(times.reduce((a, b) => Math.min(a, b)));
+  const endDate = new Date(times.reduce((a, b) => Math.max(a, b)));
+  cursor.setHours(0,0,0,0);
+  endDate.setHours(0,0,0,0);
+
   const dayMap = new Map();
-  sorted.forEach(f => {
-    const k = keyFn(f);
+  if (period === 'month') {
+    cursor.setDate(1);
+    while (cursor <= endDate) {
+      dayMap.set(monthKey(cursor), []);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  } else {
+    // Step a day at a time and dedupe — correct for both day and week keys
+    while (cursor <= endDate) {
+      const k = keyFn(cursor);
+      if (!dayMap.has(k)) dayMap.set(k, []);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  // Bucket the flights into the periods seeded above
+  flights.forEach(f => {
+    const k = keyFn(new Date(f.date));
     if (!dayMap.has(k)) dayMap.set(k, []);
     dayMap.get(k).push(f);
   });
 
-  // One entry per unique day, in chronological order
+  // One entry per period, oldest → newest. The x scale is reversed below, so
+  // the oldest period lands on the right (RTL reading order).
   const days = Array.from(dayMap.entries()).map(([k, group]) => ({
     label: k,                                                          // "18.02.25"
     count: group.length,
@@ -2328,6 +2347,10 @@ function renderChart(type, period = 'day') {
       label = L.statFuel; color = '#ef4444'; break;
   }
 
+  // Shrink the dots as the range grows — filling empty periods can push a daily
+  // view well past 100 points
+  const pointR = labels.length > 60 ? 2 : labels.length > 30 ? 3.5 : 6;
+
   // Calculate average value
   const avgValue = data.length > 0 ? data.reduce((s, v) => s + v, 0) / data.length : 0;
   const avgLine = Array(data.length).fill(avgValue);
@@ -2359,8 +2382,8 @@ function renderChart(type, period = 'day') {
           borderWidth: 2.5,
           pointBackgroundColor: pointColors || color,
           pointBorderColor: pointColors ? pointColors.map(c => c + 'cc') : color,
-          pointRadius: 6,
-          pointHoverRadius: 9,
+          pointRadius: pointR,
+          pointHoverRadius: pointR + 3,
           pointBorderWidth: 2,
           fill: true,
           tension: 0.35,
@@ -2427,12 +2450,20 @@ function renderChart(type, period = 'day') {
       },
       scales: {
         x: {
-          ticks: { color: '#94a3b8', maxRotation: 45, font: { size: 10 } },
+          reverse: true,   // RTL: oldest period on the right, newest on the left
+          ticks: {
+            color: '#94a3b8',
+            maxRotation: 45,
+            font: { size: 10 },
+            autoSkip: true,
+            maxTicksLimit: 16,   // keep labels readable once empty periods are filled in
+          },
           grid: { color: '#1e293b' },
           border: { color: '#334155' }
         },
         y: {
           beginAtZero: true,
+          position: 'right',   // RTL: origin sits in the bottom-right corner
           ticks: { color: '#94a3b8', font: { size: 11 } },
           grid: { color: '#334155' },
           border: { color: '#334155' }
@@ -4107,8 +4138,12 @@ function scoreClass(score) {
   return 'low';
 }
 
-function renderAirlineRating() {
+// scoresOnly: compute category scores and paint the stat-card badges, then bail
+// out before building the rating tab's DOM and its 3 charts. Used by updateUI()
+// so the badges are populated even if the user never opens the rating tab.
+function renderAirlineRating(scoresOnly = false) {
   if (!flights || flights.length === 0) {
+    if (scoresOnly) { window._lastRatingScores = {}; return; }
     document.getElementById('ratingGaugeScore').textContent = '-';
     document.getElementById('ratingGaugeStars').innerHTML = starsHTML(0, 28);
     document.getElementById('ratingGaugeLabel').textContent = 'אין מספיק נתונים - הוסף טיסות';
@@ -4413,11 +4448,13 @@ function renderAirlineRating() {
   window._lastRatingScores = {};
   categories.forEach(cat => { window._lastRatingScores[cat.name] = cat.score; });
   // Refresh stat card badges immediately
-  const _ratingMap = { Flights:'פעילות', Passengers:'יעילות', Distance:'מוניטין', Hours:'פעילות', Profit:'רווחיות', Fuel:'יעילות' };
+  const _ratingMap = { Flights:'פעילות', Passengers:'יעילות', Distance:'פעילות', Hours:'פעילות', Profit:'רווחיות', Fuel:'יעילות' };
   Object.entries(_ratingMap).forEach(([card, cat]) => {
     const el = document.getElementById(`statBadge${card}`);
     if (el) el.textContent = window._lastRatingScores[cat] !== undefined ? `${window._lastRatingScores[cat].toFixed(1)}★` : '–';
   });
+
+  if (scoresOnly) return;
 
   const overall = categories.reduce((s, cat) => s + cat.score * cat.weight, 0);
 
