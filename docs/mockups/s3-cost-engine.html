@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 3 · מנוע ההוצאות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #eef0f3; --panel: #ffffff; --line: #d9dde3; --line-2: #eceef2;
+  --ink: #151a21; --muted: #5d6673; --faint: #8b93a0;
+  --accent: #0b4f9c; --accent-bg: #e4edf8;
+  --go: #147a47; --go-bg: #e3f2ea; --warn: #9a5b00; --warn-bg: #fbeed7; --bad: #b3261e; --bad-bg: #fbe7e5;
+  --r: 4px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1216; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1216; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+bdi.l { direction: ltr; unicode-bidi: isolate; }
+.switch { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; border-bottom: 1px solid #000; }
+.switch b { font-weight: 600; }
+.switch button { font: inherit; border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; }
+.frame { padding: 16px; }
+.doc { max-width: 1280px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden; font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+
+.intro { padding: 18px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.intro h1 { margin: 0 0 4px; font-size: 20px; }
+.intro p { margin: 0; color: var(--muted); max-width: 920px; }
+.principles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.principles span { font-size: 12.5px; padding: 3px 10px; border-radius: var(--r); background: var(--line-2); }
+
+.grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; padding: 16px 20px 20px; }
+.col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.ph { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.pb { padding: 12px 14px; display: grid; gap: 10px; }
+
+.ctl { display: grid; gap: 3px; }
+.ctl-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.ctl-row .val { font-weight: 700; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.num { font: inherit; font-size: 13.5px; height: 32px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--ink); padding: 0 8px; direction: ltr; text-align: left; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { font: inherit; font-size: 12.5px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: var(--r); padding: 4px 8px; cursor: pointer; }
+.presets button.on { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.tgl { display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; }
+.fpm-tag { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: var(--r); }
+
+/* hero */
+.hero { display: grid; grid-template-columns: repeat(4, 1fr); }
+.hero > div { padding: 12px 14px; border-inline-start: 1px solid var(--line); }
+.hero > div:first-child { border-inline-start: none; }
+.hero .v { font-size: 24px; font-weight: 700; }
+.go { color: var(--go); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+
+/* ledger */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 7px 14px; text-align: right; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); }
+td.n, th.n { text-align: left; white-space: nowrap; }
+td.n { direction: ltr; }
+.grp td { font-size: 12px; font-weight: 700; color: var(--muted); background: var(--line-2); padding: 5px 14px; }
+.sub td { font-weight: 700; }
+.net td { font-size: 16px; font-weight: 700; border-top: 2px solid var(--ink); }
+.zero td { color: var(--faint); }
+.new-row td:first-child { box-shadow: inset -3px 0 0 var(--accent); }
+td.f { font-size: 12px; color: var(--muted); }
+td.old { color: var(--faint); font-size: 12.5px; }
+.src { font-size: 10.5px; font-weight: 600; padding: 0 5px; border-radius: 3px; margin-inline-start: 6px; white-space: nowrap; background: var(--line-2); color: var(--muted); }
+.src.m { background: var(--warn-bg); color: var(--warn); }
+.src.a { background: var(--accent-bg); color: var(--accent); }
+.src.new { background: var(--accent); color: #fff; }
+
+/* explainer cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1px; background: var(--line); }
+.card { background: var(--panel); padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
+.card h3 { margin: 0; font-size: 14px; }
+.card .formula { font-size: 12.5px; background: var(--line-2); border-radius: var(--r); padding: 6px 8px; direction: ltr; text-align: left; font-family: Consolas, "Segoe UI", monospace; }
+.card p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.card table td, .card table th { padding: 3px 6px; font-size: 12px; }
+
+@media (max-width: 1060px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 700px) {
+  .frame { padding: 0; } .doc { border-radius: 0; } .grid { padding: 12px; }
+  .hero { grid-template-columns: 1fr 1fr; }
+  .hero > div:nth-child(3) { border-inline-start: none; }
+  .hero > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  th, td { padding: 6px 10px; }
+  td.f, th.f, td.old, th.old { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="switch">
+  <b>סקיצה 3 · מנוע ההוצאות האוטומטיות</b>
+  <span style="margin-inline-start:auto"></span>
+  <b>רקע:</b>
+  <button type="button" data-theme-set="auto" aria-pressed="true">לפי המכשיר</button>
+  <button type="button" data-theme-set="light" aria-pressed="false">בהיר</button>
+  <button type="button" data-theme-set="dark" aria-pressed="false">כהה</button>
+</div>
+
+<div class="frame"><div class="doc">
+
+  <div class="intro">
+    <h1>הצעה: נוסחאות ההוצאות האוטומטיות</h1>
+    <p>כל ההוצאות נגזרות מנתונים שהמערכת כבר מקבלת: <b>משקל ההמראה המקסימלי ומספר המושבים</b> מה-OFP, <b>זמני הבלוק והאוויר</b> מ-VATSIM, ו-<b>FPM</b> ממך. בלי רשימה קשיחה של מטוסים, כך שכל מטוס עובד. למטה ספר החשבונות המלא של טיסה, כולל ההכנסות מסקיצה 2 וההוצאות הידניות מ-GSX, כדי שתראה את התמונה כולה. טור <b>"היום"</b> מראה מה המערכת הנוכחית מחשבת לאותה טיסה.</p>
+    <div class="principles"><span>אין אקראיות (ADR-006)</span><span>כל מטוס עובד: לפי MTOW ומושבים</span><span>זמנים אמיתיים (ADR-008)</span><span>כל תעריף ניתן לשינוי בהגדרות</span></div>
+  </div>
+
+  <div class="grid">
+    <!-- ======== INPUTS ======== -->
+    <div class="col">
+      <section class="panel">
+        <div class="ph"><span class="label">מטוס</span><span class="small" style="margin-inline-start:auto">מקור: OFP</span></div>
+        <div class="pb">
+          <div class="presets" id="acPresets"></div>
+          <div class="two">
+            <div class="ctl"><span class="small">מושבים · <bdi>max_passengers</bdi></span><input class="num" id="seats" type="number"></div>
+            <div class="ctl"><span class="small">MTOW (טון) · <bdi>max_tow</bdi></span><input class="num" id="mtow" type="number" step="0.1"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">הטיסה</span></div>
+        <div class="pb">
+          <div class="ctl"><div class="ctl-row"><span>מרחק <span class="small">(OFP)</span></span><span class="val"><bdi id="vDist"></bdi></span></div><input type="range" id="dist" min="100" max="7000" step="1" value="651"></div>
+          <div class="ctl"><div class="ctl-row"><span>נוסעים <span class="small">(OFP)</span></span><span class="val" id="vPax"></span></div><input type="range" id="pax" min="0" max="189" value="162"></div>
+          <div class="ctl"><div class="ctl-row"><span>זמן בלוק <span class="small">(VATSIM, OUT→IN)</span></span><span class="val" id="vBlock"></span></div><input type="range" id="block" min="30" max="900" step="1" value="116"></div>
+          <div class="small">זמן אוויר (OFF→ON) נגזר אוטומטית: בלוק פחות 22 דקות הסעה. זמן האוויר: <b id="vAir" style="color:var(--ink)"></b></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">נחיתה</span></div>
+        <div class="pb">
+          <div class="ctl"><div class="ctl-row"><span>FPM בנגיעה</span><span class="val"><bdi id="vFpm"></bdi> <span id="fpmTag" class="fpm-tag"></span></span></div><input type="range" id="fpm" min="-1200" max="-40" step="10" value="-168"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">ידני מ-GSX Pro</span><span class="small" style="margin-inline-start:auto">בסוף הטיסה</span></div>
+        <div class="pb">
+          <div class="three">
+            <div class="ctl"><span class="small">דלק $</span><input class="num" id="gFuel" type="number" value="6120"></div>
+            <div class="ctl"><span class="small">צוות קרקע $</span><input class="num" id="gGround" type="number" value="1480"></div>
+            <div class="ctl"><span class="small">קייטרינג $</span><input class="num" id="gCat" type="number" value="2050"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">לבחירתך</span></div>
+        <div class="pb">
+          <label class="tgl"><input type="checkbox" id="optNav" checked> <b>חדש:</b> דמי ניווט אווירי (שירותי בקרה בדרך)</label>
+          <div class="small" style="margin-top:-4px">סעיף אמיתי שלא היה עד עכשיו. הנוסחה היא הנוסחה של Eurocontrol, לפי מרחק ומשקל.</div>
+          <label class="tgl"><input type="checkbox" id="optLease" checked> <b>חדש:</b> חכירת מטוס (עלות המטוס עצמו)</label>
+          <div class="small" style="margin-top:-4px">ההוצאה הגדולה שחסרה היום. <bdi class="l">13 × MTOW</bdi> לשעת בלוק, כ-$1,000 לשעה ב-737. זה תואם חכירה של כ-$300K בחודש ב-300 שעות.</div>
+          <label class="tgl"><input type="checkbox" id="optRelief" checked> טייס נוסף בטיסות ארוכות</label>
+          <div class="small" style="margin-top:-4px">3 טייסים מעל 8 שעות בלוק, ו-4 מעל 12 שעות, כמו בכללי זמני העבודה.</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ======== RESULT ======== -->
+    <div class="col">
+      <section class="panel"><div class="hero">
+        <div><div class="label">הכנסות</div><div class="v go" id="hRev"></div></div>
+        <div><div class="label">הוצאות</div><div class="v bad" id="hExp"></div></div>
+        <div><div class="label">רווח נקי</div><div class="v" id="hNet"></div></div>
+        <div><div class="label">שולי רווח</div><div class="v" id="hMargin"></div><div class="small">בחברות אמיתיות: 5%–15%</div></div>
+      </div></section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">ספר החשבונות של הטיסה</span><span class="small" style="margin-inline-start:auto">כך הוא יישמר (ADR-007)</span></div>
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>סעיף</th><th class="f">חישוב</th><th class="n">סכום</th><th class="n old">היום</th></tr></thead>
+          <tbody id="ledger"></tbody>
+        </table></div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">הנוסחאות</span><span class="small" style="margin-inline-start:auto">ברירות מחדל, ניתנות לשינוי בהגדרות</span></div>
+        <div class="cards">
+          <div class="card">
+            <h3>טייסים ודיילים</h3>
+            <div class="formula">max(block, 2h) × (CPT 200 + FO 120 + FA 40 × ⌈seats/50⌉)</div>
+            <p>שכר לפי שעת בלוק. <b>מינימום של 2 שעות תשלום</b> לכל טיסה, כמו אצל חברות אמיתיות, ולכן קפיצות קצרות יקרות יחסית. מעל 8 שעות מתווסף טייס שלישי ($120 לשעה), ומעל 12 שעות רביעי.</p>
+          </div>
+          <div class="card">
+            <h3>תחזוקה</h3>
+            <div class="formula">air × (450 + 10.8 × MTOW) + 3 × MTOW</div>
+            <p>שני רכיבים. <b>לפי שעת אוויר</b> (ולא שעת בלוק, כי מנועים מתבלים באוויר), ו<b>לפי מחזור</b> לכל המראה ונחיתה. MTOW בטונות. ב-737: כ-$1,300 לשעה, וב-777: כ-$4,200 לשעה.</p>
+          </div>
+          <div class="card">
+            <h3>עמלות נחיתה ושדה</h3>
+            <div class="formula">7 × MTOW + 12 × pax</div>
+            <p>עמלת נחיתה לפי משקל ($7 לטון) ודמי נוסע בשדה ($12 לנוסע). המבנה הזה נהוג ברוב שדות התעופה.</p>
+          </div>
+          <div class="card">
+            <h3>דמי ניווט אווירי <span class="src new">חדש</span></h3>
+            <div class="formula">70 × (km / 100) × √(MTOW / 50)</div>
+            <p>נוסחת החיוב של Eurocontrol על שירותי בקרה בדרך: מרחק כפול מקדם משקל. סעיף אמיתי ומשמעותי שלא היה במערכת. ניתן לכיבוי.</p>
+          </div>
+          <div class="card">
+            <h3>חכירת מטוס <span class="src new">חדש</span></h3>
+            <div class="formula">block × 13 × MTOW</div>
+            <p>עלות המטוס עצמו, לפי שעת בלוק. בחברות אמיתיות זו אחת ההוצאות הגדולות, ובמערכת היום היא לא קיימת בכלל. ניתן לכיבוי.</p>
+          </div>
+          <div class="card">
+            <h3>קנס נחיתה קשה</h3>
+            <table>
+              <tr><th>FPM</th><th>משמעות</th><th class="n">עלות</th></tr>
+              <tr><td>עד 400</td><td>רגילה</td><td class="n">$0</td></tr>
+              <tr><td>401–600</td><td>בדיקה ויזואלית</td><td class="n">15 × MTOW</td></tr>
+              <tr><td>601–900</td><td>בדיקת נחיתה קשה (AMM)</td><td class="n">60 × MTOW</td></tr>
+              <tr><td>מעל 900</td><td>בדיקה מבנית</td><td class="n">250 × MTOW</td></tr>
+            </table>
+            <p>הקנס גדל עם גודל המטוס, כי לבדוק 777 יקר יותר מלבדוק 737.</p>
+          </div>
+          <div class="card">
+            <h3>הקפצת צוות והסטה</h3>
+            <p>מאושרים (ADR-026, ADR-027). שניהם משתמשים במחיר הבסיס מסקיצה 2. כאן הם מוצגים כשורות של $0, כי בטיסה לדוגמה אין הקפצה ואין הסטה.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const usd = n => (n < 0 ? '−$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
+const hm = m => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+const AC = [
+  { k: 'AT76', n: 'ATR 72', seats: 72, mtow: 23.0, oldBase: 3000 },
+  { k: 'B738', n: '737-800', seats: 189, mtow: 79.0, oldBase: 3000 },
+  { k: 'A21N', n: 'A321neo', seats: 220, mtow: 97.0, oldBase: 3500 },
+  { k: 'B789', n: '787-9', seats: 290, mtow: 254.0, oldBase: 4800 },
+  { k: 'B77W', n: '777-300ER', seats: 396, mtow: 351.5, oldBase: 5000 },
+  { k: 'A388', n: 'A380', seats: 555, mtow: 575.0, oldBase: 6500 },
+];
+let ac = AC[1];
+
+/* ---------------- ADR-025 revenue (same model as sketch 2; Thursday 08:00 in September, fuel +3.3%) */
+const baseFare = d => 40 + 2.8 * Math.pow(d, 0.65);
+function revenue(d, pax, seats) {
+  const lf = seats ? pax / seats : 0;
+  const mult = Math.min(1.40, Math.max(0.70, (0.85 + 0.30 * lf * lf) * 1.05 * 1.08 * 1.05));
+  const fare = Math.round(baseFare(d) * mult * 1.033);
+  const cargoKg = 2140, cargoRate = (0.8 + 0.05 * Math.pow(d, 0.55)) * 1.033;
+  return { fare, tix: fare * pax, cargo: cargoRate * cargoKg, cargoKg, cargoRate };
+}
+
+/* ---------------- proposed cost engine */
+function engine(s) {
+  const blockH = s.block / 60, airH = Math.max(0, s.block - 22) / 60, m = s.mtow;
+  const fa = Math.ceil(s.seats / 50);
+  const relief = s.optRelief ? (blockH > 12 ? 2 : blockH > 8 ? 1 : 0) : 0;
+  const payH = Math.max(blockH, 2);
+  const crewHourly = 200 + 120 + 120 * relief + 40 * fa;
+  const crew = payH * crewHourly;
+  const maintHourly = 450 + 10.8 * m;
+  const maint = airH * maintHourly + 3 * m;
+  const fees = 7 * m + 12 * s.pax;
+  const km = s.dist * 1.852;
+  const nav = s.optNav ? 70 * (km / 100) * Math.sqrt(m / 50) : 0;
+  const f = Math.abs(s.fpm);
+  const [penK, penName] = f <= 400 ? [0, 'רגילה'] : f <= 600 ? [15, 'בדיקה ויזואלית'] : f <= 900 ? [60, 'בדיקת נחיתה קשה'] : [250, 'בדיקה מבנית'];
+  const pen = penK * m;
+  const lease = s.optLease ? blockH * 13 * m : 0;
+  return { blockH, airH, fa, relief, payH, crewHourly, crew, maintHourly, maint, fees, km, nav, pen, penName, penK, lease };
+}
+
+/* ---------------- today's engine (from backend/routes/pricing.js + app.js defaults), for comparison */
+function oldEngine(s) {
+  const h = s.block / 60;
+  const faOld = Math.max(2, Math.ceil(s.seats / 50));
+  const payloadPct = Math.min(1, (s.pax * 95 + 2140) / (ac.mtow * 1000 * 0.3));
+  const maint = ac.oldBase * h * (1 + payloadPct * 0.15);
+  const crew = (200 + 120 + 35 * faOld) * h;
+  const landing = 45;                                   // random walk around ~$45 (±3% per call)
+  const pen = Math.abs(s.fpm) > 400 ? 1000 : 0;
+  return { maintCrew: maint + crew, landing, pen };
+}
+
+function state() {
+  return { seats: +$('seats').value, mtow: +$('mtow').value, dist: +$('dist').value, pax: Math.min(+$('pax').value, +$('seats').value),
+           block: +$('block').value, fpm: +$('fpm').value, optNav: $('optNav').checked, optRelief: $('optRelief').checked, optLease: $('optLease').checked,
+           gFuel: +$('gFuel').value, gGround: +$('gGround').value, gCat: +$('gCat').value };
+}
+
+function render() {
+  const s = state(), e = engine(s), o = oldEngine(s), r = revenue(s.dist, s.pax, s.seats);
+  $('vDist').textContent = `${s.dist.toLocaleString('en-US')} NM`;
+  $('pax').max = s.seats; $('vPax').textContent = `${s.pax} / ${s.seats}`;
+  $('vBlock').textContent = hm(s.block); $('vAir').textContent = hm(Math.max(0, s.block - 22));
+  $('vFpm').textContent = s.fpm;
+  const tag = $('fpmTag'); const f = Math.abs(s.fpm);
+  tag.textContent = e.penName; tag.style.background = f <= 400 ? 'var(--go-bg)' : f <= 600 ? 'var(--warn-bg)' : 'var(--bad-bg)';
+  tag.style.color = f <= 400 ? 'var(--go)' : f <= 600 ? 'var(--warn)' : 'var(--bad)';
+  document.querySelectorAll('#acPresets button').forEach(b => b.classList.toggle('on', b.dataset.k === ac.k && +$('mtow').value === ac.mtow));
+
+  const rev = [
+    ['כרטיסים', `${s.pax} × ${usd(r.fare)} (סקיצה 2)`, r.tix, 's'],
+    ['מטען', `<bdi class="l">${r.cargoKg.toLocaleString('en-US')} kg × $${r.cargoRate.toFixed(2)}</bdi>`, r.cargo, 's'],
+  ];
+  const exp = [
+    ['דלק', 'הוזן מ-GSX Pro', s.gFuel, 'm', '—'],
+    ['צוות קרקע', 'הוזן מ-GSX Pro', s.gGround, 'm', '—'],
+    ['קייטרינג', 'הוזן מ-GSX Pro', s.gCat, 'm', '—'],
+    ['טייסים ודיילים', `${hm(e.payH * 60)} × <bdi class="l">$${e.crewHourly}/h</bdi> · ${2 + e.relief} טייסים + ${e.fa} דיילים${e.blockH < 2 ? ' · מינימום 2 שעות' : ''}`, e.crew, 'a', null],
+    ['תחזוקה', `${hm(e.airH * 60)} אוויר × <bdi class="l">$${Math.round(e.maintHourly).toLocaleString('en-US')}/h</bdi> + מחזור <bdi class="l">$${Math.round(3 * s.mtow)}</bdi>`, e.maint, 'a', null],
+    ['עמלות נחיתה ושדה', `<bdi class="l">${s.mtow}t × $7</bdi> + <bdi class="l">${s.pax} × $12</bdi>`, e.fees, 'a', usd(o.landing) + '*'],
+    ['חכירת מטוס', s.optLease ? `${hm(e.blockH * 60)} בלוק × <bdi class="l">$${Math.round(13 * s.mtow).toLocaleString('en-US')}/h</bdi>` : 'כבוי', e.lease, 'new', 'אין'],
+    ['דמי ניווט אווירי', s.optNav ? `<bdi class="l">70 × ${(e.km / 100).toFixed(1)} × ${Math.sqrt(s.mtow / 50).toFixed(2)}</bdi>` : 'כבוי', e.nav, 'new', 'אין'],
+    ['קנס נחיתה קשה', `FPM ${s.fpm} · ${e.penName}${e.penK ? ` · <bdi class="l">${e.penK} × ${s.mtow}t</bdi>` : ''}`, e.pen, 'a', usd(o.pen)],
+    ['הקפצת צוות', 'המוצא = מיקום הצוות (ADR-026)', 0, 'a', 'אין'],
+    ['הסטה', 'נחת ביעד (ADR-027)', 0, 'a', 'אין'],
+  ];
+  const revT = rev.reduce((a, l) => a + l[2], 0), expT = exp.reduce((a, l) => a + l[2], 0), net = revT - expT;
+  const SRC = { s: ['SimBrief', ''], m: ['ידני', 'm'], a: ['אוטו׳', 'a'], new: ['חדש', 'new'] };
+  const row = (l, sign, old) => `<tr class="${l[2] === 0 ? 'zero' : ''} ${l[3] === 'new' ? 'new-row' : ''}">
+      <td>${l[0]}<span class="src ${SRC[l[3]][1]}">${SRC[l[3]][0]}</span></td><td class="f">${l[1]}</td>
+      <td class="n">${l[2] === 0 ? '$0' : sign + usd(l[2])}</td><td class="n old">${old ?? ''}</td></tr>`;
+  const oldCrewMaint = usd(o.maintCrew);
+  $('ledger').innerHTML =
+    `<tr class="grp"><td colspan="4">הכנסות</td></tr>` + rev.map(l => row(l, '+', '')).join('') +
+    `<tr class="sub"><td>סה״כ הכנסות</td><td class="f"></td><td class="n go">+${usd(revT)}</td><td class="n old"></td></tr>` +
+    `<tr class="grp"><td colspan="4">הוצאות</td></tr>` +
+    exp.map((l, i) => row(l, '−', i === 3 ? `${oldCrewMaint}<div class="small">צוות + תחזוקה יחד</div>` : i === 4 ? '' : l[4])).join('') +
+    `<tr class="sub"><td>סה״כ הוצאות</td><td class="f"></td><td class="n bad">−${usd(expT)}</td><td class="n old"></td></tr>` +
+    `<tr class="net"><td>${net < 0 ? 'הפסד' : 'רווח נקי'}</td><td class="f"></td><td class="n ${net < 0 ? 'bad' : 'go'}">${net < 0 ? '' : '+'}${usd(net)}</td><td class="n old"></td></tr>` +
+    `<tr><td colspan="4" class="small">* היום עמלת הנחיתה נוצרת עם רעש אקראי של ±3% בכל קריאה (ADR-006). התחזוקה של היום מבוססת על רשימה קשיחה של 10 מטוסים.</td></tr>`;
+
+  $('hRev').innerHTML = `<bdi class="l">+${usd(revT)}</bdi>`;
+  $('hExp').innerHTML = `<bdi class="l">−${usd(expT)}</bdi>`;
+  $('hNet').innerHTML = `<bdi class="l">${net < 0 ? '' : '+'}${usd(net)}</bdi>`; $('hNet').className = 'v ' + (net < 0 ? 'bad' : 'go');
+  $('hMargin').textContent = revT ? `${Math.round(net / revT * 100)}%` : '—';
+}
+
+AC.forEach(a => $('acPresets').insertAdjacentHTML('beforeend', `<button data-k="${a.k}">${a.k} · ${a.n}</button>`));
+document.querySelectorAll('#acPresets button').forEach(b => b.addEventListener('click', () => {
+  ac = AC.find(a => a.k === b.dataset.k); $('seats').value = ac.seats; $('mtow').value = ac.mtow;
+  $('pax').value = Math.round(ac.seats * 0.86); render(); }));
+$('seats').value = ac.seats; $('mtow').value = ac.mtow;
+['seats', 'mtow', 'dist', 'pax', 'block', 'fpm', 'optNav', 'optRelief', 'optLease', 'gFuel', 'gGround', 'gCat'].forEach(id => $(id).addEventListener('input', render));
+document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', () => {
+  const t = b.dataset.themeSet; if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = t;
+  document.querySelectorAll('[data-theme-set]').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+render();
+</script>
+</body>
+</html>
