@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 5 · ניתוח, אבני דרך ודירוג</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+<style>
+:root { --bg:#eef0f3; --bar:#fff; --panel:#fff; --line:#d9dde3; --line-2:#eceef2; --ink:#151a21; --muted:#5d6673; --faint:#8b93a0;
+  --accent:#0b4f9c; --accent-bg:#e4edf8; --go:#147a47; --go-bg:#e3f2ea; --warn:#9a5b00; --warn-bg:#fbeed7; --bad:#b3261e; --bad-bg:#fbe7e5; --r:4px; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0f1216; --bar:#151920; --panel:#171b21; --line:#29303a; --line-2:#20262e; --ink:#e6e9ee; --muted:#8e97a4; --faint:#6b7380;
+  --accent:#5b9df0; --accent-bg:#16263d; --go:#43c083; --go-bg:#173323; --warn:#e2a33a; --warn-bg:#3a2c12; --bad:#f07167; --bad-bg:#3b1d1b; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg:#0f1216; --bar:#151920; --panel:#171b21; --line:#29303a; --line-2:#20262e; --ink:#e6e9ee; --muted:#8e97a4; --faint:#6b7380;
+  --accent:#5b9df0; --accent-bg:#16263d; --go:#43c083; --go-bg:#173323; --warn:#e2a33a; --warn-bg:#3a2c12; --bad:#f07167; --bad-bg:#3b1d1b; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+bdi.l { direction: ltr; unicode-bidi: isolate; }
+.switch { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; border-bottom: 1px solid #000; }
+.switch b { font-weight: 600; }
+.switch button { font: inherit; border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; }
+.legend-rec { display: inline-flex; gap: 10px; align-items: center; margin-inline-start: auto; }
+.frame { padding: 16px; }
+.app { max-width: 1280px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden; font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.top { display: flex; align-items: center; gap: 24px; padding: 0 20px; height: 52px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; }
+.nav { display: flex; gap: 4px; height: 100%; }
+.nav a { display: flex; align-items: center; padding: 0 14px; color: var(--muted); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; }
+.nav a.on { color: var(--ink); border-bottom-color: var(--accent); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 20px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; height: 34px; }
+.seg button { font: inherit; font-size: 13px; border: none; border-inline-start: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 0 12px; cursor: pointer; }
+.seg button:first-child { border-inline-start: none; }
+.seg button.on { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.btn { font: inherit; font-weight: 600; font-size: 13.5px; padding: 7px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chk { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.end { margin-inline-start: auto; display: flex; gap: 8px; }
+
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; padding: 16px 20px 20px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; grid-column: span 6; }
+.w12 { grid-column: span 12; } .w8 { grid-column: span 8; } .w4 { grid-column: span 4; }
+.ph { display: flex; align-items: baseline; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.ph .q { font-size: 12px; color: var(--muted); }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.rec { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 3px; margin-inline-start: auto; }
+.rec.yes { background: var(--go-bg); color: var(--go); }
+.rec.opt { background: var(--line-2); color: var(--muted); }
+.rec.ask { background: var(--warn-bg); color: var(--warn); }
+.pos { color: var(--go); font-weight: 600; } .neg { color: var(--bad); font-weight: 600; } .wrn { color: var(--warn); font-weight: 600; }
+
+/* kpis */
+.kpis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 1px; background: var(--line); }
+.kpi { background: var(--panel); padding: 10px 12px; }
+.kpi .v { font-size: 20px; font-weight: 700; }
+.kpi .d { font-size: 11.5px; }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 6px 14px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); }
+td.n, th.n { text-align: left; }
+td.n { direction: ltr; }
+tr:last-child td { border-bottom: none; }
+.grp td { font-size: 11.5px; font-weight: 700; color: var(--muted); background: var(--line-2); padding: 4px 14px; }
+.tot td { font-weight: 700; border-top: 2px solid var(--ink); }
+.pctbar { display: inline-block; height: 6px; background: var(--accent); opacity: .6; border-radius: 2px; vertical-align: middle; }
+.tw { overflow-x: auto; }
+.units { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); }
+.units div { padding: 10px 14px; border-inline-start: 1px solid var(--line); }
+.units div:first-child { border-inline-start: none; }
+.units .v { font-weight: 700; font-size: 16px; }
+
+.chart { padding: 10px 14px 12px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font-family: "Heebo", sans-serif; font-size: 11px; fill: var(--muted); }
+
+.hist { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; align-items: end; height: 110px; padding: 10px 14px 0; }
+.hist div { background: var(--accent); opacity: .75; border-radius: 2px 2px 0 0; position: relative; }
+.hist div.hard { background: var(--bad); }
+.hist div span { position: absolute; top: -16px; inset-inline: 0; text-align: center; font-size: 11px; color: var(--ink); opacity: 1; }
+.hist-l { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; padding: 4px 14px 10px; font-size: 11px; color: var(--muted); text-align: center; }
+
+.ms { display: grid; gap: 10px; padding: 12px 14px; }
+.ms-row { display: grid; grid-template-columns: 110px 1fr 90px; gap: 10px; align-items: center; font-size: 13px; }
+.ms-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.ms-bar div { height: 100%; background: var(--accent); margin-inline-start: auto; }
+.ms-got { border-top: 1px solid var(--line); padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 3px; background: var(--go-bg); color: var(--go); font-weight: 600; }
+
+.pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); }
+.pillar { background: var(--panel); padding: 10px 12px; display: grid; gap: 4px; }
+.stars { color: var(--warn); letter-spacing: 1px; font-size: 15px; }
+.stars .off { color: var(--line); }
+.overall { display: flex; gap: 16px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.overall .big { font-size: 30px; font-weight: 700; }
+.rank { margin-inline-start: auto; text-align: left; }
+
+@media (max-width: 1000px) {
+  .panel, .w8, .w4 { grid-column: span 12; }
+  .kpis { grid-template-columns: repeat(4, 1fr); }
+  .pillars { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .frame { padding: 0; } .app { border-radius: 0; }
+  .top { gap: 12px; padding: 0 12px; } .brand { display: none; }
+  .grid { padding: 12px; gap: 12px; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .units { grid-template-columns: 1fr 1fr; }
+  .units div:nth-child(3) { border-inline-start: none; }
+  .units div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  th, td { padding: 6px 10px; }
+  .ms-row { grid-template-columns: 90px 1fr 70px; }
+}
+</style>
+</head>
+<body>
+
+<div class="switch">
+  <b>סקיצה 5 · מסך ניתוח מלא</b>
+  <span class="legend-rec"><span class="rec yes">מומלץ</span><span class="rec opt">אופציונלי</span><span class="rec ask">החלטה שלך</span></span>
+  <b style="margin-inline-start:12px">רקע:</b>
+  <button type="button" data-theme-set="auto" aria-pressed="true">לפי המכשיר</button>
+  <button type="button" data-theme-set="light" aria-pressed="false">בהיר</button>
+  <button type="button" data-theme-set="dark" aria-pressed="false">כהה</button>
+</div>
+
+<div class="frame"><div class="app">
+  <header class="top">
+    <div class="brand">SMARTLOGBOOK</div>
+    <nav class="nav"><a href="#">טיסה</a><a href="#">לוגבוק</a><a href="#" class="on">ניתוח</a></nav>
+  </header>
+
+  <div class="toolbar">
+    <div class="seg"><button class="on">חודש</button><button>רבעון</button><button>שנה</button><button>הכל</button><button>מותאם…</button></div>
+    <div style="display:flex;align-items:center;gap:8px;font-weight:600"><button class="btn">→</button>ספטמבר 2026<button class="btn">←</button></div>
+    <label class="chk"><input type="checkbox"> כולל טיסות היסטוריות</label>
+    <div class="end"><button class="btn primary">הדפס כדוח</button></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1 KPIs -->
+    <section class="panel w12">
+      <div class="ph"><span class="label">1 · מדדי מפתח</span><span class="q">מה קרה החודש, ביחס לחודש הקודם</span><span class="rec yes">מומלץ</span></div>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <!-- 2 P&L -->
+    <section class="panel w8">
+      <div class="ph"><span class="label">2 · רווח והפסד לפי סעיף</span><span class="q">לאן הולך הכסף? סכום ישיר של ספר החשבונות</span><span class="rec yes">מומלץ</span></div>
+      <div class="tw"><table id="pnl"></table></div>
+      <div class="units" id="units"></div>
+    </section>
+
+    <!-- 10 milestones -->
+    <section class="panel w4">
+      <div class="ph"><span class="label">10 · אבני דרך</span><span class="q">הבאה בכל קטגוריה</span><span class="rec yes">מומלץ</span></div>
+      <div class="ms" id="ms"></div>
+      <div class="ms-got" id="msGot"></div>
+    </section>
+
+    <!-- 3 trend -->
+    <section class="panel w8">
+      <div class="ph"><span class="label">3 · מגמה</span><span class="q">רווח שבועי ושולי רווח (ציר הזמן מתחיל מימין)</span><span class="rec yes">מומלץ</span></div>
+      <div class="chart"><svg id="trend" viewBox="0 0 720 220"></svg></div>
+    </section>
+
+    <!-- 11 rating -->
+    <section class="panel w4">
+      <div class="ph"><span class="label">11 · דירוג החברה ודרגה</span><span class="q">30 הטיסות האחרונות</span><span class="rec ask">החלטה שלך</span></div>
+      <div class="pillars" id="pillars"></div>
+      <div class="overall" id="overall"></div>
+    </section>
+
+    <!-- 4 ground costs -->
+    <section class="panel w12">
+      <div class="ph"><span class="label">4 · עלויות קרקע לפי שדה</span><span class="q">הנתונים שאתה מזין מ-GSX: איפה יקר לנחות?</span><span class="rec yes">מומלץ</span></div>
+      <div class="tw"><table id="ground"></table></div>
+    </section>
+
+    <!-- 5 routes -->
+    <section class="panel">
+      <div class="ph"><span class="label">5 · מסלולים</span><span class="q">מה הכי משתלם לטוס, לפי רווח לשעת בלוק</span><span class="rec yes">מומלץ</span></div>
+      <div class="tw"><table id="routes"></table></div>
+    </section>
+
+    <!-- 6 ops -->
+    <section class="panel">
+      <div class="ph"><span class="label">6 · דיוק ותפעול</span><span class="q">מהזמנים האמיתיים ב-VATSIM</span><span class="rec opt">אופציונלי</span></div>
+      <div class="tw"><table id="ops"></table></div>
+    </section>
+
+    <!-- 7 landings -->
+    <section class="panel">
+      <div class="ph"><span class="label">7 · איכות נחיתות</span><span class="q">התפלגות FPM</span><span class="rec yes">מומלץ</span></div>
+      <div class="hist" id="hist"></div>
+      <div class="hist-l"><span>≤100</span><span>101–200</span><span>201–300</span><span>301–400</span><span>401–600</span><span>&gt;600</span></div>
+      <div class="units" id="landStats"></div>
+    </section>
+
+    <!-- 8 aircraft -->
+    <section class="panel">
+      <div class="ph"><span class="label">8 · מטוסים</span><span class="q">לפי רישום</span><span class="rec opt">אופציונלי</span></div>
+      <div class="tw"><table id="acft"></table></div>
+    </section>
+
+    <!-- 9 network -->
+    <section class="panel w12">
+      <div class="ph"><span class="label">9 · רשת ואיכות נתונים</span><span class="q">הקפצות, הסטות, יעדים חדשים ומקור הטיסות</span><span class="rec opt">אופציונלי</span></div>
+      <div class="units" id="net" style="grid-template-columns:repeat(6,1fr)"></div>
+    </section>
+
+  </div>
+</div></div>
+
+<script>
+/* ------------------------------------------------------------ deterministic sample data (mockup only) */
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const AP = { LLBG:'תל אביב', LGAV:'אתונה', LCLK:'לרנקה', LTFM:'איסטנבול', LICC:'קטניה', LEMD:'מדריד', LPPT:'ליסבון', EDDK:'קלן', LGKR:'קורפו', LYTV:'טיבט' };
+const ROUTES = [['LLBG','LGAV',651],['LGAV','LLBG',651],['LLBG','LCLK',162],['LCLK','LLBG',162],['LLBG','LICC',1108],['LICC','LLBG',1108],['LLBG','LTFM',612],['LTFM','LLBG',612],['LLBG','LGKR',927],['LGKR','LLBG',927],['LLBG','LEMD',1957]];
+const GROUND = { LLBG:[2600,5.1], LGAV:[1900,3.4], LCLK:[1500,2.9], LTFM:[2400,4.2], LICC:[1700,3.1], LEMD:[2900,4.8], LGKR:[1600,3.0] }; // avg handling $, catering $/pax
+const REGS = ['4X-SLB','4X-SLC','4X-SLD'];
+const F = [];
+for (let i = 0; i < 22; i++) {
+  const [o, d, nm] = ROUTES[Math.floor(rnd() * ROUTES.length)];
+  const day = 1 + Math.floor(i * 29 / 22), pax = Math.round(189 * (0.62 + rnd() * 0.37));
+  const air = Math.round(nm / 7.6 + 18), block = air + 18 + Math.round(rnd() * 10);
+  const fpm = -Math.round(60 + rnd() * rnd() * 560);
+  const fare = 40 + 1.51 * Math.pow(nm, 0.65), lf = pax / 189;
+  const tickets = Math.round(pax * fare * (0.85 + 0.3 * lf * lf) * 1.08);
+  const cargo = Math.round((0.8 + 0.05 * Math.pow(nm, 0.55)) * (rnd() * 600));   // freight only (ADR-034)
+  const [gh, cpp] = GROUND[d] || [2000, 3.5];
+  const ground = Math.round(gh * (0.85 + rnd() * 0.3)), catering = Math.round(cpp * pax * (0.8 + rnd() * 0.4));
+  const fuel = Math.round(nm * 9.4 * (0.9 + rnd() * 0.2));
+  const bh = block / 60, ah = air / 60, m = 79;
+  const crew = Math.round(Math.max(bh, 2) * 480), maint = Math.round(ah * 1303 + 237), fees = Math.round(553 + 12 * pax);
+  const nav = Math.round(70 * nm * 1.852 / 100 * 1.257), lease = Math.round(bh * 830);
+  const af = Math.abs(fpm), pen = af <= 400 ? 0 : af <= 600 ? 15 * m : af <= 900 ? 60 * m : 250 * m;
+  const pos = (i === 9) ? 1650 : 0, div = (i === 15) ? 17400 : 0;
+  const delay = Math.round((rnd() - 0.35) * 30);
+  F.push({ day, o, d, nm, pax, air, block, fpm, reg: REGS[i % 3], delay, taxiOut: 9 + Math.round(rnd() * 12), src: i === 4 ? 'manual' : i === 12 ? 'partial' : 'tracked',
+    rev: { tickets, cargo }, exp: { fuel, ground, catering, crew, maint, fees, nav, lease, pen, pos, div } });
+}
+const sum = (arr, fn) => arr.reduce((a, x) => a + fn(x), 0);
+const usd = n => (n < 0 ? '−$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
+const k = n => Math.abs(n) >= 1000 ? (n < 0 ? '−' : '') + '$' + (Math.abs(n) / 1000).toFixed(Math.abs(n) >= 100000 ? 0 : 1) + 'K' : usd(n);
+const hm = m => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+const net = f => Object.values(f.rev).reduce((a, b) => a + b, 0) - Object.values(f.exp).reduce((a, b) => a + b, 0);
+const revOf = f => f.rev.tickets + f.rev.cargo;
+
+/* ------------------------------------------------------------ 1 KPIs */
+const T = { flights: F.length, block: sum(F, f => f.block), rev: sum(F, revOf), net: sum(F, net), pax: sum(F, f => f.pax), lf: sum(F, f => f.pax) / (F.length * 189),
+  otp: F.filter(f => f.delay <= 15).length / F.length, fpm: sum(F, f => Math.abs(f.fpm)) / F.length };
+const K = [
+  ['טיסות', T.flights, '+3'], ['שעות בלוק', hm(T.block), '+6:10'], ['רווח נקי', `<bdi class="l">${k(T.net)}</bdi>`, '+12%'],
+  ['שולי רווח', Math.round(T.net / T.rev * 100) + '%', '+2 נק׳'], ['נוסעים', T.pax.toLocaleString('en-US'), '+9%'],
+  ['תפוסה', Math.round(T.lf * 100) + '%', '−1 נק׳'], ['בזמן (OTP)', Math.round(T.otp * 100) + '%', '+4 נק׳'], ['FPM ממוצע', Math.round(T.fpm), '−18'],
+];
+document.getElementById('kpis').innerHTML = K.map(([l, v, d]) => `<div class="kpi"><div class="label">${l}</div><div class="v">${v}</div><div class="d ${d.startsWith('−') && l !== 'FPM ממוצע' || (l === 'FPM ממוצע' && !d.startsWith('−')) ? 'neg' : 'pos'}">${d} <span class="small">מול אוגוסט</span></div></div>`).join('');
+
+/* ------------------------------------------------------------ 2 P&L */
+const LINES = [['כרטיסים','tickets','rev'],['מטען','cargo','rev'],['דלק','fuel','exp','GSX'],['צוות קרקע','ground','exp','GSX'],['קייטרינג','catering','exp','GSX'],
+  ['טייסים ודיילים','crew','exp'],['תחזוקה','maint','exp'],['עמלות נחיתה ושדה','fees','exp'],['דמי ניווט','nav','exp'],['חכירת מטוס','lease','exp'],
+  ['קנסות נחיתה','pen','exp'],['הקפצות צוות','pos','exp'],['הסטות','div','exp']];
+const val = (code, side) => sum(F, f => f[side][code]);
+const row = ([n, c, side, tag]) => { const v = val(c, side), p = v / T.rev * 100;
+  return `<tr><td>${n}${tag ? ` <span class="small">(${tag})</span>` : ''}</td><td class="n ${side === 'rev' ? 'pos' : ''}">${side === 'rev' ? '+' : '−'}${usd(v)}</td>
+    <td class="n small">${p.toFixed(1)}%</td><td><span class="pctbar" style="width:${Math.min(120, p * 2.4)}px"></span></td></tr>`; };
+document.getElementById('pnl').innerHTML = `<tr><th>סעיף</th><th class="n">סכום</th><th class="n">מההכנסות</th><th></th></tr>
+  <tr class="grp"><td colspan="4">הכנסות</td></tr>${LINES.filter(l => l[2] === 'rev').map(row).join('')}
+  <tr class="grp"><td colspan="4">הוצאות</td></tr>${LINES.filter(l => l[2] === 'exp').map(row).join('')}
+  <tr class="tot"><td>רווח נקי</td><td class="n pos">+${usd(T.net)}</td><td class="n">${(T.net / T.rev * 100).toFixed(1)}%</td><td></td></tr>`;
+const seatNm = sum(F, f => 189 * f.nm);
+document.getElementById('units').innerHTML = [
+  ['הכנסה למושב-מייל', `${(T.rev / seatNm * 100).toFixed(1)}¢`, 'RASM'], ['עלות למושב-מייל', `${((T.rev - T.net) / seatNm * 100).toFixed(1)}¢`, 'CASM'],
+  ['רווח לשעת בלוק', `<bdi class="l">${usd(T.net / (T.block / 60))}</bdi>`, ''], ['רווח לטיסה', `<bdi class="l">${usd(T.net / F.length)}</bdi>`, '']
+].map(([l, v, s]) => `<div><div class="label">${l} ${s ? `<span class="small">${s}</span>` : ''}</div><div class="v">${v}</div></div>`).join('');
+
+/* ------------------------------------------------------------ 3 trend (weekly bars, RTL: oldest on the right) */
+(() => {
+  const W = 720, H = 220, L = 40, R = 46, Tp = 16, B = 30, weeks = [0, 0, 0, 0, 0], wr = [0, 0, 0, 0, 0];
+  F.forEach(f => { const w = Math.min(4, Math.floor((f.day - 1) / 7)); weeks[w] += net(f); wr[w] += revOf(f); });
+  const max = Math.max(...weeks) * 1.15, bw = (W - L - R) / 5;
+  const x = i => W - R - (i + 0.5) * bw, y = v => Tp + (1 - v / max) * (H - Tp - B);
+  let g = '';
+  for (let v = 0; v <= max; v += 20000) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line-2)"/><text x="${W - R + 4}" y="${y(v) + 4}">${k(v)}</text>`;
+  weeks.forEach((v, i) => {
+    g += `<rect x="${x(i) - bw * 0.3}" y="${y(v)}" width="${bw * 0.6}" height="${y(0) - y(v)}" fill="var(--accent)" opacity=".75" rx="2"/>`;
+    g += `<text x="${x(i)}" y="${H - 10}" text-anchor="middle">שבוע ${i + 1}</text>`;
+    g += `<text x="${x(i)}" y="${y(v) - 6}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${Math.round(v / wr[i] * 100)}%</text>`;
+  });
+  document.getElementById('trend').innerHTML = g;
+})();
+
+/* ------------------------------------------------------------ 4 ground costs by destination (GSX) */
+(() => {
+  const by = {};
+  F.forEach(f => { const a = by[f.d] ||= { n: 0, gnd: 0, cat: 0, pax: 0, fuel: 0, nm: 0 }; a.n++; a.gnd += f.exp.ground; a.cat += f.exp.catering; a.pax += f.pax; a.fuel += f.exp.fuel; a.nm += f.nm; });
+  const rows = Object.entries(by).sort((a, b) => b[1].gnd / b[1].n - a[1].gnd / a[1].n);
+  const avgG = sum(rows, ([, a]) => a.gnd) / sum(rows, ([, a]) => a.n);
+  document.getElementById('ground').innerHTML = `<tr><th>שדה</th><th class="n">טיפולים</th><th class="n">צוות קרקע, ממוצע</th><th class="n">מול הממוצע</th><th class="n">קייטרינג לנוסע</th><th class="n">דלק ל-NM</th></tr>` +
+    rows.map(([ap, a]) => { const g = a.gnd / a.n, diff = (g / avgG - 1) * 100;
+      return `<tr><td><bdi>${ap}</bdi> <span class="small">${AP[ap] || ''}</span></td><td class="n">${a.n}</td><td class="n">${usd(g)}</td>
+        <td class="n ${diff > 10 ? 'neg' : diff < -10 ? 'pos' : ''}">${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%</td><td class="n">$${(a.cat / a.pax).toFixed(2)}</td><td class="n">$${(a.fuel / a.nm).toFixed(2)}</td></tr>`; }).join('');
+})();
+
+/* ------------------------------------------------------------ 5 routes */
+(() => {
+  const by = {};
+  F.forEach(f => { const key = `${f.o}>${f.d}`; const a = by[key] ||= { o: f.o, d: f.d, n: 0, net: 0, bh: 0, pax: 0, rev: 0 }; a.n++; a.net += net(f); a.bh += f.block / 60; a.pax += f.pax; a.rev += revOf(f); });
+  const rows = Object.values(by).sort((a, b) => b.net / b.bh - a.net / a.bh);
+  document.getElementById('routes').innerHTML = `<tr><th>מסלול</th><th class="n">טיסות</th><th class="n">תפוסה</th><th class="n">רווח/שעה</th><th class="n">שוליים</th></tr>` +
+    rows.map(a => `<tr><td><bdi>${a.o}</bdi> ← <bdi>${a.d}</bdi></td><td class="n">${a.n}</td><td class="n">${Math.round(a.pax / (a.n * 189) * 100)}%</td>
+      <td class="n ${a.net < 0 ? 'neg' : 'pos'}">${usd(a.net / a.bh)}</td><td class="n">${Math.round(a.net / a.rev * 100)}%</td></tr>`).join('');
+})();
+
+/* ------------------------------------------------------------ 6 ops */
+(() => {
+  const late = F.filter(f => f.delay > 15), early = F.filter(f => f.delay < -5);
+  const byAp = {}; F.forEach(f => { (byAp[f.o] ||= []).push(f.taxiOut); });
+  const tx = Object.entries(byAp).map(([ap, a]) => [ap, a.reduce((x, y) => x + y, 0) / a.length]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  document.getElementById('ops').innerHTML = `<tr><th>מדד</th><th class="n">ערך</th></tr>
+    <tr><td>יציאה בזמן (עד 15 דק׳ מה-OUT המתוכנן)</td><td class="n pos">${Math.round(T.otp * 100)}%</td></tr>
+    <tr><td>יציאות באיחור</td><td class="n">${late.length}</td></tr>
+    <tr><td>יציאות מוקדמות</td><td class="n">${early.length}</td></tr>
+    <tr><td>בלוק בפועל מול מתוכנן</td><td class="n">+3 דק׳</td></tr>
+    ${tx.map(([ap, m]) => `<tr><td>זמן הסעה להמראה · <bdi>${ap}</bdi></td><td class="n">${Math.round(m)} דק׳</td></tr>`).join('')}`;
+})();
+
+/* ------------------------------------------------------------ 7 landings */
+(() => {
+  const B = [100, 200, 300, 400, 600, 1e9], cnt = [0, 0, 0, 0, 0, 0];
+  F.forEach(f => cnt[B.findIndex(b => Math.abs(f.fpm) <= b)]++);
+  const mx = Math.max(...cnt);
+  document.getElementById('hist').innerHTML = cnt.map((c, i) => `<div class="${i >= 4 ? 'hard' : ''}" style="height:${c / mx * 100}%"><span>${c}</span></div>`).join('');
+  const best = F.reduce((a, f) => Math.abs(f.fpm) < Math.abs(a.fpm) ? f : a), hard = F.filter(f => Math.abs(f.fpm) > 400);
+  let streak = 0; for (let i = F.length - 1; i >= 0 && Math.abs(F[i].fpm) <= 200; i--) streak++;
+  document.getElementById('landStats').innerHTML = [['הנחיתה הטובה', `<bdi class="l">${best.fpm}</bdi>`], ['נחיתות קשות', hard.length], ['עלות הקנסות', `<bdi class="l">${usd(sum(hard, f => f.exp.pen))}</bdi>`], ['רצף רכות (≤200)', streak]]
+    .map(([l, v]) => `<div><div class="label">${l}</div><div class="v">${v}</div></div>`).join('');
+})();
+
+/* ------------------------------------------------------------ 8 aircraft */
+document.getElementById('acft').innerHTML = `<tr><th>רישום</th><th class="n">טיסות</th><th class="n">שעות</th><th class="n">מחזורים</th><th class="n">רווח/שעה</th></tr>` +
+  REGS.map(r => { const fs = F.filter(f => f.reg === r), bh = sum(fs, f => f.block) / 60;
+    return `<tr><td><bdi>${r}</bdi> <span class="small">B738</span></td><td class="n">${fs.length}</td><td class="n">${hm(bh * 60)}</td><td class="n">${fs.length}</td><td class="n pos">${usd(sum(fs, net) / bh)}</td></tr>`; }).join('');
+
+/* ------------------------------------------------------------ 9 network */
+document.getElementById('net').innerHTML = [['הקפצות צוות', `1 · <bdi class="l">${usd(1650)}</bdi>`], ['הסטות', `1 · <bdi class="l">${usd(17400)}</bdi>`], ['שדות שונים', new Set(F.flatMap(f => [f.o, f.d])).size],
+  ['שדות חדשים החודש', 2], ['מקור: נעקבה', `${F.filter(f => f.src === 'tracked').length}/${F.length}`], ['מקור: חלקית או ידנית', F.filter(f => f.src !== 'tracked').length]]
+  .map(([l, v]) => `<div><div class="label">${l}</div><div class="v">${v}</div></div>`).join('');
+
+/* ------------------------------------------------------------ 10 milestones */
+const MS = [['שעות בלוק', 487.6, 500, 'h'], ['טיסות', 214, 250, ''], ['נוסעים', 36420, 50000, ''], ['מרחק', 182300, 250000, 'NM'], ['רווח מצטבר', 4.62, 5, 'M$'], ['שדות שונים', 41, 50, ''], ['רצף נחיתות רכות', 7, 10, '']];
+document.getElementById('ms').innerHTML = MS.map(([n, c, t, u]) => `<div class="ms-row"><span>${n}</span><div class="ms-bar"><div style="width:${c / t * 100}%"></div></div>
+  <span class="small" style="text-align:left"><bdi class="l">${c.toLocaleString('en-US')} / ${t.toLocaleString('en-US')}${u ? ' ' + u : ''}</bdi></span></div>`).join('');
+document.getElementById('msGot').innerHTML = '<span class="small" style="width:100%">הושגו החודש:</span><span class="badge">200 טיסות · 14.09</span><span class="badge">$4M רווח · 06.09</span><span class="badge">40 שדות · 02.09</span>';
+
+/* ------------------------------------------------------------ 11 rating */
+const star = s => '<span class="stars">' + [1, 2, 3, 4, 5].map(i => i <= Math.round(s) ? '★' : '<span class="off">★</span>').join('') + '</span>';
+const P = [['בטיחות', 4.3, 'FPM ממוצע 187 · נחיתה קשה אחת'], ['דיוק', 3.9, `${Math.round(T.otp * 100)}% בזמן`], ['רווחיות', 4.6, `שוליים ${Math.round(T.net / T.rev * 100)}% (יעד 20%)`], ['יעילות', 3.7, `תפוסה ${Math.round(T.lf * 100)}% · הקפצה אחת`]];
+document.getElementById('pillars').innerHTML = P.map(([n, s, why]) => `<div class="pillar"><div class="label">${n}</div><div>${star(s)} <b>${s.toFixed(1)}</b></div><div class="small">${why}</div></div>`).join('');
+const ov = P.reduce((a, p) => a + p[1], 0) / P.length;
+document.getElementById('overall').innerHTML = `<div><div class="label">ציון כולל</div><div class="big">${ov.toFixed(1)}</div></div><div>${star(ov)}</div>
+  <div class="rank"><div class="label">דרגה</div><div style="font-weight:700">קברניט</div><div class="small">500 שעות לקברניט בכיר · עוד 12:24</div></div>`;
+
+document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', () => {
+  const t = b.dataset.themeSet; if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = t;
+  document.querySelectorAll('[data-theme-set]').forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+</script>
+</body>
+</html>

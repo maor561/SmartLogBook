@@ -259,7 +259,7 @@ const AC = [
 let ac = AC[1];
 
 /* ---------------- ADR-025 revenue (same model as sketch 2; Thursday 08:00 in September, fuel +3.3%) */
-const baseFare = d => 40 + 1.04 * Math.pow(d, 0.65);   // K calibrated in ADR-029
+const baseFare = d => 40 + 1.51 * Math.pow(d, 0.65);   // K per ADR-034
 function revenue(d, pax, seats) {
   const lf = seats ? pax / seats : 0;
   const mult = Math.min(1.40, Math.max(0.70, (0.85 + 0.30 * lf * lf) * 1.05 * 1.08 * 1.05));
