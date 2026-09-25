@@ -1,0 +1,122 @@
+[
+ {
+  "route": "LPPT-LLBG",
+  "date": "2026-09-20T13:48:41.745Z",
+  "distanceNm": 2240,
+  "pax": 168,
+  "payloadKg": 18625,
+  "airMin": 303,
+  "fpm": 0,
+  "fuel": 25443,
+  "ground": 2733,
+  "catering": 1229
+ },
+ {
+  "route": "EDDK-LPPT",
+  "date": "2026-09-19T13:44:53.098Z",
+  "distanceNm": 1112,
+  "pax": 185,
+  "payloadKg": 20468,
+  "airMin": 165,
+  "fpm": 0,
+  "fuel": 12419,
+  "ground": 2624,
+  "catering": 616
+ },
+ {
+  "route": "LLBG-LEMD",
+  "date": "2026-09-12T19:49:46.090Z",
+  "distanceNm": 1957,
+  "pax": 183,
+  "payloadKg": 20269,
+  "airMin": 288,
+  "fpm": -157,
+  "fuel": 21507,
+  "ground": 3193,
+  "catering": 1690
+ },
+ {
+  "route": "LLBG-LICC",
+  "date": "2026-09-05T17:10:17.615Z",
+  "distanceNm": 1108,
+  "pax": 185,
+  "payloadKg": 20468,
+  "airMin": 171,
+  "fpm": -170,
+  "fuel": 12000,
+  "ground": 2991,
+  "catering": 665
+ },
+ {
+  "route": "SOCA-SBBE",
+  "date": "2026-08-29T16:47:32.275Z",
+  "distanceNm": 459,
+  "pax": 138,
+  "payloadKg": 15336,
+  "airMin": 75,
+  "fpm": -181,
+  "fuel": 4599,
+  "ground": 2465,
+  "catering": 207
+ },
+ {
+  "route": "SMJP-SOCA",
+  "date": "2026-08-29T14:43:06.752Z",
+  "distanceNm": 182,
+  "pax": 175,
+  "payloadKg": 19448,
+  "airMin": 40,
+  "fpm": -215,
+  "fuel": 3434,
+  "ground": 1289,
+  "catering": 222
+ },
+ {
+  "route": "LYTV-LLBG",
+  "date": "2026-08-22T18:10:44.935Z",
+  "distanceNm": 1037,
+  "pax": 135,
+  "payloadKg": 15003,
+  "airMin": 150,
+  "fpm": -185,
+  "fuel": 7566,
+  "ground": 1947,
+  "catering": 555
+ },
+ {
+  "route": "TTPP-SMJP",
+  "date": "2026-08-15T16:39:06.690Z",
+  "distanceNm": 512,
+  "pax": 126,
+  "payloadKg": 14002,
+  "airMin": 82,
+  "fpm": 0,
+  "fuel": 8407,
+  "ground": 3132,
+  "catering": 102
+ },
+ {
+  "route": "TNCM-TTPP",
+  "date": "2026-08-15T15:00:45.765Z",
+  "distanceNm": 482,
+  "pax": 138,
+  "payloadKg": 15336,
+  "airMin": 78,
+  "fpm": 0,
+  "fuel": 4888,
+  "ground": 1968,
+  "catering": 182
+ },
+ {
+  "route": "TJSJ-TNCM",
+  "date": "2026-08-08T16:02:18.525Z",
+  "distanceNm": 179,
+  "pax": 185,
+  "payloadKg": 20468,
+  "airMin": 41,
+  "fpm": -281,
+  "fuel": 3958,
+  "ground": 3562,
+  "catering": 243
+ }
+]
