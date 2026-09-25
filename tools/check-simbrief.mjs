@@ -44,12 +44,19 @@ for (const [path, why] of REQUIRED) {
   console.log(`${ok ? '✔' : '✖'} ${path.padEnd(24)} ${ok ? String(v).padEnd(14) : '(missing)'.padEnd(14)} ${why}`);
 }
 const n = (p) => +get(p);
+const units = get('params.units');
+// Accounts set to pounds get kg values converted from lb (e.g. 86.183 kg per pax),
+// so these identities only hold up to rounding. Tolerance: 0.5% of payload.
+const tol = Math.max(10, n('weights.payload') * 0.005);
 const bags = n('weights.bag_count') * n('weights.bag_weight');
-const payloadOk = n('weights.pax_count') * n('weights.pax_weight') + n('weights.cargo') === n('weights.payload');
-const freightOk = n('weights.cargo') - bags === n('weights.freight_added');
+const payloadCalc = n('weights.pax_count') * n('weights.pax_weight') + n('weights.cargo');
+const payloadOk = Math.abs(payloadCalc - n('weights.payload')) <= tol;
+const freightCalc = Math.max(0, n('weights.cargo') - bags);
+const freightOk = Math.abs(freightCalc - n('weights.freight_added')) <= tol;
 console.log(`
-payload ${n('weights.payload')} = pax ${n('weights.pax_count')} × ${n('weights.pax_weight')} + cargo ${n('weights.cargo')} → ${payloadOk ? '✔' : '✖'}`);
-console.log(`cargo ${n('weights.cargo')} − bags ${bags} = freight_added ${n('weights.freight_added')} → ${freightOk ? '✔' : '✖ לבדוק'} (ADR-039)`);
+units: ${units} (tolerance ±${Math.round(tol)} kg)`);
+console.log(`payload ${n('weights.payload')} ≈ pax ${n('weights.pax_count')} × ${n('weights.pax_weight')} + cargo ${n('weights.cargo')} = ${Math.round(payloadCalc)} → ${payloadOk ? '✔' : '✖'}`);
+console.log(`freight_added ${n('weights.freight_added')} ≈ max(0, cargo ${n('weights.cargo')} − bags ${Math.round(bags)}) = ${Math.round(freightCalc)} → ${freightOk ? '✔' : '✖ לבדוק'} (ADR-039)`);
 if (!payloadOk || !freightOk) missing++;
 console.log(missing ? `\n${missing} שדות חסרים` : '\nכל השדות הנדרשים קיימים');
 process.exit(missing ? 1 : 0);
