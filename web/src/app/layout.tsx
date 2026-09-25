@@ -9,6 +9,8 @@ const heebo = Heebo({ variable: '--font-heebo', subsets: ['hebrew', 'latin'] });
 export const metadata: Metadata = {
   title: 'SmartLogBook',
   description: 'לוגבוק וחברת תעופה וירטואלית',
+  // Private single-user app: keep it out of search indexes (ADR-041).
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

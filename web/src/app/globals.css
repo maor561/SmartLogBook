@@ -94,6 +94,51 @@ body {
 .seg button:first-child { border-inline-start: none; }
 .seg button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 
+.btn-sm { font-size: 13px; padding: 5px 12px; }
+.btn-link { border: none; background: none; color: var(--accent); padding: 0; cursor: pointer; font: inherit; font-size: 12.5px; }
+.chip.go { background: var(--go-bg); color: var(--go); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.ok { font-size: 12px; color: var(--go); }
+.err { font-size: 12px; color: var(--bad); }
+.note { font-size: 12.5px; padding: 8px 10px; border-radius: var(--r); background: var(--accent-bg); }
+
+/* ---------- settings (sketch s6) ---------- */
+.acct { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.acct .field input, .p input { direction: ltr; text-align: left; }
+.ver { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; }
+.ver b { font-size: 16px; }
+.hist { border-top: 1px solid var(--line); overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td { padding: 7px 14px; text-align: right; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+.tbl th { font-size: 12px; color: var(--muted); font-weight: 600; }
+.tbl td.n { direction: ltr; text-align: left; white-space: nowrap; }
+.groups { display: grid; gap: 10px; }
+details.g { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+details.g > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+details.g > summary::-webkit-details-marker { display: none; }
+details.g > summary::before { content: '›'; display: inline-block; transform: rotate(180deg); color: var(--faint); transition: transform .15s; font-size: 18px; line-height: 1; }
+details.g[open] > summary::before { transform: rotate(90deg); }
+details.g[open] > summary { border-bottom: 1px solid var(--line); }
+.g-title { font-weight: 600; }
+.g-formula { font-size: 12px; color: var(--muted); direction: ltr; unicode-bidi: isolate; margin-inline-start: auto; }
+.g-body { padding: 12px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; }
+.p { display: grid; gap: 3px; }
+.p .row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.p .name { font-size: 12.5px; }
+.p .unit, .p .def { font-size: 11.5px; color: var(--faint); }
+.p input { font: inherit; font-size: 13.5px; height: 32px; width: 100%; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--ink); padding: 0 8px; }
+.p.changed input { border-color: var(--warn); background: var(--warn-bg); }
+.p.changed .def { color: var(--warn); }
+.sub-h { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--line-2); padding-bottom: 3px; margin-top: 4px; }
+.savebar { position: sticky; bottom: 0; z-index: 15; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; background: var(--panel); border-top: 2px solid var(--warn); box-shadow: 0 -4px 16px rgba(0,0,0,.08); }
+.savebar .grow { flex: 1; min-width: 200px; }
+dialog.dlg { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); padding: 0; width: min(520px, calc(100vw - 32px)); }
+dialog.dlg::backdrop { background: rgba(0,0,0,.45); }
+.dlg .dh { padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 700; }
+.dlg .db { padding: 12px 16px; display: grid; gap: 10px; }
+.dlg .df { padding: 10px 16px; display: flex; gap: 8px; border-top: 1px solid var(--line); }
+.toast { position: fixed; bottom: 16px; inset-inline-start: 50%; transform: translateX(50%); background: var(--go); color: #fff; padding: 8px 14px; border-radius: var(--r); font-size: 13px; z-index: 30; }
+
 /* ---------- login ---------- */
 .login-page { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
 .login-card { width: min(340px, 100%); display: grid; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
@@ -106,4 +151,8 @@ body {
   .brand { display: none; }
   .conn .conn-text { display: none; }
   .page { padding: 12px; }
+  .acct { grid-template-columns: 1fr; }
+  .g-formula { display: none; }
+  .g-body { grid-template-columns: 1fr 1fr; }
+  .hist .opt { display: none; }
 }

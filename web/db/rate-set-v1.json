@@ -1,0 +1,19 @@
+{
+  "fare": { "f0": 40, "k": 1.51, "exp": 0.65 },
+  "loadFactor": { "a": 0.85, "b": 0.30 },
+  "clamp": { "min": 0.70, "max": 1.40 },
+  "reputation": { "maxPct": 5 },
+  "season": [0.85, 0.85, 0.95, 1.05, 0.95, 1.05, 1.20, 1.20, 1.05, 1.00, 0.90, 1.10],
+  "dow": [1.05, 0.95, 0.90, 0.95, 1.08, 1.05, 0.95],
+  "hour": { "night": 0.90, "am": 1.05, "day": 1.00, "pm": 1.05, "late": 0.95 },
+  "fuel": { "sensitivity": 0.35, "refUsdPerKg": 0.75, "minPct": -10, "maxPct": 15 },
+  "cargo": { "a": 0.8, "b": 0.05, "c": 0.55 },
+  "crew": { "captain": 200, "firstOfficer": 120, "relief": 120, "attendant": 40, "seatsPerAttendant": 50, "minHours": 2, "relief3AboveHours": 8, "relief4AboveHours": 12 },
+  "maintenance": { "perAirHour": 450, "perAirHourPerMtowT": 10.8, "perCyclePerMtowT": 3 },
+  "fees": { "landingPerMtowT": 7, "airportPerPax": 12 },
+  "nav": { "per100km": 70, "refMtowT": 50 },
+  "lease": { "perBlockHourPerMtowT": 10.5 },
+  "hardLanding": { "freeUpToFpm": 400, "visualUpToFpm": 600, "ammUpToFpm": 900, "visualPerMtowT": 15, "ammPerMtowT": 60, "structuralPerMtowT": 250 },
+  "positioning": { "freeUnderNm": 50 },
+  "diversion": { "busUnderNm": 50, "busPerPax": 25 }
+}
