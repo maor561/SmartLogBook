@@ -116,6 +116,8 @@ body {
 details.g { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
 details.g > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
 details.g > summary::-webkit-details-marker { display: none; }
+details.g > summary:focus { outline: none; }
+details.g > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 details.g > summary::before { content: '›'; display: inline-block; transform: rotate(180deg); color: var(--faint); transition: transform .15s; font-size: 18px; line-height: 1; }
 details.g[open] > summary::before { transform: rotate(90deg); }
 details.g[open] > summary { border-bottom: 1px solid var(--line); }
