@@ -64,7 +64,7 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   const draft: Draft = {
     ofp, times, fpm: fpm == null ? null : Math.round(fpm),
     manual: { fuel: num(money.fuel), ground: num(money.ground), catering: num(money.catering) },
-    fuelUsdPerKg: form.fuel?.usdPerKg ?? null, rating: null,
+    fuelUsdPerKg: form.fuel?.usdPerKg ?? null, rating: form.rating,
     positioningNm: form.positioningNm, diversionNm: form.diverted ? form.diversionNm : null,
   };
   const gaps = missing(draft);
@@ -204,6 +204,7 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
           <div className="pb small" style={{ borderTop: '1px solid var(--line)' }}>
             מחיר כרטיס <b style={{ color: 'var(--ink)' }}>{result ? `$${result.fare}` : '—'}</b> · תעריפים גרסה {form.rateSetId}
             {form.fuel ? <> · דלק EIA <bdi>${form.fuel.usdPerKg.toFixed(2)}</bdi>/ק״ג</> : ' · בלי מחיר EIA (תוספת 0%)'}
+            {form.rating != null ? <> · דירוג <bdi>{form.rating.toFixed(1)}</bdi>★</> : ' · דירוג בבנייה (נייטרלי)'}
           </div>
         </section>
       </aside>

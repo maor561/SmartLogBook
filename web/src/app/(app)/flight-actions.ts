@@ -7,6 +7,7 @@ import { compute } from '@/lib/engine';
 import { getFlightView } from '@/lib/flight-view';
 import { missing, sourceOf, timesSource, toEngineInput, type Draft, type Manual, type Times } from '@/lib/flight-input';
 import { hasTracker, trackerAck } from '@/lib/tracker';
+import { syncMilestones } from '@/lib/analysis-data';
 
 export type CloseResult = { ok: true } | { ok: false; errors: string[] };
 
@@ -34,7 +35,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
   const draft: Draft = {
     ofp: f.ofp, times, fpm,
     manual: { fuel: money(p.manual.fuel), ground: money(p.manual.ground), catering: money(p.manual.catering) },
-    fuelUsdPerKg: f.fuel?.usdPerKg ?? null, rating: null,          // rating arrives with WP7 (ADR-037: neutral until then)
+    fuelUsdPerKg: f.fuel?.usdPerKg ?? null, rating: f.rating,     // rating before this flight (ADR-037)
     positioningNm: f.positioningNm, diversionNm: f.diverted ? f.diversionNm : null,
   };
   const errs = missing(draft);
@@ -63,7 +64,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
         ${o.weights.pax}, ${o.weights.freight_kg}, ${o.weights.payload_kg},
         ${o.sched.out}, ${o.sched.off}, ${o.sched.on}, ${o.sched.in},
         ${times.out}, ${times.off}, ${times.on}, ${times.in}, ${ts},
-        ${fpm}, ${view.base.crew.icao}, ${f.rateSetId}, ${draft.fuelUsdPerKg}, ${input.out.hour}, ${o.orig_utc_offset}, ${null},
+        ${fpm}, ${view.base.crew.icao}, ${f.rateSetId}, ${draft.fuelUsdPerKg}, ${input.out.hour}, ${o.orig_utc_offset}, ${f.rating},
         now(), ${JSON.stringify(o)}::jsonb)
       ON CONFLICT (ofp_id) DO NOTHING
       RETURNING id)
@@ -79,6 +80,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
   }
 
   await ackTracker(view, f.ofp.id);
+  await syncMilestones().catch(() => {});   // recomputed on the analysis screen too
   revalidatePath('/');
   return { ok: true };
 }

@@ -5,6 +5,7 @@ import { latestOfp } from './external';
 import { currentFuelPrice } from './eia';
 import { getSettings, type Settings } from './settings';
 import { hasTracker, trackerState } from './tracker';
+import { currentRating } from './analysis-data';
 import type { OfpSummary } from './ofp';
 import type { Times } from './flight-input';
 import type { RateParams } from './rates/params';
@@ -45,6 +46,7 @@ export type FormView = {
   params: RateParams;
   rateSetId: number;
   fuel: { usdPerKg: number; week: string } | null;
+  rating: number | null;           // company rating before this flight (ADR-037); null = still building
   trackerState: TrackerDoc['state'] | null;
   disconnectedAt: string | null;
 };
@@ -131,11 +133,11 @@ export async function buildForm(ofp: OfpSummary, t: TrackerDoc | null, crew: str
     }
   }
   const at = tracked.out ?? tracked.off;
-  const [rs, fuel, positioningNm] = await Promise.all([rateSetAt(at), fuelAt(at), nmBetween(crew, ofp.origin.icao)]);
+  const [rs, fuel, positioningNm, rating] = await Promise.all([rateSetAt(at), fuelAt(at), nmBetween(crew, ofp.origin.icao), currentRating()]);
   const mode = t && t.ofp?.id === ofp.id && t.state === 'arrived' && !t.joined && tracked.out && tracked.off && tracked.on && tracked.in ? 'tracked' : 'manual';
   return {
     mode, ofp, tracked, actual, diverted, diversionNm, positioningNm,
-    params: rs.params, rateSetId: rs.id, fuel,
+    params: rs.params, rateSetId: rs.id, fuel, rating,
     trackerState: t?.state ?? null, disconnectedAt: t?.disconnected_at ?? null,
   };
 }

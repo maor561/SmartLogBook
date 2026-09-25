@@ -6,6 +6,8 @@ import { IdleView, PlanView } from '../flight/IdlePlan';
 import { LiveView } from '../flight/LiveView';
 import { CompletionForm } from '../flight/CompletionForm';
 import { Logbook } from '../logbook/Logbook';
+import { AnalysisView } from '../analysis/AnalysisView';
+import { inRange, rangeOf } from '@/lib/analysis';
 import { NO_FILTERS, type LogFlight } from '@/lib/logbook-filter';
 
 const L = (o: Partial<LogFlight> & Pick<LogFlight, 'id' | 'date' | 'origin' | 'dest'>): LogFlight => ({
@@ -70,7 +72,7 @@ const form = (o: Partial<FormView> = {}): FormView => ({
   mode: 'tracked', ofp: OFP,
   tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: '2026-09-25T15:49:00.000Z', in: '2026-09-25T15:58:00.000Z' },
   actual: { icao: 'LGAV', name: 'Athens' }, diverted: false, diversionNm: null, positioningNm: 0,
-  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, trackerState: 'arrived', disconnectedAt: null, ...o,
+  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, ...o,
 });
 
 export default async function DevPreview({ searchParams }: PageProps<'/dev-preview'>) {
@@ -84,6 +86,13 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
     case 'done': return <CompletionForm form={form()} crewIcao="LLBG" />;
     case 'divert': return <CompletionForm form={form({ actual: { icao: 'LGTS', name: 'Thessaloniki' }, diverted: true, diversionNm: 160 })} crewIcao="LLBG" />;
     case 'manual': return <CompletionForm form={form({ mode: 'manual', trackerState: 'interrupted', disconnectedAt: '2026-09-25T15:13:00.000Z', tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: null, in: null }, actual: null })} crewIcao="LLBG" />;
+    case 'analysis': {
+      const r = rangeOf('m', '2026-09-15');
+      const pnl: Record<string, number> = {};
+      for (const f of LOG.filter((x) => x.source !== 'historical' && inRange(x, r))) for (const l of f.lines) pnl[l.code] = (pnl[l.code] ?? 0) + l.cents;
+      return <AnalysisView kind="m" anchor="2026-09-15" hist={false} from="" to="" flights={LOG} pnl={pnl}
+        achieved={[{ cat: 'flights', threshold: 10, at: '2026-09-21T15:51:00Z', flightId: 5 }]} />;
+    }
     case 'logbook': return <Logbook flights={LOG} airports={APS} home="LLBG" initial={NO_FILTERS} />;
     default: return <IdleView base={base} />;
   }
