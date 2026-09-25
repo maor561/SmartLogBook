@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>כיוון חזותי · השוואה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<style>
+/* ================= switcher (outside the app, neutral) ================= */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+.switch { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 10px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; border-bottom: 1px solid #000; }
+.switch b { font-weight: 600; margin-inline-end: 4px; }
+.switch button { font: inherit; border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 5px 12px; border-radius: 4px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; border-color: #cfd3da; }
+.switch .sep { width: 1px; height: 20px; background: #454a53; margin: 0 6px; }
+.switch .hint { color: #8b919b; margin-inline-start: auto; }
+.frame { padding: 16px; }
+
+/* ================= shared app skeleton ================= */
+.app { max-width: 1280px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden;
+  font-family: var(--f-ui); font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.num, .code { font-family: var(--f-num); }
+.top { display: flex; align-items: center; gap: 24px; padding: 0 20px; height: 52px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; letter-spacing: .2px; }
+.nav { display: flex; gap: 4px; height: 100%; }
+.nav a { display: flex; align-items: center; padding: 0 14px; color: var(--muted); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; }
+.nav a.on { color: var(--ink); border-bottom-color: var(--accent); }
+.conn { white-space: nowrap; margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--go); display: inline-block; }
+.gear { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r); color: var(--muted); }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; padding: 16px 20px 20px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.ph { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.pb { padding: 14px; }
+
+/* live head */
+.live-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 14px; border-bottom: 1px solid var(--line); }
+.phase { font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: var(--r); background: var(--go-bg); color: var(--go); }
+.callsign { font-size: 22px; font-weight: 700; }
+.route { display: flex; align-items: baseline; gap: 10px; font-size: 20px; font-weight: 600; }
+.route small { font-size: 13px; font-weight: 400; color: var(--muted); }
+.route .arr { color: var(--muted); font-weight: 400; }
+.acft { color: var(--muted); }
+.src { margin-inline-start: auto; font-size: 12px; color: var(--muted); text-align: left; }
+
+/* phase stepper */
+.phases { list-style: none; margin: 0; padding: 16px 14px 12px; display: grid; grid-template-columns: repeat(8, 1fr); }
+.phases li { position: relative; text-align: center; font-size: 12px; color: var(--muted); padding-top: 18px; }
+/* each step draws the segment back to the previous (right-hand) step */
+.phases li::before { content: ""; position: absolute; top: 5px; left: 50%; width: 100%; height: 2px; background: var(--line); }
+.phases li:first-child::before { display: none; }
+.phases li::after { z-index: 1; }
+.phases li::after { content: ""; position: absolute; top: 1px; right: calc(50% - 5px); width: 10px; height: 10px; border-radius: 50%; background: var(--panel); border: 2px solid var(--line); }
+.phases li.done { color: var(--ink); }
+.phases li.done::before, .phases li.now::before { background: var(--done); }
+.phases li.done::after { background: var(--done); border-color: var(--done); }
+.phases li.now { color: var(--go); font-weight: 700; }
+.phases li.now::after { background: var(--go); border-color: var(--go); box-shadow: 0 0 0 4px var(--go-bg); }
+.phases i { display: block; font-style: normal; font-family: var(--f-num); font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* track */
+.track { padding: 4px 14px 16px; }
+.bar { position: relative; height: 6px; background: var(--line); border-radius: 3px; margin: 10px 0 8px; }
+.bar .fill { position: absolute; inset-block: 0; right: 0; width: 63%; background: var(--route); border-radius: 3px; }
+.bar .plane { position: absolute; top: 50%; right: 63%; transform: translate(50%, -50%) scaleX(-1); font-size: 16px; color: var(--route); line-height: 1; }
+.track-row { display: flex; justify-content: space-between; font-size: 13px; }
+.track-row .mid { color: var(--muted); }
+
+/* metrics */
+.metrics { display: grid; grid-template-columns: repeat(6, 1fr); border-top: 1px solid var(--line); }
+.metric { padding: 10px 14px; border-inline-start: 1px solid var(--line); }
+.metric:first-child { border-inline-start: none; }
+.metric .v { font-family: var(--f-num); font-size: 20px; font-weight: 600; }
+.metric .v small { font-size: 12px; color: var(--muted); font-weight: 400; }
+
+/* tables */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 14px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); }
+td.n, th.n { text-align: left; font-family: var(--f-num); }
+td.n { direction: ltr; }   /* keep leading +/− signs in front of the number */
+tr:last-child td { border-bottom: none; }
+.plan { color: var(--plan); }
+.act { color: var(--go); font-weight: 600; }
+.est { color: var(--warn); }
+.pos { color: var(--go); font-weight: 600; }
+.neg { color: var(--bad); font-weight: 600; }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 3px; color: var(--warn); background: var(--warn-bg); margin-inline-start: 6px; font-family: var(--f-ui); }
+.tw { overflow-x: auto; }
+
+/* load strip */
+.load { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+.load div { padding: 10px 14px; border-inline-start: 1px solid var(--line); }
+.load div:first-child { border-inline-start: none; }
+.load .v { font-family: var(--f-num); font-weight: 600; font-size: 15px; }
+
+/* aside */
+.aside { display: grid; gap: 16px; align-content: start; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; }
+.kv .v { font-family: var(--f-num); font-weight: 600; text-align: left; }
+.big { font-family: var(--f-num); font-size: 26px; font-weight: 700; color: var(--go); }
+.ms-bar { height: 6px; background: var(--line); border-radius: 3px; margin: 10px 0 6px; overflow: hidden; }
+.ms-bar div { height: 100%; width: 97.5%; background: var(--accent); margin-inline-start: auto; }
+.small { font-size: 12px; color: var(--muted); }
+
+.stack { display: grid; gap: 16px; }
+
+@media (max-width: 980px) {
+  .conn .t { display: none; }
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .metrics { grid-template-columns: repeat(3, 1fr); }
+  .metric:nth-child(4) { border-inline-start: none; }
+  .metric:nth-child(n+4) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 640px) {
+  .frame { padding: 0; }
+  .app { border-radius: 0; }
+  .top { gap: 12px; padding: 0 12px; }
+  .brand { display: none; }
+  .conn span.t { display: none; }
+  .main { padding: 12px; }
+  .phases { grid-template-columns: repeat(4, 1fr); row-gap: 14px; }
+  .phases li:nth-child(5)::before { display: none; }
+  .src { margin-inline-start: 0; text-align: right; width: 100%; }
+  .load div { padding: 8px 10px; }
+  .load .v { font-size: 13px; }
+  th, td { padding: 8px 10px; }
+  .metric { padding: 8px 10px; }
+  .metric .v { font-size: 17px; }
+}
+.stack, .panel { min-width: 0; }
+
+/* ================= DIRECTION 1 · Operational / EFB ================= */
+.app[data-dir="ops"] {
+  --f-ui: "Heebo", "Segoe UI", Arial, sans-serif;
+  --f-num: "Heebo", "Segoe UI", Arial, sans-serif;
+  --r: 4px;
+  --bg: #eef0f3; --bar: #ffffff; --panel: #ffffff; --line: #d9dde3;
+  --ink: #151a21; --muted: #5d6673;
+  --accent: #0b4f9c; --route: #0b4f9c; --done: #7b8594;
+  --go: #147a47; --go-bg: #e3f2ea;
+  --plan: #5d6673;
+  --warn: #9a5b00; --warn-bg: #fbeed7;
+  --bad: #b3261e;
+}
+.app[data-dir="ops"][data-theme="dark"] {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a;
+  --ink: #e6e9ee; --muted: #8e97a4;
+  --accent: #5b9df0; --route: #5b9df0; --done: #7f8896;
+  --go: #43c083; --go-bg: #173323;
+  --plan: #8e97a4;
+  --warn: #e2a33a; --warn-bg: #3a2c12;
+  --bad: #f07167;
+}
+
+/* ================= DIRECTION 3 · Avionics / flight board ================= */
+.app[data-dir="avx"] {
+  --f-ui: "IBM Plex Sans Hebrew", "Segoe UI", Arial, sans-serif;
+  --f-num: "IBM Plex Mono", Consolas, monospace;
+  --r: 2px;
+  --bg: #04060a; --bar: #080b10; --panel: #0a0e14; --line: #1d2631;
+  --ink: #e8edf2; --muted: #7d8a99;
+  --accent: #4fd6e8;           /* cyan  = selected */
+  --route: #e05ce0;            /* magenta = active route */
+  --done: #e8edf2;
+  --go: #3ee07a; --go-bg: rgba(62,224,122,.12);   /* green = active / actual */
+  --plan: #4fd6e8;             /* cyan = planned */
+  --warn: #f5b400; --warn-bg: rgba(245,180,0,.12); /* amber = caution / pending */
+  --bad: #ff5a4e;
+  font-size: 13.5px;
+}
+.app[data-dir="avx"] .brand { font-family: var(--f-num); letter-spacing: 2px; font-size: 13px; color: var(--accent); }
+.app[data-dir="avx"] .nav a { font-size: 13px; }
+.app[data-dir="avx"] .nav a.on { color: var(--accent); border-bottom-color: var(--accent); }
+.app[data-dir="avx"] .phase { border: 1px solid var(--go); background: transparent; font-family: var(--f-num); letter-spacing: 1px; }
+.app[data-dir="avx"] .callsign, .app[data-dir="avx"] .route .code { font-family: var(--f-num); letter-spacing: 1px; }
+.app[data-dir="avx"] .callsign { color: var(--go); }
+.app[data-dir="avx"] .label { color: var(--muted); letter-spacing: .3px; }
+.app[data-dir="avx"] .metric .v { color: var(--go); }
+.app[data-dir="avx"] .metric:nth-child(6) .v { color: var(--route); }
+.app[data-dir="avx"] .panel { box-shadow: inset 0 0 0 1px rgba(255,255,255,.02); }
+.app[data-dir="avx"] .big { color: var(--go); }
+/* recent flights as departure board */
+.app[data-dir="avx"] .board td { color: #f3c738; font-family: var(--f-num); letter-spacing: .5px; }
+.app[data-dir="avx"] .board td.pos { color: var(--go); }
+.app[data-dir="avx"] .board td.neg { color: var(--bad); }
+.app[data-dir="avx"] .board tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+.app[data-dir="avx"] .chip { border: 1px solid var(--warn); background: transparent; }
+.app[data-dir="avx"] .legend { display: flex; }
+.legend { display: none; gap: 14px; font-size: 11px; color: var(--muted); padding: 0 20px 14px; font-family: var(--f-num); }
+.legend span::before { content: "■ "; }
+.legend .c1::before { color: #4fd6e8; } .legend .c2::before { color: #3ee07a; }
+.legend .c3::before { color: #e05ce0; } .legend .c4::before { color: #f5b400; }
+</style>
+</head>
+<body>
+
+<div class="switch">
+  <b>כיוון:</b>
+  <button type="button" data-set-dir="ops" aria-pressed="true">1 · תפעולי / EFB</button>
+  <button type="button" data-set-dir="avx" aria-pressed="false">3 · אוויוניקה / לוח טיסות</button>
+  <span class="sep"></span>
+  <span id="themeGroup"><b>רקע:</b>
+    <button type="button" data-set-theme="light" aria-pressed="true">בהיר</button>
+    <button type="button" data-set-theme="dark" aria-pressed="false">כהה</button>
+  </span>
+  <span class="hint">אותו מסך, אותם נתונים · נסה גם להקטין את החלון</span>
+</div>
+
+<div class="frame">
+<div class="app" id="app" data-dir="ops" data-theme="light">
+
+  <header class="top">
+    <div class="brand">SMARTLOGBOOK</div>
+    <nav class="nav"><a href="#" class="on">טיסה</a><a href="#">לוגבוק</a><a href="#">ניתוח</a></nav>
+    <div class="conn"><span class="dot"></span>מחובר ל-<bdi>VATSIM</bdi><span class="t"> · <bdi class="num">CID 1512345</bdi></span></div>
+    <div class="gear" title="הגדרות">⚙</div>
+  </header>
+
+  <div class="main">
+    <div class="stack">
+
+      <section class="panel">
+        <div class="live-head">
+          <span class="phase">בשיוט</span>
+          <span class="callsign code">SLB351</span>
+          <span class="route"><span class="code">LLBG</span><small>תל אביב</small><span class="arr">←</span><span class="code">LGAV</span><small>אתונה</small></span>
+          <span class="acft code">B738 · 4X-SLB</span>
+          <span class="src">תוכנית: <bdi>SimBrief 13:31Z</bdi><br>מעקב: <bdi>VATSIM</bdi> · עודכן לפני 12 שנ׳</span>
+        </div>
+
+        <ol class="phases">
+          <li class="done">בגייט<i>14:02</i></li>
+          <li class="done">הסעה<i>14:02</i></li>
+          <li class="done">המראה<i>14:15</i></li>
+          <li class="done">טיפוס<i>14:15</i></li>
+          <li class="now">שיוט<i>14:38</i></li>
+          <li>הנמכה<i>~15:28</i></li>
+          <li>נחיתה<i>~15:50</i></li>
+          <li>בגייט<i>~15:58</i></li>
+        </ol>
+
+        <div class="track">
+          <div class="bar"><div class="fill"></div><span class="plane">✈</span></div>
+          <div class="track-row"><span class="code">LLBG</span><span class="mid">טסו <bdi class="num">412 NM</bdi> · נותרו <bdi class="num">239 NM</bdi></span><span class="code">LGAV</span></div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><div class="label">גובה</div><div class="v">FL360</div></div>
+          <div class="metric"><div class="label">מהירות קרקע</div><div class="v">452 <small>kt</small></div></div>
+          <div class="metric"><div class="label">כיוון</div><div class="v">297°</div></div>
+          <div class="metric"><div class="label">סקווק</div><div class="v">4721</div></div>
+          <div class="metric"><div class="label">זמן באוויר</div><div class="v">0:58</div></div>
+          <div class="metric"><div class="label">ETA נחיתה</div><div class="v">15:50<small>Z</small></div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">זמני בלוק · UTC</span></div>
+        <div class="tw"><table>
+          <tr><th></th><th class="n">OUT</th><th class="n">OFF</th><th class="n">ON</th><th class="n">IN</th><th class="n">בלוק</th></tr>
+          <tr><td>מתוכנן · SimBrief</td><td class="n plan">14:00</td><td class="n plan">14:14</td><td class="n plan">15:52</td><td class="n plan">15:59</td><td class="n plan">1:59</td></tr>
+          <tr><td>בפועל · VATSIM</td><td class="n act">14:02</td><td class="n act">14:15</td><td class="n">—</td><td class="n">—</td><td class="n act">1:11 ▸</td></tr>
+          <tr><td>צפי</td><td class="n"></td><td class="n"></td><td class="n est">15:50</td><td class="n est">15:58</td><td class="n est">1:56</td></tr>
+        </table></div>
+        <div class="load">
+          <div><div class="label">נוסעים</div><div class="v">162 / 189 <span class="small">· 86%</span></div></div>
+          <div><div class="label">מטען</div><div class="v">2,140 ק״ג</div></div>
+          <div><div class="label">משקל המראה</div><div class="v">71.4 ט׳</div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="ph"><span class="label">טיסות אחרונות</span><span class="small" style="margin-inline-start:auto">כל הלוגבוק ←</span></div>
+        <div class="tw"><table class="board">
+          <tr><th>תאריך</th><th>מסלול</th><th>מטוס</th><th class="n">בלוק</th><th class="n">FPM</th><th class="n">רווח / הפסד</th></tr>
+          <!-- routes are written in visual order (destination ← origin) so origin sits on the right -->
+          <tr><td class="num">23.09</td><td class="code">LLBG ← LGAV</td><td class="code">B738</td><td class="n">1:52</td><td class="n">-142</td><td class="n pos">+$38,420</td></tr>
+          <tr><td class="num">21.09</td><td class="code">LGAV ← LLBG</td><td class="code">B738</td><td class="n">1:49</td><td class="n">-210</td><td class="n pos">+$29,880</td></tr>
+          <tr><td class="num">20.09</td><td class="code">LLBG ← LCLK</td><td class="code">B738</td><td class="n">1:01</td><td class="n">-388</td><td class="n pos">+$17,120</td></tr>
+          <tr><td class="num">18.09</td><td class="code">LCLK ← LLBG</td><td class="code">A21N</td><td class="n">0:58</td><td class="n">-96</td><td class="n pos">+$21,300</td></tr>
+          <tr><td class="num">14.09</td><td class="code">LLBG ← LTFM<span class="chip">הקפצת צוות</span></td><td class="code">B738</td><td class="n">1:58</td><td class="n neg">-455</td><td class="n neg">−$4,210</td></tr>
+        </table></div>
+      </section>
+
+    </div>
+
+    <aside class="aside">
+      <section class="panel">
+        <div class="ph"><span class="label">ספטמבר 2026</span></div>
+        <div class="pb">
+          <div class="small">רווח נקי</div>
+          <div class="big"><bdi dir="ltr">+$212,480</bdi></div>
+          <div class="kv" style="margin-top:12px">
+            <span>טיסות</span><span class="v">9</span>
+            <span>שעות בלוק</span><span class="v">21:40</span>
+            <span>ממוצע לטיסה</span><span class="v"><bdi dir="ltr">+$23,609</bdi></span>
+            <span>נחיתות קשות</span><span class="v">1</span>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="ph"><span class="label">אבן הדרך הבאה</span></div>
+        <div class="pb">
+          <div style="font-weight:600">500 שעות טיסה</div>
+          <div class="ms-bar"><div></div></div>
+          <div class="kv"><span class="small">487:36 מתוך 500:00</span><span class="v small">עוד 12:24</span></div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="ph"><span class="label">אחרי הנחיתה</span></div>
+        <div class="pb small">כאן ייפתח טופס ההשלמה: דלק, צוות קרקע וקייטרינג (מ-<bdi>GSX Pro</bdi>), וקצב הנגיעה (<bdi>FPM</bdi>).</div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="legend"><span class="c1">מתוכנן / נבחר</span><span class="c2">בפועל / פעיל</span><span class="c3">מסלול</span><span class="c4">צפי / דורש תשומת לב</span></div>
+</div>
+</div>
+
+<script>
+  const app = document.getElementById('app');
+  const themeGroup = document.getElementById('themeGroup');
+  document.querySelectorAll('[data-set-dir]').forEach(b => b.addEventListener('click', () => {
+    app.dataset.dir = b.dataset.setDir;
+    document.querySelectorAll('[data-set-dir]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    themeGroup.style.visibility = b.dataset.setDir === 'ops' ? 'visible' : 'hidden';
+  }));
+  document.querySelectorAll('[data-set-theme]').forEach(b => b.addEventListener('click', () => {
+    app.dataset.theme = b.dataset.setTheme;
+    document.querySelectorAll('[data-set-theme]').forEach(x => x.setAttribute('aria-pressed', x === b));
+  }));
+</script>
+</body>
+</html>
