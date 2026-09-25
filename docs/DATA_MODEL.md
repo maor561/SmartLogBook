@@ -31,7 +31,7 @@
 | נגזר | `block_min`, `air_min` | עמודות מחושבות (generated) |
 | נחיתה | `fpm`, `landing_lat`, `landing_lon` | הקואורדינטות מה-Worker, לזיהוי השדה (ADR-033) |
 | רצף | `crew_location_icao` | מיקום הצוות לפני הטיסה (ADR-026) |
-| תמחור | `rate_set_id`, `eia_fuel_price_per_kg`, `local_out_hour`, `orig_utc_offset` | **הצילום:** מה שהמחיר נבנה עליו (ADR-021, 025) |
+| תמחור | `rate_set_id`, `eia_fuel_price_per_kg`, `local_out_hour`, `orig_utc_offset`, `rating_at_out` | **הצילום:** מה שהמחיר נבנה עליו (ADR-021, 025) |
 | סגירה | `closed_at`, `edited_at` | `edited_at` ⇒ תג "נערכה" |
 | היסטוריות | `legacy_planned_air_min`, `legacy_doc` (jsonb) | ADR-030 |
 
@@ -65,7 +65,10 @@
 ### `eia_prices`
 `week`, `usd_per_kg`, `fetched_at`. משמש מטמון ומקור ל"ערך האחרון" כש-EIA לא זמין (ADR-025).
 
-### `milestones`: ייקבע בשלב 5 (Q6)
+### `milestones` (ADR-038)
+`id`, `category`, `threshold`, `achieved_at`, `flight_id`. אין עדכון, רק הוספה. בהעברה מחשבים בדיעבד את מה שכבר הושג.
+
+**דירוג ודרגה (ADR-036, 038)** לא נשמרים: הם מחושבים בכל פעם מהטיסות ומ-`ledger_lines`. הדירוג שבו השתמשו לתמחור של טיסה נשמר ב-`ledger_lines.calc` של שורת הכרטיסים (ADR-037).
 
 ---
 
