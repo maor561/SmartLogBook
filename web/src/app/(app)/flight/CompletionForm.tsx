@@ -141,7 +141,9 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
             </div>
             <div className="small">
               בלוק <b style={{ color: 'var(--ink)' }}>{hm(minsBetween(times.out, times.in))}</b> · באוויר <b style={{ color: 'var(--ink)' }}>{hm(minsBetween(times.off, times.on))}</b>
-              {allTracked ? ' · נעקב במלואו, לא ניתן לעריכה' : ' · הזמנים שנמדדו ב-VATSIM נעולים'}
+              {allTracked ? ' · נעקב במלואו, לא ניתן לעריכה'
+                : KEYS.some((k) => tracked[k]) ? ' · הזמנים שנמדדו ב-VATSIM נעולים'
+                : ' · טיסה ידנית: כל הזמנים מוזנים ידנית'}
             </div>
 
             <div className="fgroup-title">מ-GSX Pro</div>
