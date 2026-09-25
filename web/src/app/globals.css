@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/* ================================================================
+   SmartLogBook design tokens — operational / EFB (ADR-015)
+   Light & dark per device, with a manual override (ADR-016):
+   <html data-theme="light|dark"> wins; otherwise the OS preference.
+   Colour carries meaning only: go = active/profit, warn = estimate or
+   needs attention, bad = loss, accent = interaction/route.
+   ================================================================ */
+:root {
+  --bg: #eef0f3; --bar: #ffffff; --panel: #ffffff; --line: #d9dde3; --line-2: #eceef2;
+  --ink: #151a21; --muted: #5d6673; --faint: #8b93a0;
+  --accent: #0b4f9c; --accent-bg: #e4edf8;
+  --go: #147a47; --go-bg: #e3f2ea;
+  --warn: #9a5b00; --warn-bg: #fbeed7;
+  --bad: #b3261e; --bad-bg: #fbe7e5;
+  --r: 4px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e;
+    --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+    --accent: #5b9df0; --accent-bg: #16263d;
+    --go: #43c083; --go-bg: #173323;
+    --warn: #e2a33a; --warn-bg: #3a2c12;
+    --bad: #f07167; --bad-bg: #3b1d1b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e;
+  --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d;
+  --go: #43c083; --go-bg: #173323;
+  --warn: #e2a33a; --warn-bg: #3a2c12;
+  --bad: #f07167; --bad-bg: #3b1d1b;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: var(--font-heebo), "Segoe UI", Arial, sans-serif;
+}
+
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-heebo), "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+/* Latin codes (ICAO, callsigns, numbers with signs) inside Hebrew text */
+.ltr { direction: ltr; unicode-bidi: isolate; }
+
+/* ---------- top bar ---------- */
+.topbar { display: flex; align-items: center; gap: 24px; padding: 0 20px; height: 52px; background: var(--bar); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+.brand { font-weight: 700; letter-spacing: .2px; }
+.nav { display: flex; gap: 4px; height: 100%; }
+.nav a { display: flex; align-items: center; padding: 0 14px; color: var(--muted); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; }
+.nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.topbar-end { margin-inline-start: auto; display: flex; align-items: center; gap: 10px; }
+.conn { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); display: inline-block; }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--muted); text-decoration: none; cursor: pointer; font: inherit; }
+.icon-btn[aria-current="page"] { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- layout ---------- */
+.page { max-width: 1280px; margin: 0 auto; padding: 16px 20px 24px; display: grid; gap: 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.panel-head { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.panel-body { padding: 14px; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.empty { display: flex; gap: 16px; align-items: center; padding: 20px 14px; }
+.empty .ring { width: 44px; height: 44px; border-radius: 50%; border: 2px dashed var(--line); display: grid; place-items: center; color: var(--muted); flex: none; }
+.empty h2 { margin: 0; font-size: 18px; }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: var(--line-2); color: var(--muted); }
+
+/* ---------- controls ---------- */
+.btn { font: inherit; font-weight: 600; font-size: 14px; padding: 8px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.btn:disabled { opacity: .6; cursor: default; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-ghost-bad { border-color: transparent; background: transparent; color: var(--bad); }
+.field { display: grid; gap: 4px; }
+.field span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.field input { font: inherit; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--ink); }
+.field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; border: none; border-inline-start: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 6px 12px; cursor: pointer; }
+.seg button:first-child { border-inline-start: none; }
+.seg button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+
+/* ---------- login ---------- */
+.login-page { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login-card { width: min(340px, 100%); display: grid; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 24px; }
+.login-card h1 { margin: 0; font-size: 20px; }
+.login-card p { margin: 0; }
+.login-error { color: var(--bad); font-size: 14px; }
+
+@media (max-width: 640px) {
+  .topbar { gap: 12px; padding: 0 12px; }
+  .brand { display: none; }
+  .conn .conn-text { display: none; }
+  .page { padding: 12px; }
+}
