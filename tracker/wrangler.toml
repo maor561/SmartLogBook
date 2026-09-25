@@ -6,10 +6,23 @@ compatibility_date = "2026-09-01"
 [triggers]
 crons = ["* * * * *"]
 
-# Set your VATSIM CID at deploy time:  npx wrangler deploy --var VATSIM_CID:<cid>
-[vars]
-VATSIM_CID = ""
+# Live tracking state (ADR-024). Schema: migrations/*.sql
+#   npx wrangler d1 migrations apply smartlogbook-tracker --remote
+[[d1_databases]]
+binding = "DB"
+database_name = "smartlogbook-tracker"
+database_id = "a5c73390-c24d-4d3d-a181-225a36a154c8"
+migrations_dir = "migrations"
 
-# Logs + CPU-time metrics in the dashboard — this is how WP0 reads the real CPU time.
+[vars]
+VATSIM_CID = "1242058"
+SIMBRIEF_ID = "MAOR561"
+# Origins allowed to read the live state from the browser (the app's live screen).
+APP_ORIGINS = "https://smart-log-book-rjo7.vercel.app,http://localhost:3100"
+
+# Secret, set by the user (never in this file):
+#   npx wrangler secret put TRACKER_SECRET
+# The same value goes into Vercel as TRACKER_SECRET (ADR-031).
+
 [observability]
 enabled = true
