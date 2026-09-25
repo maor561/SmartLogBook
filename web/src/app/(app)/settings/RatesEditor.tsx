@@ -99,7 +99,7 @@ export function RatesEditor({ versions, currentId }: Props) {
                     <span className="row"><span className="name">{i.name}</span><span className="unit">{i.unit}</span></span>
                     <input inputMode="decimal" value={values[i.path]} onChange={(e) => setValues({ ...values, [i.path]: e.target.value })} />
                     <span className="row">
-                      <span className="def">ברירת מחדל {getAt(DEFAULTS, i.path)}</span>
+                      <span className="def">ברירת מחדל <bdi className="ltr">{getAt(DEFAULTS, i.path)}</bdi></span>
                       {changed.has(i.path) && (
                         <button type="button" className="btn-link" onClick={() => setValues({ ...values, [i.path]: saved[i.path] })}>↺ הקודם</button>
                       )}
