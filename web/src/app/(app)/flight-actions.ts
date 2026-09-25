@@ -39,7 +39,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
   };
   const errs = missing(draft);
   if (errs.length) return { ok: false, errors: [`חסרים: ${errs.join(', ')}`] };
-  if (Date.parse(times.in!) > Date.now() + 5 * 60e3) return { ok: false, errors: ['IN לא יכול להיות בעתיד'] };
+  if (Date.parse(times.in!) > Date.now() + 5 * 60e3) return { ok: false, errors: ['זמן GATE לא יכול להיות בעתיד'] };
 
   const input = toEngineInput(draft)!;
   const result = compute(f.params, input);

@@ -7,6 +7,7 @@ import type { TrackerDoc } from '@/lib/flight-view';
 import type { OfpSummary } from '@/lib/ofp';
 import { distanceNm } from '@/lib/geo';
 import { hm, minsBetween, nf, z } from '@/lib/format';
+import { TIME_LABEL } from '@/lib/flight-input';
 import { Head } from './Parts';
 
 const PHASES = ['בגייט', 'הסעה', 'באוויר', 'הסעה לגייט', 'בחניה'];
@@ -100,7 +101,7 @@ export function LiveView({ initial, ofp }: { initial: TrackerDoc; ofp: OfpSummar
           <div className="panel-head"><span className="label">זמני בלוק · UTC</span></div>
           <div style={{ overflowX: 'auto' }}>
             <table className="tbl">
-              <thead><tr><th /><th className="n">OUT</th><th className="n">OFF</th><th className="n">ON</th><th className="n">IN</th><th className="n">בלוק</th></tr></thead>
+              <thead><tr><th />{(["out", "off", "on", "in"] as const).map((k) => <th key={k} className="n">{TIME_LABEL[k]}</th>)}<th className="n">בלוק</th></tr></thead>
               <tbody>
                 <tr>
                   <td>מתוכנן · SimBrief</td>
@@ -123,7 +124,7 @@ export function LiveView({ initial, ofp }: { initial: TrackerDoc; ofp: OfpSummar
       </div>
       <aside className="stack">
         <section className="panel">
-          <div className="panel-head"><span className="label">{disc ? 'מה נשמר' : 'אחרי IN'}</span></div>
+          <div className="panel-head"><span className="label">{disc ? 'מה נשמר' : 'אחרי GATE'}</span></div>
           <div className="pb small" style={{ lineHeight: 1.7 }}>
             {disc
               ? <>הזמנים שכבר נמדדו ב-VATSIM נשמרים. אם תסיים ידנית, תזין רק את החסרים.</>

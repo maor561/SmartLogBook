@@ -18,6 +18,9 @@ export type Draft = {
   diversionNm: number | null;
 };
 
+// Names shown to the user for OUT / OFF / ON / IN (user's choice, 2026-09-25).
+export const TIME_LABEL = { out: 'PUSHBACK', off: 'המראה', on: 'נחיתה', in: 'GATE' } as const;
+
 const minutes = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 60000);
 
 // Local time at the origin when the fare is locked: actual OUT, else OFF, else
@@ -33,10 +36,10 @@ export function localOut(ofp: OfpSummary, t: Times) {
 export function missing(d: Draft): string[] {
   const m: string[] = [];
   const t = d.times;
-  for (const k of ['out', 'off', 'on', 'in'] as const) if (!t[k]) m.push(k.toUpperCase());
+  for (const k of ['out', 'off', 'on', 'in'] as const) if (!t[k]) m.push(TIME_LABEL[k]);
   const order = [t.out, t.off, t.on, t.in];
   for (let i = 1; i < 4; i++) if (order[i - 1] && order[i] && Date.parse(order[i]!) < Date.parse(order[i - 1]!)) {
-    m.push('סדר הזמנים (OUT ≤ OFF ≤ ON ≤ IN)');
+    m.push('סדר הזמנים (PUSHBACK ← המראה ← נחיתה ← GATE)');
     break;
   }
   if (d.manual.fuel == null || d.manual.ground == null || d.manual.catering == null) m.push('עלויות GSX');

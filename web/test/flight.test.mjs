@@ -33,7 +33,7 @@ test('local OUT time uses the origin offset (LPPT +1)', () => {
 
 test('missing: times, order, GSX, FPM', () => {
   assert.deepEqual(missing(draft()), []);
-  assert.deepEqual(missing(draft({ times: { ...T, in: null } })), ['IN']);
+  assert.deepEqual(missing(draft({ times: { ...T, in: null } })), ['GATE']);
   assert.ok(missing(draft({ times: { ...T, on: '2026-09-20T08:00:00.000Z' } })).some((m) => m.startsWith('סדר')));
   assert.deepEqual(missing(draft({ manual: { fuel: 1, ground: null, catering: 1 }, fpm: null })), ['עלויות GSX', 'FPM']);
 });

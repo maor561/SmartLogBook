@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { compute, type LedgerCode } from '@/lib/engine';
-import { missing, toEngineInput, type Draft, type Times } from '@/lib/flight-input';
+import { missing, toEngineInput, TIME_LABEL, type Draft, type Times } from '@/lib/flight-input';
 import type { FormView } from '@/lib/flight-view';
 import { hm, minsBetween, usd, z } from '@/lib/format';
 import { closeFlight, discardFlight } from '../flight-actions';
@@ -105,7 +105,7 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
         <section className="panel">
           <Head ofp={ofp} tag={tag} actual={form.actual} diverted={form.diverted}>
             {form.mode === 'tracked'
-              ? <>IN · <bdi>{z(tracked.in)}Z</bdi> <span className="chip plan">נעקבה</span></>
+              ? <>GATE · <bdi>{z(tracked.in)}Z</bdi> <span className="chip plan">נעקבה</span></>
               : <span className="chip warn">{Object.values(tracked).some(Boolean) ? 'תירשם כחלקית' : 'תירשם כידנית'}</span>}
           </Head>
 
@@ -125,7 +125,7 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
             <div className="fields">
               {KEYS.map((k) => (
                 <div key={k} className="ff">
-                  <label htmlFor={`t-${k}`}>{k.toUpperCase()}</label>
+                  <label htmlFor={`t-${k}`}>{TIME_LABEL[k]}</label>
                   {tracked[k] ? (
                     <div className="in locked"><b>{z(tracked[k])}</b></div>
                   ) : (
