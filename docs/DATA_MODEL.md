@@ -25,7 +25,7 @@
 | מקור | `source` | `tracked` · `partial` · `manual` · `historical` (ADR-019, ADR-030) |
 | מסלול | `origin_icao`, `dest_planned_icao`, `dest_actual_icao`, `alternate_icao`, `route_distance_nm`, `gc_distance_nm` | `dest_actual ≠ dest_planned` → הסטה |
 | מטוס | `aircraft_type`, `registration`, `seats`, `mtow_kg`, `mlw_kg`, `oew_kg` | מה-OFP (ADR-032) |
-| עומס | `pax`, `cargo_kg`, `payload_kg` | מה-OFP. **`cargo_kg` = `weights.cargo`** (ADR-034), ואסור לגזור אותו מה-payload |
+| עומס | `pax`, `cargo_kg`, `payload_kg` | מה-OFP. **`cargo_kg` = `weights.freight_added`** (ADR-039). ‏`weights.cargo` כולל מזוודות, ואסור להשתמש בו כהכנסה |
 | זמנים מתוכננים | `sched_out`, `sched_off`, `sched_on`, `sched_in` | מה-OFP (`times.sched_*`) |
 | זמנים בפועל | `out_at`, `off_at`, `on_at`, `in_at` + `times_source` (למשל `vvmm`) | v = VATSIM, m = ידני (ADR-019). ריק בטיסות היסטוריות |
 | נגזר | `block_min`, `air_min` | עמודות מחושבות (generated) |

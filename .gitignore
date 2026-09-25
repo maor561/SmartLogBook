@@ -39,3 +39,6 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# WP0 flight recordings (personal position data, not committed)
+recordings/

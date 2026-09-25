@@ -1,0 +1,15 @@
+name = "smartlogbook-tracker"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# Every minute (ADR-024). The Workers Free plan allows up to 5 cron triggers.
+[triggers]
+crons = ["* * * * *"]
+
+# Set your VATSIM CID at deploy time:  npx wrangler deploy --var VATSIM_CID:<cid>
+[vars]
+VATSIM_CID = ""
+
+# Logs + CPU-time metrics in the dashboard — this is how WP0 reads the real CPU time.
+[observability]
+enabled = true
