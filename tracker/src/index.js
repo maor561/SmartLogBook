@@ -89,11 +89,12 @@ export default {
       return json({ tracker: s, events: results, server_time: new Date().toISOString() }, 200, h);
     }
 
-    // The app stored the flight in Neon (or the user deleted an interrupted one): reset.
+    // The app stored the flight in Neon — tracked, finished manually mid-flight,
+    // or an interrupted one the user deleted: reset, and never re-arm this OFP.
     if (request.method === 'POST' && url.pathname === '/v1/ack') {
       const body = await request.json().catch(() => ({}));
       const { s, ofpCheckedAt } = await load(env);
-      if (!['arrived', 'interrupted'].includes(s.state)) return json({ error: `nothing to acknowledge (state ${s.state})` }, 409, h);
+      if (s.state === 'idle') return json({ error: 'nothing to acknowledge (idle)' }, 409, h);
       if (body.ofp_id !== s.ofp?.id) return json({ error: 'ofp_id does not match the tracked flight' }, 409, h);
       const now = new Date().toISOString();
       await env.DB.prepare('DELETE FROM tracker_events').run();   // the flight now lives in Neon

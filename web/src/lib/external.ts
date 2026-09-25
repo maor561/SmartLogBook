@@ -1,4 +1,5 @@
 import 'server-only';
+import { summarizeOfp, type OfpSummary } from './ofp';
 
 // Account checks for the settings screen (sketch s6): prove the IDs are real
 // before the tracker relies on them.
@@ -18,6 +19,20 @@ export async function checkSimbrief(id: string): Promise<Check> {
     return { ok: true, text: `נמצא OFP אחרון: ${j.origin?.icao_code} → ${j.destination?.icao_code}` };
   } catch {
     return { ok: false, text: 'SimBrief לא הגיב' };
+  }
+}
+
+// Latest OFP for the flight screen's "plan ready" state (ADR-019: no plan, no flight).
+// Cached for a minute so page loads don't hammer SimBrief.
+export async function latestOfp(id: string): Promise<OfpSummary | null> {
+  const key = /^\d+$/.test(id) ? 'userid' : 'username';
+  try {
+    const res = await fetch(`https://www.simbrief.com/api/xml.fetcher.php?${key}=${encodeURIComponent(id)}&json=1`, {
+      signal: AbortSignal.timeout(TIMEOUT_MS), next: { revalidate: 60 },
+    });
+    return res.ok ? summarizeOfp(await res.json()) : null;
+  } catch {
+    return null;
   }
 }
 
