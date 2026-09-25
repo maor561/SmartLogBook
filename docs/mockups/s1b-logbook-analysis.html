@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 1b · לוגבוק וניתוח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+<style>
+/* ============ EFB tokens (ADR-015) · light/dark per device (ADR-016) ============ */
+:root {
+  --bg: #eef0f3; --bar: #ffffff; --panel: #ffffff; --line: #d9dde3; --line-2: #eceef2;
+  --ink: #151a21; --muted: #5d6673; --faint: #8b93a0;
+  --accent: #0b4f9c; --accent-bg: #e4edf8;
+  --go: #147a47; --go-bg: #e3f2ea;
+  --warn: #9a5b00; --warn-bg: #fbeed7;
+  --bad: #b3261e; --bad-bg: #fbe7e5;
+  --map-bg: #f4f6f9; --map-grid: #e3e7ec;
+  --r: 4px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e;
+    --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+    --accent: #5b9df0; --accent-bg: #16263d;
+    --go: #43c083; --go-bg: #173323;
+    --warn: #e2a33a; --warn-bg: #3a2c12;
+    --bad: #f07167; --bad-bg: #3b1d1b;
+    --map-bg: #13171d; --map-grid: #1f252d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e;
+  --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d;
+  --go: #43c083; --go-bg: #173323;
+  --warn: #e2a33a; --warn-bg: #3a2c12;
+  --bad: #f07167; --bad-bg: #3b1d1b;
+  --map-bg: #13171d; --map-grid: #1f252d; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+bdi.l { direction: ltr; unicode-bidi: isolate; }
+
+.switch { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 10px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; border-bottom: 1px solid #000; }
+.switch b { font-weight: 600; margin-inline-end: 2px; }
+.switch button { font: inherit; border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; border-color: #cfd3da; }
+.switch .sep { width: 1px; height: 20px; background: #454a53; margin: 0 6px; }
+.frame { padding: 16px; }
+.note-bar { max-width: 1280px; margin: 0 auto 10px; color: #b9bec7; font-size: 13px; line-height: 1.5; }
+.note-bar b { color: #fff; }
+
+.app { max-width: 1280px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden;
+  font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.top { display: flex; align-items: center; gap: 24px; padding: 0 20px; height: 52px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; }
+.nav { display: flex; gap: 4px; height: 100%; }
+.nav a { display: flex; align-items: center; padding: 0 14px; color: var(--muted); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; }
+.nav a.on { color: var(--ink); border-bottom-color: var(--accent); }
+.conn { white-space: nowrap; margin-inline-start: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); display: inline-block; }
+.gear { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r); color: var(--muted); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.ph { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.muted { color: var(--muted); }
+
+.chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 3px; margin-inline-start: 4px; white-space: nowrap; vertical-align: 1px; }
+.chip.plan { color: var(--accent); background: var(--accent-bg); }
+.chip.warn { color: var(--warn); background: var(--warn-bg); }
+.chip.bad { color: var(--bad); background: var(--bad-bg); }
+.chip.muted { color: var(--muted); background: var(--line-2); }
+
+.btn { font: inherit; font-weight: 600; font-size: 13.5px; padding: 7px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.ghost-bad { border-color: transparent; background: transparent; color: var(--bad); }
+
+/* ---------- toolbar ---------- */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding: 12px 20px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.search { display: flex; align-items: center; gap: 6px; height: 34px; border: 1px solid var(--line); border-radius: var(--r); padding: 0 10px; background: var(--panel); min-width: 220px; }
+.search input { border: none; outline: none; background: transparent; font: inherit; color: var(--ink); width: 100%; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; height: 34px; }
+.seg button { font: inherit; font-size: 13px; border: none; border-inline-start: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 0 12px; cursor: pointer; }
+.seg button:first-child { border-inline-start: none; }
+.seg button.on { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.sel { height: 34px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); color: var(--ink); font: inherit; font-size: 13px; padding: 0 8px; }
+.tgl { font: inherit; font-size: 12.5px; height: 30px; padding: 0 10px; border-radius: 15px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; }
+.tgl.on { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+.tb-end { margin-inline-start: auto; display: flex; gap: 8px; }
+.tb-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; }
+.tb-row .label { margin-inline-end: 4px; }
+
+/* ---------- summary strip ---------- */
+.sum { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--panel); border-bottom: 1px solid var(--line); }
+.sum > div { padding: 10px 20px; border-inline-start: 1px solid var(--line); }
+.sum > div:first-child { border-inline-start: none; }
+.sum .v { font-size: 18px; font-weight: 700; }
+
+/* ---------- logbook layout ---------- */
+.lb { display: grid; grid-template-columns: minmax(0, 1fr) 420px; min-height: 560px; }
+.list { min-width: 0; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--bg); position: sticky; top: 0; }
+td.n, th.n { text-align: left; }
+td.n { direction: ltr; }
+.rows tr { cursor: pointer; }
+.rows tr:hover td { background: var(--line-2); }
+.rows tr.sel td { background: var(--accent-bg); }
+.rows tr.sel td:first-child { box-shadow: inset -3px 0 0 var(--accent); }
+.pos { color: var(--go); font-weight: 600; } .neg { color: var(--bad); font-weight: 600; }
+.empty { padding: 40px; text-align: center; color: var(--muted); }
+
+/* ---------- detail drawer ---------- */
+.detail { border-inline-start: 1px solid var(--line); background: var(--panel); min-width: 0; overflow-y: auto; }
+.d-head { padding: 14px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+.d-head .row1 { display: flex; align-items: center; gap: 10px; }
+.d-head .cs { font-size: 20px; font-weight: 700; }
+.d-head .date { color: var(--muted); }
+.d-head .route { font-size: 18px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.d-head .route .arr { color: var(--muted); font-weight: 400; }
+.d-head .route s { color: var(--faint); font-weight: 400; font-size: 14px; }
+.d-close { margin-inline-start: auto; display: none; }
+.d-sec { border-bottom: 1px solid var(--line); }
+.d-sec .ph { border-bottom: none; padding-bottom: 4px; }
+.d-sec table td, .d-sec table th { padding: 6px 14px; }
+.d-sec table th { background: transparent; position: static; }
+.t-man { color: var(--warn); font-weight: 600; }
+.t-vat { color: var(--go); font-weight: 600; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+.facts > div { background: var(--panel); padding: 8px 14px; }
+.facts .v { font-weight: 600; }
+.ledger td { padding: 5px 14px; }
+.ledger .grp td { font-size: 11.5px; font-weight: 700; color: var(--muted); background: var(--line-2); padding: 4px 14px; }
+.ledger .sub td { font-weight: 700; }
+.ledger .net td { font-weight: 700; font-size: 15px; border-top: 2px solid var(--ink); }
+.srcs { font-size: 10.5px; font-weight: 600; padding: 0 5px; border-radius: 3px; background: var(--line-2); color: var(--muted); margin-inline-start: 6px; }
+.srcs.m { background: var(--warn-bg); color: var(--warn); }
+.srcs.a { background: var(--accent-bg); color: var(--accent); }
+.d-actions { display: flex; gap: 8px; align-items: center; padding: 12px 14px; }
+.d-actions .end { margin-inline-start: auto; }
+.edited { font-size: 12px; color: var(--warn); padding: 8px 14px; background: var(--warn-bg); }
+
+/* ---------- map ---------- */
+.mapwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: 560px; }
+.map { background: var(--map-bg); position: relative; min-width: 0; }
+.map svg { display: block; width: 100%; height: 100%; min-height: 520px; }
+.map .gl { stroke: var(--map-grid); stroke-width: 1; }
+.map .rt { stroke: var(--accent); stroke-linecap: round; fill: none; opacity: .75; }
+.map .rt.loss { stroke: var(--bad); }
+.map .ap { fill: var(--panel); stroke: var(--ink); stroke-width: 1.5; }
+.map .ap.base { fill: var(--ink); }
+.map text { font-family: "Heebo", sans-serif; font-size: 12px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--map-bg); stroke-width: 3px; }
+.map .caption { position: absolute; bottom: 10px; right: 12px; font-size: 11.5px; color: var(--muted); }
+.routes-list { border-inline-start: 1px solid var(--line); background: var(--panel); overflow-y: auto; }
+
+/* ---------- analysis skeleton ---------- */
+.an { padding: 16px 20px 20px; display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+.an .panel { grid-column: span 6; }
+.an .w12 { grid-column: span 12; } .an .w8 { grid-column: span 8; } .an .w4 { grid-column: span 4; }
+.skel { padding: 14px; display: grid; gap: 8px; }
+.sk { background: var(--line-2); border-radius: 3px; height: 10px; }
+.sk.h { height: 28px; width: 40%; }
+.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); }
+.tiles > div { background: var(--panel); padding: 12px 14px; display: grid; gap: 6px; }
+.tbd { margin: 0 14px 14px; border: 1px dashed var(--line); border-radius: var(--r); padding: 10px; font-size: 12px; color: var(--muted); text-align: center; }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding: 0 14px; }
+.bars div { flex: 1; background: var(--line-2); border-radius: 2px 2px 0 0; }
+
+[data-view] { display: none; }
+[data-view].on { display: block; }
+
+@media (max-width: 980px) {
+  .conn .t { display: none; }
+  .lb { grid-template-columns: minmax(0, 1fr); }
+  .detail { position: fixed; inset: 12% 0 0 0; z-index: 40; border: none; border-top: 1px solid var(--line); box-shadow: 0 -10px 40px rgba(0,0,0,.35); display: none; border-radius: 10px 10px 0 0; }
+  .detail.open { display: block; }
+  .d-close { display: inline-block; }
+  .mapwrap { grid-template-columns: minmax(0, 1fr); }
+  .routes-list { border-inline-start: none; border-top: 1px solid var(--line); }
+  .sum { grid-template-columns: repeat(3, 1fr); }
+  .sum > div:nth-child(n+4) { display: none; }
+  .an .panel, .an .w8, .an .w4 { grid-column: span 12; }
+  .tiles { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .frame { padding: 0; }
+  .app { border-radius: 0; }
+  .top { gap: 12px; padding: 0 12px; }
+  .brand { display: none; }
+  .toolbar { padding: 10px 12px; }
+  .search { min-width: 0; flex: 1; }
+  .tb-end { margin-inline-start: 0; }
+  .hide-m { display: none; }
+  th, td { padding: 8px 10px; }
+  .sum > div { padding: 8px 12px; }
+  .an { padding: 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="switch">
+  <b>תצוגה:</b>
+  <button type="button" data-go="list" aria-pressed="true">לוגבוק · רשימה</button>
+  <button type="button" data-go="map" aria-pressed="false">לוגבוק · מפה</button>
+  <button type="button" data-go="an" aria-pressed="false">ניתוח · שלד</button>
+  <span class="sep"></span>
+  <b>רקע:</b>
+  <button type="button" data-theme-set="auto" aria-pressed="true">לפי המכשיר</button>
+  <button type="button" data-theme-set="light" aria-pressed="false">בהיר</button>
+  <button type="button" data-theme-set="dark" aria-pressed="false">כהה</button>
+</div>
+
+<div class="frame">
+<div class="note-bar" id="note"></div>
+<div class="app" id="app">
+
+  <header class="top">
+    <div class="brand">SMARTLOGBOOK</div>
+    <nav class="nav"><a href="#" id="navFlight">טיסה</a><a href="#" id="navLog" class="on">לוגבוק</a><a href="#" id="navAn">ניתוח</a></nav>
+    <div class="conn"><span class="dot"></span><span>VATSIM · לא מחובר</span><span class="t"> · CID 1512345</span></div>
+    <div class="gear" title="הגדרות">⚙</div>
+  </header>
+
+  <!-- ================= LOGBOOK (list + map share the toolbar) ================= -->
+  <div data-view="log" class="on" id="logView">
+    <div class="toolbar">
+      <div class="search">⌕<input id="q" placeholder="חיפוש: אות קריאה, ICAO, רישום"></div>
+      <div class="seg" id="period">
+        <button data-p="m" class="on">החודש</button><button data-p="q">3 חודשים</button><button data-p="y">השנה</button><button data-p="all">הכל</button><button data-p="c">מותאם…</button>
+      </div>
+      <select class="sel" id="fAp"><option value="">כל השדות</option></select>
+      <select class="sel" id="fAc"><option value="">כל המטוסים</option></select>
+      <div class="tb-end">
+        <div class="seg" id="viewSeg"><button data-v="list" class="on">רשימה</button><button data-v="map">מפה</button></div>
+        <button class="btn">ייצוא Excel</button>
+      </div>
+      <div class="tb-row">
+        <span class="label">מקור:</span>
+        <button class="tgl" data-src="tracked">נעקבה</button>
+        <button class="tgl" data-src="partial">חלקית</button>
+        <button class="tgl" data-src="manual">ידנית</button>
+        <span class="label" style="margin-inline-start:12px">תגים:</span>
+        <button class="tgl" data-tag="div">הסטה</button>
+        <button class="tgl" data-tag="pos">הקפצת צוות</button>
+        <button class="tgl" data-tag="hard">נחיתה קשה</button>
+        <button class="tgl" data-tag="loss">הפסד</button>
+        <button class="tgl" data-tag="edited">נערכה</button>
+      </div>
+    </div>
+
+    <div class="sum" id="sum"></div>
+
+    <div id="listView" class="lb">
+      <div class="list">
+        <table>
+          <thead><tr><th>תאריך</th><th class="hide-m">אות קריאה</th><th>מסלול</th><th class="hide-m">מטוס</th><th class="n">בלוק</th><th class="n hide-m">FPM</th><th class="hide-m">מקור ותגים</th><th class="n">רווח / הפסד</th></tr></thead>
+          <tbody class="rows" id="rows"></tbody>
+        </table>
+        <div class="empty" id="empty" hidden>אין טיסות שעונות על הסינון</div>
+      </div>
+      <aside class="detail" id="detail"></aside>
+    </div>
+
+    <div id="mapView" class="mapwrap" hidden>
+      <div class="map"><svg id="svg" viewBox="0 0 800 540" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="caption">שרטוט בלבד. במימוש: מפה אמיתית עם קווי חוף. עובי הקו = מספר הטיסות, ואדום = מסלול שהפסיד בסך הכל.</div></div>
+      <aside class="routes-list">
+        <div class="ph"><span class="label">מסלולים בסינון</span></div>
+        <table><thead><tr><th>מסלול</th><th class="n">טיסות</th><th class="n">רווח</th></tr></thead><tbody id="rlist"></tbody></table>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ================= ANALYSIS (skeleton) ================= -->
+  <div data-view="an" id="anView">
+    <div class="toolbar">
+      <div class="seg"><button class="on">חודש</button><button>רבעון</button><button>שנה</button><button>הכל</button><button>מותאם…</button></div>
+      <div style="display:flex;align-items:center;gap:8px;font-weight:600"><button class="btn">→</button>ספטמבר 2026<button class="btn">←</button></div>
+      <div class="tb-end"><button class="btn primary">הדפס כדוח</button></div>
+    </div>
+    <div class="an">
+      <section class="panel w12">
+        <div class="ph"><span class="label">מדדי מפתח</span></div>
+        <div class="tiles"><div><div class="sk" style="width:50%"></div><div class="sk h"></div></div><div><div class="sk" style="width:50%"></div><div class="sk h"></div></div><div><div class="sk" style="width:50%"></div><div class="sk h"></div></div><div><div class="sk" style="width:50%"></div><div class="sk h"></div></div><div><div class="sk" style="width:50%"></div><div class="sk h"></div></div></div>
+      </section>
+      <section class="panel w8">
+        <div class="ph"><span class="label">מגמה לאורך התקופה</span></div>
+        <div class="bars" style="padding-top:14px"><div style="height:40%"></div><div style="height:65%"></div><div style="height:30%"></div><div style="height:80%"></div><div style="height:55%"></div><div style="height:90%"></div><div style="height:45%"></div><div style="height:70%"></div><div style="height:35%"></div><div style="height:60%"></div></div>
+        <div class="tbd" style="margin-top:14px">מה מוצג כאן ייקבע בשלב 5</div>
+      </section>
+      <section class="panel w4">
+        <div class="ph"><span class="label">רווח והפסד לפי סעיף</span></div>
+        <div class="skel"><div class="sk"></div><div class="sk" style="width:80%"></div><div class="sk" style="width:65%"></div><div class="sk" style="width:90%"></div><div class="sk" style="width:55%"></div><div class="sk" style="width:70%"></div></div>
+        <div class="tbd">נסכם ישירות מספר החשבונות</div>
+      </section>
+      <section class="panel"><div class="ph"><span class="label">לפי מטוס · לפי שדה · לפי מסלול</span></div>
+        <div class="skel"><div class="sk"></div><div class="sk" style="width:85%"></div><div class="sk" style="width:70%"></div><div class="sk" style="width:60%"></div></div><div class="tbd">ייקבע בשלב 5</div></section>
+      <section class="panel"><div class="ph"><span class="label">איכות נחיתות</span></div>
+        <div class="skel"><div class="sk"></div><div class="sk" style="width:75%"></div><div class="sk" style="width:50%"></div></div><div class="tbd">ייקבע בשלב 5</div></section>
+      <section class="panel"><div class="ph"><span class="label">אבני דרך</span></div>
+        <div class="skel"><div class="sk"></div><div class="sk" style="width:60%"></div><div class="sk" style="width:80%"></div></div><div class="tbd">ייקבע בשלב 5 (ADR-009)</div></section>
+      <section class="panel"><div class="ph"><span class="label">דרגה ודירוג החברה</span></div>
+        <div class="skel"><div class="sk"></div><div class="sk" style="width:65%"></div></div><div class="tbd">ייקבע בשלב 5</div></section>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ data */
+const AP = { LLBG:[32.01,34.89,'תל אביב'], LGAV:[37.94,23.94,'אתונה'], LCLK:[34.88,33.63,'לרנקה'], LTFM:[41.26,28.74,'איסטנבול'], EGLL:[51.47,-0.45,'לונדון'], LGTS:[40.52,22.97,'סלוניקי'] };
+// money lines: [label, amount, source]  source: s=SimBrief m=manual a=automatic
+const F = [
+ { d:'23.09', cs:'SLB350', o:'LGAV', t:'LLBG', ac:'B738', reg:'4X-SLB', src:'tracked', tags:[], fpm:-142, pax:[171,189], cargo:2310, dist:651,
+   plan:['13:00','13:12','14:48','14:56'], act:['13:04','13:18','14:54','15:02'], ts:'vvvv',
+   rev:[['כרטיסים',41200,'s'],['מטען',6100,'s']], exp:[['דלק',5610,'m'],['צוות קרקע',1420,'m'],['קייטרינג',2010,'m'],['טייסים ודיילים',1090,'a'],['תחזוקה',3850,'a'],['עמלות נחיתה ושדה',690,'a']] },
+ { d:'21.09', cs:'SLB351', o:'LLBG', t:'LGAV', ac:'B738', reg:'4X-SLB', src:'tracked', tags:[], fpm:-210, pax:[164,189], cargo:2140, dist:651,
+   plan:['14:00','14:14','15:52','15:59'], act:['14:02','14:15','15:44','15:51'], ts:'vvvv',
+   rev:[['כרטיסים',39800,'s'],['מטען',5400,'s']], exp:[['דלק',5540,'m'],['צוות קרקע',1390,'m'],['קייטרינג',1980,'m'],['טייסים ודיילים',1060,'a'],['תחזוקה',3760,'a'],['עמלות נחיתה ושדה',690,'a']] },
+ { d:'20.09', cs:'SLB212', o:'LCLK', t:'LLBG', ac:'B738', reg:'4X-SLB', src:'manual', tags:[], fpm:-388, pax:[151,189], cargo:980, dist:162,
+   plan:['09:30','09:38','10:22','10:29'], act:['09:31','09:40','10:27','10:32'], ts:'mmmm',
+   rev:[['כרטיסים',24100,'s'],['מטען',2300,'s']], exp:[['דלק',2870,'m'],['צוות קרקע',1210,'m'],['קייטרינג',1140,'m'],['טייסים ודיילים',610,'a'],['תחזוקה',2110,'a'],['עמלות נחיתה ושדה',690,'a']] },
+ { d:'18.09', cs:'SLB211', o:'LLBG', t:'LCLK', ac:'A21N', reg:'4X-SLC', src:'tracked', tags:['edited'], edited:'19.09', fpm:-96, pax:[188,220], cargo:1240, dist:162,
+   plan:['07:00','07:09','07:52','07:58'], act:['07:03','07:12','07:56','08:01'], ts:'vvvv',
+   rev:[['כרטיסים',27300,'s'],['מטען',1900,'s']], exp:[['דלק',2650,'m'],['צוות קרקע',1260,'m'],['קייטרינג',1210,'m'],['טייסים ודיילים',640,'a'],['תחזוקה',2380,'a'],['עמלות נחיתה ושדה',760,'a']] },
+ { d:'14.09', cs:'SLB118', o:'LTFM', t:'LLBG', ac:'B738', reg:'4X-SLB', src:'partial', tags:['pos','hard','loss'], fpm:-455, pax:[102,189], cargo:1650, dist:612,
+   plan:['11:00','11:15','12:55','13:02'], act:['11:06','11:19','13:01','13:04'], ts:'vvmm', posFrom:'LGTS',
+   rev:[['כרטיסים',18200,'s'],['מטען',2900,'s']], exp:[['דלק',5920,'m'],['צוות קרקע',1480,'m'],['קייטרינג',1640,'m'],['טייסים ודיילים',1140,'a'],['תחזוקה',3990,'a'],['עמלות נחיתה ושדה',690,'a'],['קנס נחיתה קשה · FPM -455',5000,'a'],['הקפצת צוות · <bdi>LGTS</bdi> ← <bdi>LTFM</bdi>',7450,'a']] },
+ { d:'11.09', cs:'SLB117', o:'LLBG', t:'LGTS', planned:'LGAV', ac:'B738', reg:'4X-SLB', src:'tracked', tags:['div'], fpm:-201, pax:[166,189], cargo:2050, dist:689,
+   plan:['15:00','15:13','16:52','16:59'], act:['15:02','15:14','16:50','16:58'], ts:'vvvv',
+   rev:[['כרטיסים',40500,'s'],['מטען',5900,'s']], exp:[['דלק',5700,'m'],['צוות קרקע',1400,'m'],['קייטרינג',2020,'m'],['טייסים ודיילים',1050,'a'],['תחזוקה',3700,'a'],['עמלות נחיתה ושדה',690,'a'],['הסטה · 166 נוסעים ל-LGAV',9720,'a']] },
+ { d:'06.09', cs:'SLB116', o:'EGLL', t:'LLBG', ac:'A21N', reg:'4X-SLC', src:'tracked', tags:[], fpm:-118, pax:[207,220], cargo:3400, dist:1938,
+   plan:['09:00','09:18','13:55','14:03'], act:['09:04','09:20','14:01','14:08'], ts:'vvvv',
+   rev:[['כרטיסים',86400,'s'],['מטען',9800,'s']], exp:[['דלק',17900,'m'],['צוות קרקע',1950,'m'],['קייטרינג',4620,'m'],['טייסים ודיילים',3010,'a'],['תחזוקה',11300,'a'],['עמלות נחיתה ושדה',1240,'a']] },
+ { d:'02.09', cs:'SLB115', o:'LLBG', t:'EGLL', ac:'A21N', reg:'4X-SLC', src:'tracked', tags:[], fpm:-174, pax:[212,220], cargo:3650, dist:1938,
+   plan:['10:00','10:16','15:10','15:20'], act:['10:02','10:18','15:14','15:23'], ts:'vvvv',
+   rev:[['כרטיסים',88900,'s'],['מטען',10300,'s']], exp:[['דלק',18600,'m'],['צוות קרקע',1980,'m'],['קייטרינג',4710,'m'],['טייסים ודיילים',3170,'a'],['תחזוקה',11900,'a'],['עמלות נחיתה ושדה',1240,'a']] },
+];
+const sumOf = a => a.reduce((s, l) => s + l[1], 0);
+const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const hm = m => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+F.forEach(f => {
+  f.revT = sumOf(f.rev); f.expT = sumOf(f.exp); f.net = f.revT - f.expT;
+  f.block = toMin(f.act[3]) - toMin(f.act[0]); f.air = toMin(f.act[2]) - toMin(f.act[1]);
+});
+const money = n => (n < 0 ? '−$' : '+$') + Math.abs(n).toLocaleString('en-US');
+const SRC = { tracked:['plan','נעקבה'], partial:['warn','חלקית'], manual:['muted','ידנית'] };
+const TAG = { div:['warn','הסטה'], pos:['warn','הקפצת צוות'], hard:['bad','נחיתה קשה'], loss:['bad','הפסד'], edited:['muted','נערכה'] };
+const chip = (k, map) => `<span class="chip ${map[k][0]}">${map[k][1]}</span>`;
+const routeHtml = f => `<bdi>${f.o}</bdi> ← <bdi>${f.t}</bdi>`;
+
+/* ------------------------------------------------------------------ filters */
+const state = { q:'', ap:'', ac:'', src:new Set(), tags:new Set(), sel:F[0].cs, view:'list' };
+const fAp = document.getElementById('fAp'), fAc = document.getElementById('fAc');
+Object.keys(AP).forEach(k => fAp.insertAdjacentHTML('beforeend', `<option value="${k}">${k} · ${AP[k][2]}</option>`));
+[...new Set(F.map(f => f.ac))].forEach(a => fAc.insertAdjacentHTML('beforeend', `<option>${a}</option>`));
+
+function filtered() {
+  const q = state.q.trim().toUpperCase();
+  return F.filter(f =>
+    (!q || [f.cs, f.o, f.t, f.reg, f.ac].some(v => v.toUpperCase().includes(q))) &&
+    (!state.ap || f.o === state.ap || f.t === state.ap) &&
+    (!state.ac || f.ac === state.ac) &&
+    (!state.src.size || state.src.has(f.src)) &&
+    [...state.tags].every(t => f.tags.includes(t)));
+}
+
+function render() {
+  const list = filtered();
+  // summary
+  const net = list.reduce((s, f) => s + f.net, 0), blk = list.reduce((s, f) => s + f.block, 0);
+  document.getElementById('sum').innerHTML = `
+    <div><div class="label">טיסות</div><div class="v">${list.length}</div></div>
+    <div><div class="label">שעות בלוק</div><div class="v">${hm(blk)}</div></div>
+    <div><div class="label">רווח נקי</div><div class="v ${net < 0 ? 'neg' : 'pos'}"><bdi class="l">${money(net)}</bdi></div></div>
+    <div><div class="label">ממוצע לטיסה</div><div class="v"><bdi class="l">${list.length ? money(Math.round(net / list.length)) : '—'}</bdi></div></div>
+    <div><div class="label">נוסעים</div><div class="v">${list.reduce((s, f) => s + f.pax[0], 0).toLocaleString('en-US')}</div></div>`;
+  // rows
+  document.getElementById('rows').innerHTML = list.map(f => `
+    <tr data-cs="${f.cs}" class="${f.cs === state.sel ? 'sel' : ''}">
+      <td>${f.d}</td><td class="hide-m">${f.cs}</td><td>${routeHtml(f)}</td><td class="hide-m">${f.ac}</td>
+      <td class="n">${hm(f.block)}</td><td class="n hide-m ${Math.abs(f.fpm) > 400 ? 'neg' : ''}">${f.fpm}</td>
+      <td class="hide-m">${chip(f.src, SRC)}${f.tags.filter(t => t !== 'loss').map(t => chip(t, TAG)).join('')}</td>
+      <td class="n ${f.net < 0 ? 'neg' : 'pos'}">${money(f.net)}</td>
+    </tr>`).join('');
+  document.getElementById('empty').hidden = list.length > 0;
+  document.querySelectorAll('#rows tr').forEach(tr => tr.addEventListener('click', () => {
+    state.sel = tr.dataset.cs; render(); document.getElementById('detail').classList.add('open');
+  }));
+  renderDetail(F.find(f => f.cs === state.sel));
+  renderMap(list);
+}
+
+function renderDetail(f) {
+  const el = document.getElementById('detail');
+  if (!f) { el.innerHTML = '<div class="empty">בחר טיסה מהרשימה</div>'; return; }
+  const tcell = (i) => `<td class="n ${f.ts[i] === 'm' ? 't-man' : 't-vat'}">${f.act[i]}</td>`;
+  const lines = (arr, sign) => arr.map(l => `<tr><td>${l[0]}<span class="srcs ${l[2]}">${{s:'SimBrief', m:'ידני', a:'אוטו׳'}[l[2]]}</span></td><td class="n">${sign}$${l[1].toLocaleString('en-US')}</td></tr>`).join('');
+  el.innerHTML = `
+    <div class="d-head">
+      <div class="row1"><span class="cs">${f.cs}</span><span class="date">${f.d}.2026</span>${chip(f.src, SRC)}${f.tags.filter(t => t !== 'loss').map(t => chip(t, TAG)).join('')}
+        <button class="btn d-close" onclick="document.getElementById('detail').classList.remove('open')">סגור</button></div>
+      <div class="route"><bdi>${f.o}</bdi><span class="small">${AP[f.o][2]}</span><span class="arr">←</span><bdi>${f.t}</bdi><span class="small">${AP[f.t][2]}</span>${f.planned ? `<s><bdi>${f.planned}</bdi></s>` : ''}</div>
+      <div class="small"><bdi>${f.ac} · ${f.reg}</bdi></div>
+    </div>
+    ${f.edited ? `<div class="edited">נערכה ב-${f.edited}: סכומי GSX עודכנו, וספר החשבונות חושב מחדש לפי התעריפים של יום הסגירה.</div>` : ''}
+    <div class="d-sec">
+      <div class="ph"><span class="label">זמני בלוק · UTC</span><span class="small" style="margin-inline-start:auto"><span class="t-vat">ירוק</span> = VATSIM · <span class="t-man">כתום</span> = ידני</span></div>
+      <table><tr><th></th><th class="n">OUT</th><th class="n">OFF</th><th class="n">ON</th><th class="n">IN</th></tr>
+        <tr><td class="muted">מתוכנן</td>${f.plan.map(t => `<td class="n muted">${t}</td>`).join('')}</tr>
+        <tr><td>בפועל</td>${[0,1,2,3].map(tcell).join('')}</tr></table>
+      <div class="facts">
+        <div><div class="label">בלוק</div><div class="v">${hm(f.block)}</div></div>
+        <div><div class="label">באוויר</div><div class="v">${hm(f.air)}</div></div>
+        <div><div class="label">FPM</div><div class="v ${Math.abs(f.fpm) > 400 ? 'neg' : ''}"><bdi class="l">${f.fpm}</bdi></div></div>
+        <div><div class="label">נוסעים</div><div class="v">${f.pax[0]} <span class="small">/ ${f.pax[1]}</span></div></div>
+        <div><div class="label">מטען</div><div class="v">${f.cargo.toLocaleString('en-US')} <span class="small">ק״ג</span></div></div>
+        <div><div class="label">מרחק</div><div class="v">${f.dist.toLocaleString('en-US')} <span class="small">NM</span></div></div>
+      </div>
+    </div>
+    <div class="d-sec">
+      <div class="ph"><span class="label">ספר החשבונות</span><span class="small" style="margin-inline-start:auto">נעול · נסגר ${f.d}</span></div>
+      <table class="ledger">
+        <tr class="grp"><td colspan="2">הכנסות</td></tr>${lines(f.rev, '+')}
+        <tr class="sub"><td>סה״כ הכנסות</td><td class="n pos">${money(f.revT)}</td></tr>
+        <tr class="grp"><td colspan="2">הוצאות</td></tr>${lines(f.exp, '−')}
+        <tr class="sub"><td>סה״כ הוצאות</td><td class="n neg">${money(-f.expT)}</td></tr>
+        <tr class="net"><td>${f.net < 0 ? 'הפסד' : 'רווח נקי'}</td><td class="n ${f.net < 0 ? 'neg' : 'pos'}">${money(f.net)}</td></tr>
+      </table>
+    </div>
+    <div class="d-actions">
+      <button class="btn">ערוך נתונים ידניים</button>
+      <button class="btn ghost-bad end">מחק טיסה</button>
+    </div>`;
+}
+
+/* ------------------------------------------------------------------ map (sketch projection) */
+// a map is a map: west stays on the left even in an RTL interface
+const proj = ([lat, lon]) => [ 40 + (lon + 4) / 42 * 720, 500 - (lat - 29) / 25 * 460 ];
+function renderMap(list) {
+  const svg = document.getElementById('svg');
+  let g = '';
+  for (let x = 0; x <= 800; x += 80) g += `<line class="gl" x1="${x}" y1="0" x2="${x}" y2="540"/>`;
+  for (let y = 0; y <= 540; y += 60) g += `<line class="gl" x1="0" y1="${y}" x2="800" y2="${y}"/>`;
+  const routes = {};
+  list.forEach(f => { const k = [f.o, f.t].sort().join('-'); (routes[k] ||= { a:f.o, b:f.t, n:0, net:0 }); routes[k].n++; routes[k].net += f.net; });
+  Object.values(routes).forEach(r => {
+    const [x1, y1] = proj(AP[r.a]), [x2, y2] = proj(AP[r.b]);
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - Math.hypot(x2 - x1, y2 - y1) * 0.12;
+    g += `<path class="rt ${r.net < 0 ? 'loss' : ''}" stroke-width="${1.5 + r.n * 1.5}" d="M${x1},${y1} Q${mx},${my} ${x2},${y2}"/>`;
+  });
+  const used = new Set(list.flatMap(f => [f.o, f.t]));
+  Object.entries(AP).filter(([k]) => used.has(k)).forEach(([k, v]) => {
+    const [x, y] = proj(v);
+    g += `<circle class="ap ${k === 'LLBG' ? 'base' : ''}" cx="${x}" cy="${y}" r="5"/><text x="${x}" y="${y - 10}" text-anchor="middle">${k}</text>`;
+  });
+  svg.innerHTML = g;
+  document.getElementById('rlist').innerHTML = Object.values(routes).sort((a, b) => b.n - a.n).map(r =>
+    `<tr><td><bdi>${r.a}</bdi> ↔ <bdi>${r.b}</bdi></td><td class="n">${r.n}</td><td class="n ${r.net < 0 ? 'neg' : 'pos'}">${money(r.net)}</td></tr>`).join('')
+    || '<tr><td colspan="3" class="muted">אין מסלולים</td></tr>';
+}
+
+/* ------------------------------------------------------------------ wiring */
+document.getElementById('q').addEventListener('input', e => { state.q = e.target.value; render(); });
+fAp.addEventListener('change', e => { state.ap = e.target.value; render(); });
+fAc.addEventListener('change', e => { state.ac = e.target.value; render(); });
+document.querySelectorAll('[data-src]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.src; state.src.has(k) ? state.src.delete(k) : state.src.add(k); b.classList.toggle('on'); render(); }));
+document.querySelectorAll('[data-tag]').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.tag; state.tags.has(k) ? state.tags.delete(k) : state.tags.add(k); b.classList.toggle('on'); render(); }));
+document.querySelectorAll('#period button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#period button').forEach(x => x.classList.toggle('on', x === b)); }));
+
+const NOTES = {
+  list: '<b>לוגבוק, רשימה:</b> לחיצה על שורה פותחת את הפרטים בצד. במסך צר הם נפתחים כחלון שעולה מלמטה. <b>הסינונים עובדים, נסה אותם.</b> שורת הסיכום מתעדכנת לפי הסינון, וגם הייצוא ל-Excel ייצא בדיוק את מה שמסונן (ADR-023).',
+  map: '<b>לוגבוק, מפה:</b> אותו סינון בדיוק, כתצוגה חלופית (ADR-022). המסלול בפועל לא נשמר, ולכן כל קו הוא מוצא ← יעד. נסה לסנן לפי "הקפצת צוות" או לפי שדה.',
+  an: '<b>ניתוח, שלד בלבד:</b> כאן רואים רק את המבנה: בורר תקופה, "הדפס כדוח" שמחליף את הדוח החודשי, ואזורים. <b>מה יוצג בכל אזור נחליט בשלב 5</b>, לפי הנתונים שנאספים באמת.',
+};
+function setView(v) {
+  state.view = v;
+  const isLog = v !== 'an';
+  document.getElementById('logView').classList.toggle('on', isLog);
+  document.getElementById('anView').classList.toggle('on', !isLog);
+  document.getElementById('navLog').classList.toggle('on', isLog);
+  document.getElementById('navAn').classList.toggle('on', !isLog);
+  document.getElementById('listView').hidden = v !== 'list';
+  document.getElementById('mapView').hidden = v !== 'map';
+  document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  document.querySelectorAll('[data-go]').forEach(b => b.setAttribute('aria-pressed', b.dataset.go === v));
+  document.getElementById('note').innerHTML = NOTES[v];
+}
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => setView(b.dataset.go)));
+document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', () => {
+  const t = b.dataset.themeSet;
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = t;
+  document.querySelectorAll('[data-theme-set]').forEach(x => x.setAttribute('aria-pressed', x === b));
+}));
+render(); setView('list');
+</script>
+</body>
+</html>
