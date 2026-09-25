@@ -1,7 +1,6 @@
 import 'server-only';
 import { db } from './db';
-import { getAirport, nearestAirport } from './airports';
-import { distanceNm } from './geo';
+import { getAirport, nearestAirport, nmBetween } from './airports';
 import { latestOfp } from './external';
 import { currentFuelPrice } from './eia';
 import { getSettings, type Settings } from './settings';
@@ -93,12 +92,6 @@ async function monthSummary() {
     WHERE f.status = 'closed' AND f.closed_at >= ${start}`;
   const label = now.toLocaleDateString('he-IL', { month: 'long', year: 'numeric', timeZone: 'UTC' });
   return { label, profitCents: Number(r.profit), flights: r.flights, blockMin: r.block };
-}
-
-async function nmBetween(a: string, b: string): Promise<number | null> {
-  if (a === b) return 0;
-  const [x, y] = await Promise.all([getAirport(a), getAirport(b)]);
-  return x && y ? Math.round(distanceNm(x.lat, x.lon, y.lat, y.lon)) : null;
 }
 
 // Rate version in force at OUT (ADR-021, 025): the newest one created before it.

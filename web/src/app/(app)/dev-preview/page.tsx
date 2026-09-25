@@ -5,6 +5,34 @@ import type { Base, FormView, TrackerDoc } from '@/lib/flight-view';
 import { IdleView, PlanView } from '../flight/IdlePlan';
 import { LiveView } from '../flight/LiveView';
 import { CompletionForm } from '../flight/CompletionForm';
+import { Logbook } from '../logbook/Logbook';
+import { NO_FILTERS, type LogFlight } from '@/lib/logbook-filter';
+
+const L = (o: Partial<LogFlight> & Pick<LogFlight, 'id' | 'date' | 'origin' | 'dest'>): LogFlight => ({
+  callsign: 'ELY351', plannedDest: o.dest, aircraft: 'B738', reg: '4X-EKA', source: 'tracked', timesSource: 'vvvv',
+  times: { out: '2026-09-23T13:04:00Z', off: '2026-09-23T13:18:00Z', on: '2026-09-23T14:54:00Z', in: '2026-09-23T15:02:00Z' },
+  sched: { out: '2026-09-23T13:00:00Z', off: '2026-09-23T13:12:00Z', on: '2026-09-23T14:48:00Z', in: '2026-09-23T14:56:00Z' },
+  blockMin: 118, airMin: 96, fpm: -142, pax: 171, seats: 189, cargoKg: 2310, distanceNm: 651, profitCents: 3842000,
+  lines: [
+    { code: 'tickets', cents: 4120000, source: 'auto' }, { code: 'cargo', cents: 610000, source: 'auto' },
+    { code: 'fuel', cents: -561000, source: 'manual' }, { code: 'ground_handling', cents: -142000, source: 'manual' },
+    { code: 'catering', cents: -201000, source: 'manual' }, { code: 'crew', cents: -109000, source: 'auto' },
+  ],
+  rateSetId: 2, closedAt: '2026-09-23T15:10:00Z', editedAt: null, crewFrom: 'LGAV', editable: true, ...o,
+});
+const LOG: LogFlight[] = [
+  L({ id: 6, date: '2026-09-23T15:02:00Z', origin: 'LGAV', dest: 'LLBG' }),
+  L({ id: 5, date: '2026-09-21T15:51:00Z', origin: 'LLBG', dest: 'LGAV', callsign: 'ELY350', profitCents: 2950000 }),
+  L({ id: 4, date: '2026-09-20T10:32:00Z', origin: 'LCLK', dest: 'LLBG', source: 'manual', timesSource: 'mmmm', callsign: 'ELY212', fpm: -388, profitCents: 1712000 }),
+  L({ id: 3, date: '2026-09-14T13:04:00Z', origin: 'LTFM', dest: 'LLBG', source: 'partial', timesSource: 'vvmm', fpm: -455, profitCents: -421000,
+      lines: [{ code: 'tickets', cents: 1820000, source: 'auto' }, { code: 'positioning', cents: -745000, source: 'auto' }, { code: 'hard_landing', cents: -118500, source: 'auto' }] }),
+  L({ id: 2, date: '2026-09-11T16:58:00Z', origin: 'LLBG', dest: 'LGTS', plannedDest: 'LGAV', editedAt: '2026-09-12T08:00:00Z',
+      lines: [{ code: 'tickets', cents: 4050000, source: 'auto' }, { code: 'diversion', cents: -972000, source: 'auto' }] }),
+  L({ id: 1, date: '2026-06-02T15:23:00Z', origin: 'LLBG', dest: 'EGLL', aircraft: 'A21N', source: 'historical', timesSource: null, editable: false,
+      times: { out: null, off: null, on: null, in: null }, blockMin: 290, airMin: 290, lines: [{ code: 'legacy_profit', cents: 8890000, source: 'legacy' }], profitCents: 8890000 }),
+];
+const APS = { LLBG: { lat: 32.0114, lon: 34.8867, name: 'Tel Aviv' }, LGAV: { lat: 37.9364, lon: 23.9445, name: 'Athens' }, LCLK: { lat: 34.875, lon: 33.6249, name: 'Larnaca' },
+  LTFM: { lat: 41.2608, lon: 28.7418, name: 'Istanbul' }, LGTS: { lat: 40.5197, lon: 22.9709, name: 'Thessaloniki' }, EGLL: { lat: 51.4706, lon: -0.4619, name: 'London' } };
 
 // Development only: every flight-screen state with fixture data, so the UI can
 // be checked without a database or a live flight. 404 in production.
@@ -56,6 +84,7 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
     case 'done': return <CompletionForm form={form()} crewIcao="LLBG" />;
     case 'divert': return <CompletionForm form={form({ actual: { icao: 'LGTS', name: 'Thessaloniki' }, diverted: true, diversionNm: 160 })} crewIcao="LLBG" />;
     case 'manual': return <CompletionForm form={form({ mode: 'manual', trackerState: 'interrupted', disconnectedAt: '2026-09-25T15:13:00.000Z', tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: null, in: null }, actual: null })} crewIcao="LLBG" />;
+    case 'logbook': return <Logbook flights={LOG} airports={APS} home="LLBG" initial={NO_FILTERS} />;
     default: return <IdleView base={base} />;
   }
 }

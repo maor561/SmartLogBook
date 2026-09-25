@@ -1,12 +1,18 @@
 import 'server-only';
 import { db } from './db';
-import { boundingBox, nearest } from './geo';
+import { boundingBox, distanceNm, nearest } from './geo';
 
 export type Airport = { icao: string; name: string; city: string | null; country: string | null; lat: number; lon: number };
 
 export async function getAirport(icao: string): Promise<Airport | null> {
   const [row] = await db()`SELECT icao, name, city, country, lat, lon FROM airports WHERE icao = ${icao.toUpperCase()}`;
   return (row as Airport) ?? null;
+}
+
+export async function nmBetween(a: string, b: string): Promise<number | null> {
+  if (a === b) return 0;
+  const [x, y] = await Promise.all([getAirport(a), getAirport(b)]);
+  return x && y ? Math.round(distanceNm(x.lat, x.lon, y.lat, y.lon)) : null;
 }
 
 // Actual landing airport from the ON position (ADR-033). Widens the box until
