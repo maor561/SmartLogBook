@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 4 · מודל הנתונים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+<style>
+:root { --bg:#eef0f3; --panel:#fff; --line:#d9dde3; --line-2:#eceef2; --ink:#151a21; --muted:#5d6673; --faint:#8b93a0;
+  --accent:#0b4f9c; --accent-bg:#e4edf8; --go:#147a47; --go-bg:#e3f2ea; --warn:#9a5b00; --warn-bg:#fbeed7; --bad:#b3261e; --r:4px; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1216; --panel:#171b21; --line:#29303a; --line-2:#20262e; --ink:#e6e9ee; --muted:#8e97a4; --faint:#6b7380;
+  --accent:#5b9df0; --accent-bg:#16263d; --go:#43c083; --go-bg:#173323; --warn:#e2a33a; --warn-bg:#3a2c12; --bad:#f07167; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Heebo", "Segoe UI", Arial, sans-serif; font-size: 14px; line-height: 1.55; font-variant-numeric: tabular-nums; }
+bdi.l { direction: ltr; unicode-bidi: isolate; }
+.page { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 18px; }
+h1 { margin: 0; font-size: 22px; } h2 { margin: 0 0 10px; font-size: 16px; }
+.lead { color: var(--muted); margin: 4px 0 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.small { font-size: 12.5px; color: var(--muted); }
+
+/* journey */
+.journey { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr; gap: 8px; align-items: stretch; }
+.stage { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 4px; align-content: start; }
+.stage b { font-size: 14px; } .stage .where { font-size: 11.5px; font-weight: 600; color: var(--accent); }
+.stage ul { margin: 0; padding-inline-start: 16px; font-size: 12.5px; color: var(--muted); }
+.stage.hot { border-color: var(--warn); background: var(--warn-bg); }
+.arrow { display: grid; place-items: center; color: var(--muted); font-size: 18px; }
+.arrow small { display: block; font-size: 11px; font-weight: 600; text-align: center; }
+@media (max-width: 860px) { .journey { grid-template-columns: 1fr; } .arrow { transform: rotate(-90deg); padding: 2px 0; } .arrow small { transform: rotate(90deg); } }
+
+/* stored fields */
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+.grp { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.grp h3 { margin: 0 0 4px; font-size: 13px; }
+.grp p { margin: 0; font-size: 12.5px; color: var(--muted); }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 3px; margin-inline-start: 4px; }
+.tag.v { background: var(--go-bg); color: var(--go); } .tag.s { background: var(--line-2); color: var(--muted); }
+.tag.m { background: var(--warn-bg); color: var(--warn); } .tag.a { background: var(--accent-bg); color: var(--accent); }
+
+/* ledger */
+.two { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: right; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; }
+td.n { text-align: left; direction: ltr; white-space: nowrap; }
+.pos { color: var(--go); font-weight: 600; } .neg { color: var(--bad); }
+tr.sum td { font-weight: 700; border-top: 2px solid var(--ink); }
+.rule { margin-top: 10px; padding: 8px 10px; background: var(--accent-bg); border-radius: var(--r); font-size: 13px; }
+
+/* versions */
+.tl { display: grid; gap: 8px; }
+.ver { display: grid; grid-template-columns: 90px 1fr; gap: 10px; align-items: start; }
+.ver .v { font-weight: 700; color: var(--accent); }
+.ver .flights { display: flex; flex-wrap: wrap; gap: 6px; }
+.fl { font-size: 12px; border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; }
+.fl.ed { border-color: var(--warn); color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div>
+    <h1>סקיצה 4 · מודל הנתונים</h1>
+    <p class="lead">מה נשמר, איפה, ואיך טיסה עוברת מהמעקב החי ללוגבוק. הגרסה הטכנית המלאה נמצאת ב-<bdi>docs/DATA_MODEL.md</bdi>.</p>
+  </div>
+
+  <section class="panel">
+    <h2>1 · המסע של טיסה בין המערכות</h2>
+    <div class="journey">
+      <div class="stage"><span class="where">SimBrief + VATSIM</span><b>מקורות</b><ul><li>תוכנית הטיסה (OFP)</li><li>תמונת מצב כל 15 שניות</li></ul></div>
+      <div class="arrow">←<small>כל דקה</small></div>
+      <div class="stage"><span class="where">Cloudflare · D1</span><b>מעקב חי</b><ul><li>טיסה אחת בכל רגע</li><li>שלב, זמנים, מיקום אחרון</li><li>לא נשמר מסלול (ADR-022)</li></ul></div>
+      <div class="arrow">←<small>ב-IN</small></div>
+      <div class="stage hot"><span class="where">האפליקציה</span><b>טופס ההשלמה</b><ul><li>עלויות <bdi>GSX</bdi> וקצב נגיעה ממך</li><li>זיהוי שדה הנחיתה (הסטה?)</li><li>המנוע מחשב פעם אחת</li></ul></div>
+      <div class="arrow">←<small>סגירה</small></div>
+      <div class="stage"><span class="where">Vercel · Neon</span><b>הלוגבוק</b><ul><li>טיסה + ספר חשבונות</li><li>ננעל (ADR-007)</li><li>כל הדוחות נבנים מכאן</li></ul></div>
+    </div>
+    <p class="small" style="margin:10px 0 0">המעקב אף פעם לא כותב ללוגבוק, והלוגבוק אף פעם לא מושפע מהמעקב עד שאתה סוגר טיסה. ככה Neon לא מתעורר כל דקה, וטיסה חצי-עשויה לא מלכלכת את הסטטיסטיקות.</p>
+  </section>
+
+  <section class="panel">
+    <h2>2 · מה נשמר על כל טיסה</h2>
+    <div class="groups">
+      <div class="grp"><h3>זהות ומסלול <span class="tag s">OFP</span></h3><p>אות קריאה, מוצא, יעד מתוכנן, <b>יעד בפועל</b> (שונה = הסטה), חלופי, מרחק</p></div>
+      <div class="grp"><h3>מטוס <span class="tag s">OFP</span></h3><p>סוג, רישום, מושבים, משקלים (MTOW, MLW, OEW). בלי ניהול צי (ADR-032)</p></div>
+      <div class="grp"><h3>עומס <span class="tag s">OFP</span></h3><p>נוסעים, מטען, payload</p></div>
+      <div class="grp"><h3>זמנים <span class="tag v">VATSIM</span><span class="tag m">ידני</span></h3><p>מתוכנן מול בפועל, OUT/OFF/ON/IN, <b>ולכל זמן נשמר המקור שלו</b>. בלוק ואוויר מחושבים</p></div>
+      <div class="grp"><h3>נחיתה <span class="tag m">ידני</span></h3><p>FPM, וקואורדינטות הנגיעה לזיהוי השדה</p></div>
+      <div class="grp"><h3>"הצילום" <span class="tag a">אוטו׳</span></h3><p>גרסת התעריפים, מחיר הדלק מ-EIA, השעה המקומית ומיקום הצוות. <b>כל מה שצריך כדי לשחזר את החישוב</b></p></div>
+      <div class="grp"><h3>מקור ומצב</h3><p>נעקבה · חלקית · ידנית · <b>היסטורית</b>. ממתינה להשלמה או נסגרה, ומתי נערכה</p></div>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="panel">
+      <h2>3 · ספר החשבונות: שורה לכל סעיף</h2>
+      <table>
+        <tr><th>סעיף</th><th>מקור</th><th class="n">סכום</th></tr>
+        <tr><td>כרטיסים</td><td><span class="tag s">SimBrief</span></td><td class="n pos">+$23,490</td></tr>
+        <tr><td>מטען</td><td><span class="tag s">SimBrief</span></td><td class="n pos">+$5,667</td></tr>
+        <tr><td>דלק</td><td><span class="tag m">ידני</span></td><td class="n neg">−$6,120</td></tr>
+        <tr><td>צוות קרקע</td><td><span class="tag m">ידני</span></td><td class="n neg">−$1,480</td></tr>
+        <tr><td>קייטרינג</td><td><span class="tag m">ידני</span></td><td class="n neg">−$2,050</td></tr>
+        <tr><td>טייסים ודיילים</td><td><span class="tag a">אוטו׳</span></td><td class="n neg">−$960</td></tr>
+        <tr><td>תחזוקה</td><td><span class="tag a">אוטו׳</span></td><td class="n neg">−$2,279</td></tr>
+        <tr><td>עמלות נחיתה ושדה</td><td><span class="tag a">אוטו׳</span></td><td class="n neg">−$2,497</td></tr>
+        <tr><td>דמי ניווט אווירי</td><td><span class="tag a">אוטו׳</span></td><td class="n neg">−$1,061</td></tr>
+        <tr><td>חכירת מטוס</td><td><span class="tag a">אוטו׳</span></td><td class="n neg">−$1,604</td></tr>
+        <tr class="sum"><td>רווח</td><td></td><td class="n pos">+$11,106</td></tr>
+      </table>
+      <div class="rule"><b>הכלל שמונע את באגי העבר:</b> רווח = סכום השורות. כל דוח, גרף ואבן דרך רק סוכמים ומקבצים את השורות האלה, ואף אחד לא מחשב מחדש. כל שורה שומרת גם את <b>אופן החישוב שלה</b>, לתצוגת "איך הגענו".</div>
+    </section>
+
+    <section class="panel">
+      <h2>4 · תעריפים עם גרסאות</h2>
+      <p class="small" style="margin:0 0 10px">שינוי בהגדרות <b>לא מתקן</b> את הגרסה הקיימת, אלא יוצר גרסה חדשה. כל טיסה זוכרת באיזו גרסה נסגרה.</p>
+      <div class="tl">
+        <div class="ver"><span class="v">גרסה 1</span><div><div class="small">K=1.04, חכירה 10.5 (ADR-029)</div><div class="flights"><span class="fl">SLB115</span><span class="fl">SLB116</span><span class="fl ed">SLB117 · נערכה</span><span class="fl">SLB118</span></div></div></div>
+        <div class="ver"><span class="v">גרסה 2</span><div><div class="small">שינית את טבלת העונות בהגדרות</div><div class="flights"><span class="fl">SLB119</span><span class="fl">SLB120</span><span class="fl">…</span></div></div></div>
+      </div>
+      <div class="rule">SLB117 נערכה אחרי שנוצרה גרסה 2, ובכל זאת <b>חושבה מחדש לפי גרסה 1</b> (ADR-021). הסכומים של טיסות העבר לא זזים בגלל שינויים של היום.</div>
+
+      <h2 style="margin-top:18px">5 · 50 הטיסות הקיימות</h2>
+      <table>
+        <tr><th>טיסה</th><th>מקור</th><th class="n">ספר חשבונות</th></tr>
+        <tr><td><bdi>LLBG ← LPPT</bdi> · 20.09</td><td><span class="tag s">היסטורית</span></td><td class="n pos">+$34,966</td></tr>
+      </table>
+      <p class="small" style="margin:8px 0 0">שורה אחת, "רווח מהמערכת הישנה" (ADR-030). הטיסות נספרות בטיסות, בשעות ובמסלולים. בניתוח הכספי אפשר להוציא אותן בלחיצה. המסמך המקורי נשמר לעיון.</p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>6 · אבטחה</h2>
+    <p class="small" style="margin:0">כניסה בסיסמה, ו-session של 90 יום בכל מכשיר (ADR-031). <b>כל</b> ה-API מוגן, וגם ה-Worker של המעקב מקבל רק טוקן חתום מהאפליקציה. היום, לשם השוואה, כל הלוגבוק שלך פתוח לכל מי שיודע את הכתובת.</p>
+  </section>
+
+</div>
+</body>
+</html>

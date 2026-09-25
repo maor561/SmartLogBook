@@ -10,6 +10,8 @@
 | [`docs/STATUS.md`](docs/STATUS.md) | **בתחילת כל סשן.** מה נעשה, מה הבא, שאלות פתוחות |
 | [`docs/PROJECT_BRIEF.md`](docs/PROJECT_BRIEF.md) | אפיון, flow, סעיפי הכסף, מלאי הפיצ'רים |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | לוג החלטות (ADR), append-only |
+| [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | טבלאות Neon ו-D1, ספר החשבונות, מיפוי ההעברה |
+| [`docs/mockups/`](docs/mockups/) | סקיצות מאושרות (s0 עד s4) |
 
 ## נוהל עבודה
 
