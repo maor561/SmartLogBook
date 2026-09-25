@@ -9,6 +9,8 @@ import { checkSimbrief, checkVatsim, type Check } from '@/lib/external';
 import { createRateVersion, getSettings, listRateVersions, updateAccounts } from '@/lib/settings';
 import { FIELDS } from '@/lib/rates/catalogue';
 import { validate, withChanges, type RateParams } from '@/lib/rates/params';
+import { hasLegacy, runLegacyImport } from '@/lib/legacy';
+import { syncMilestones } from '@/lib/analysis-data';
 
 // Manual theme override (ADR-016). 'auto' removes it so the OS preference applies.
 export async function setTheme(theme: 'auto' | 'light' | 'dark') {
@@ -69,4 +71,22 @@ export async function saveRateVersion(changes: Record<string, number>, note: str
   const id = await createRateVersion(next, note.trim().slice(0, 200) || null);
   revalidatePath('/settings');
   return { ok: true, id };
+}
+
+export type LegacyResult =
+  | { ok: true; imported: number; skipped: number; neonCents: number; mongoCents: number }
+  | { ok: false; error: string };
+
+// WP8: import the old app's flights (ADR-030), then back-fill milestones.
+export async function importLegacyAction(): Promise<LegacyResult> {
+  await verifySession();
+  if (!hasLegacy()) return { ok: false, error: 'MONGODB_URI לא מוגדר' };
+  try {
+    const r = await runLegacyImport();
+    await syncMilestones().catch(() => {});
+    revalidatePath('/', 'layout');
+    return { ok: true, imported: r.imported, skipped: r.skipped, neonCents: r.neonCents, mongoCents: r.mongoCents };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 }

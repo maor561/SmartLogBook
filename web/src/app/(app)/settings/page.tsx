@@ -8,6 +8,8 @@ import { logout } from '@/app/login/actions';
 import { ThemePicker } from './ThemePicker';
 import { AccountsForm } from './AccountsForm';
 import { RatesEditor } from './RatesEditor';
+import { LegacyImport } from './LegacyImport';
+import { hasLegacy, planLegacyImport } from '@/lib/legacy';
 
 export const metadata: Metadata = { title: 'הגדרות · SmartLogBook' };
 
@@ -16,6 +18,12 @@ export default async function SettingsPage() {
   const raw = (await cookies()).get(THEME_COOKIE)?.value;
   const theme = raw === 'light' || raw === 'dark' ? raw : 'auto';
   const data = hasDb() ? await Promise.all([getSettings(), listRateVersions()]) : null;
+  // Shown only while MONGODB_URI is set (WP8); remove the variable after the cutover.
+  const legacy = data && hasLegacy()
+    ? await planLegacyImport().then(
+        (p) => ({ total: p.total, missing: p.missing.length, present: p.present, errors: p.errors, mongoCents: p.mongoProfitCents, from: p.from, to: p.to }),
+        (e: Error) => ({ error: e.message }))
+    : null;
 
   return (
     <>
@@ -23,6 +31,7 @@ export default async function SettingsPage() {
         <>
           <AccountsForm {...data[0]} />
           <RatesEditor versions={data[1]} currentId={data[0].currentRateSetId} />
+          {legacy && <LegacyImport plan={legacy} />}
         </>
       ) : (
         <section className="panel">
