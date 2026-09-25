@@ -7,6 +7,8 @@ import { compute, price, baseFare } from '../src/lib/engine/index.ts';
 import { DEFAULTS, withChanges } from '../src/lib/rates/params.ts';
 
 const P = DEFAULTS;
+// Sketch 2 was approved with a $0.75/kg fuel reference; ADR-043 moved the default to $1.51.
+const P_S2 = withChanges(DEFAULTS, { 'fuel.refUsdPerKg': 0.75 });
 const flight = (o = {}) => ({
   distanceNm: 1108, seats: 189, pax: 185, cargoKg: 0, mtowKg: 79000, blockMin: 193, airMin: 171, fpm: -170,
   out: { month: 8, dow: 4, hour: 8 }, fuelUsdPerKg: null, rating: null,
@@ -51,7 +53,7 @@ test('fare and cargo match sketch 2 across the whole grid', () => {
       for (const [pax, seats] of [[40, 189], [150, 189], [189, 189], [300, 396]])
         for (const fuel of [0.55, 0.75, 0.80, 1.20]) {
           const ref = s2Price({ dist, month, dow, hour, pax, seats, fuel, cargo: 2140 });
-          const r = compute(P, flight({ distanceNm: dist, seats, pax, cargoKg: 2140, out: { month, dow, hour }, fuelUsdPerKg: fuel }));
+          const r = compute(P_S2, flight({ distanceNm: dist, seats, pax, cargoKg: 2140, out: { month, dow, hour }, fuelUsdPerKg: fuel }));
           assert.equal(r.fare, ref.fare, `fare ${dist}NM m${month} d${dow} h${hour} ${pax}/${seats} fuel ${fuel}`);
           assert.equal(line(r, 'cargo').amountCents, Math.round(ref.cargoRev * 100));
           n++;
@@ -118,6 +120,7 @@ test('clamp, reputation and fuel surcharge (ADR-025, 037)', () => {
   assert.equal(price(P, flight({ ...full, rating: 3 })).fare, r.fare);
   assert.equal(price(P, flight({ ...full, fuelUsdPerKg: 5 })).surcharge, 0.15);
   assert.equal(price(P, flight({ ...full, fuelUsdPerKg: 0.1 })).surcharge, -0.10);
+  assert.equal(price(P, flight({ ...full, fuelUsdPerKg: 1.51 })).surcharge, 0);   // ADR-043: today's price is neutral
   assert.equal(price(P, flight({ ...full, fuelUsdPerKg: null })).surcharge, 0);
 });
 
