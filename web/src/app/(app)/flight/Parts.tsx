@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import type { Base, RecentFlight } from '@/lib/flight-view';
 import type { OfpSummary } from '@/lib/ofp';
-import { ddmm, hm, usd } from '@/lib/format';
+import { ddmm, hm, nf, usd } from '@/lib/format';
 
 export function Route({ ofp, actual, diverted }: { ofp: OfpSummary; actual?: { icao: string; name: string | null } | null; diverted?: boolean }) {
   return (
@@ -79,4 +79,21 @@ export function MonthAside({ base }: { base: Base }) {
 
 export function LogbookLink() {
   return <Link className="link" href="/logbook">כל הלוגבוק ←</Link>;
+}
+
+export function MilestoneAside({ base }: { base: Base }) {
+  const m = base.nextMilestone;
+  if (!m) return null;
+  const fmt = (v: number) => (m.unit === 'h' ? hm(Math.round(v * 60)) : m.unit === '$' ? `$${nf(Math.floor(v))}` : nf(Math.floor(v)));
+  const left = m.next - m.current;
+  return (
+    <section className="panel">
+      <div className="panel-head"><span className="label">אבן הדרך הבאה</span><Link className="link" href="/analysis?p=all">כל אבני הדרך ←</Link></div>
+      <div className="pb">
+        <div style={{ fontWeight: 600 }}><bdi className="ltr">{m.unit === '$' ? `$${nf(m.next)}` : `${nf(m.next)}${m.unit === 'NM' ? ' NM' : ''}`}</bdi> {m.name}</div>
+        <div className="ms-bar" style={{ margin: '10px 0 6px' }}><div style={{ width: `${Math.min(100, (m.current / m.next) * 100)}%` }} /></div>
+        <div className="kv"><span className="small"><bdi className="ltr">{fmt(m.current)}</bdi> מתוך <bdi className="ltr">{fmt(m.next)}</bdi></span><span className="v small">עוד <bdi className="ltr">{fmt(left)}</bdi></span></div>
+      </div>
+    </section>
+  );
 }

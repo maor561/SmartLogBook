@@ -59,6 +59,7 @@ const base: Base = {
   ],
   month: { label: 'ספטמבר 2026', profitCents: 21248000, flights: 9, blockMin: 1300 },
   tracker: null, trackerError: null,
+  nextMilestone: { name: 'שעות בלוק', unit: 'h', current: 487.6, next: 500 },
 };
 
 const T0: TrackerDoc = {

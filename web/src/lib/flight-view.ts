@@ -6,6 +6,8 @@ import { currentFuelPrice } from './eia';
 import { getSettings, type Settings } from './settings';
 import { hasTracker, trackerState } from './tracker';
 import { currentRating } from './analysis-data';
+import { loadLogbook } from './logbook';
+import { milestoneCrossings, nextMilestones } from './rating';
 import type { OfpSummary } from './ofp';
 import type { Times } from './flight-input';
 import type { RateParams } from './rates/params';
@@ -34,6 +36,7 @@ export type Base = {
   month: { label: string; profitCents: number; flights: number; blockMin: number };
   tracker: TrackerDoc | null;
   trackerError: string | null;
+  nextMilestone: { name: string; unit: string; current: number; next: number } | null;
 };
 export type FormView = {
   mode: 'tracked' | 'manual';
@@ -59,6 +62,17 @@ export type FlightView =
 
 const LIVE = new Set(['armed', 'taxi_out', 'airborne', 'taxi_in']);
 const OFP_MAX_AGE_H = 12;
+
+// The milestone closest to completion across all categories (sketch s1a, idle state).
+async function closestMilestone(): Promise<Base['nextMilestone']> {
+  const { flights } = await loadLogbook();
+  if (!flights.length) return null;
+  const { totals, best } = milestoneCrossings(flights);
+  const open = nextMilestones(totals, best).filter((m) => m.next != null);
+  if (!open.length) return null;
+  const m = open.reduce((a, b) => (b.current / b.next! > a.current / a.next! ? b : a));
+  return { name: m.name, unit: m.unit, current: m.current, next: m.next! };
+}
 
 async function crewLocation(home: string): Promise<Place & { since: string | null }> {
   const [last] = await db()`
@@ -144,13 +158,15 @@ export async function buildForm(ofp: OfpSummary, t: TrackerDoc | null, crew: str
 
 export async function getFlightView(opts: { manual?: boolean } = {}): Promise<FlightView> {
   const settings = await getSettings();
-  const [crew, recent, month] = await Promise.all([crewLocation(settings.homeBaseIcao), recentFlights(), monthSummary()]);
+  const [crew, recent, month, nextMilestone] = await Promise.all([
+    crewLocation(settings.homeBaseIcao), recentFlights(), monthSummary(), closestMilestone().catch(() => null),
+  ]);
 
   let tracker: TrackerDoc | null = null, trackerError: string | null = null;
   if (hasTracker()) {
     try { tracker = (await trackerState()).tracker as TrackerDoc; } catch (e) { trackerError = (e as Error).message; }
   } else trackerError = 'TRACKER_SECRET לא מוגדר';
-  const base: Base = { settings, crew, recent, month, tracker, trackerError };
+  const base: Base = { settings, crew, recent, month, tracker, trackerError, nextMilestone };
 
   // Tracker owns the flight once it matched an OFP.
   if (tracker && tracker.state !== 'idle' && tracker.ofp) {

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Base } from '@/lib/flight-view';
 import type { OfpSummary } from '@/lib/ofp';
 import { ddmm, hm, minsBetween, nf, z } from '@/lib/format';
-import { Head, LogbookLink, MonthAside, RecentTable } from './Parts';
+import { Head, LogbookLink, MilestoneAside, MonthAside, RecentTable } from './Parts';
 
 // State 1 · no active flight (sketch s1a).
 export function IdleView({ base }: { base: Base }) {
@@ -37,7 +37,7 @@ export function IdleView({ base }: { base: Base }) {
           <RecentTable rows={base.recent} />
         </section>
       </div>
-      <aside className="stack"><MonthAside base={base} /></aside>
+      <aside className="stack"><MonthAside base={base} /><MilestoneAside base={base} /></aside>
     </div>
   );
 }
