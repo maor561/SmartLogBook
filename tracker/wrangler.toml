@@ -18,7 +18,7 @@ migrations_dir = "migrations"
 VATSIM_CID = "1242058"
 SIMBRIEF_ID = "MAOR561"
 # Origins allowed to read the live state from the browser (the app's live screen).
-APP_ORIGINS = "https://smart-log-book-rjo7.vercel.app,http://localhost:3100"
+APP_ORIGINS = "https://smart-log-book-eta.vercel.app,https://smart-log-book-rjo7.vercel.app,http://localhost:3100"
 
 # Secret, set by the user (never in this file):
 #   npx wrangler secret put TRACKER_SECRET
