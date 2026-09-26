@@ -17,7 +17,9 @@ export const DEFAULTS = {
   offGsAloneKt: 160,      // … or simply this fast (no aircraft taxis at 160 kt)
   onGsKt: 40,             // after airborne, slower than this = on the ground (ON)
   inGsKt: 1,              // stopped …
-  inTicks: 2,             // … for this many consecutive minutes = IN
+  inTicks: 3,             // … for this many consecutive minutes = IN (DLH314 held 75 s mid-taxi)
+  unparkGsKt: 5,          // moving again this fast soon after IN = it wasn't the gate
+  unparkMinutes: 10,
   armRadiusNm: 5,         // must be on the ground this close to the OFP origin to arm
   graceTicks: 30,         // ADR-020: 30 minutes to reconnect
   ofpMaxAgeH: 12,         // ADR-020: an unflown plan expires
@@ -170,7 +172,17 @@ function run(s, p, now, cfg, go) {
       if (s.absent_ticks >= cfg.graceTicks) go('interrupted', `no reconnect within ${cfg.graceTicks} min`);
       return;
     }
-    default: return;                                // arrived / interrupted: wait for the app (ack)
+    case 'arrived': {
+      // A long taxi hold can look like parking. If it moves off again soon after,
+      // and the app hasn't closed the flight, it's still taxiing in.
+      const since = s.in_at ? (Date.parse(now) - Date.parse(s.in_at)) / 60000 : Infinity;
+      if (p && s.on_at && p.gs_kt >= cfg.unparkGsKt && since <= cfg.unparkMinutes) {
+        s.in_at = null; s.stopped_ticks = 0; s.stopped_since = null;
+        go('taxi_in', 'moving again after a stop: not the gate');
+      }
+      return;
+    }
+    default: return;                                // interrupted: wait for the app (ack)
   }
 }
 

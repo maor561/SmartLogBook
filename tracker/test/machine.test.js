@@ -34,7 +34,8 @@ const pushTaxi = [P({ gs_kt: 2, lat: GATE.lat + 0.001 }), P({ gs_kt: 15, lat: GA
 const takeoff = [P({ gs_kt: 150, alt_ft: 2500, lat: 38.80 }), P({ gs_kt: 280, alt_ft: 9000, lat: 38.9 })];
 const cruise = [P({ gs_kt: 460, alt_ft: 37000, lat: 36, lon: 10 })];
 const landing = [P({ gs_kt: 140, alt_ft: 1200, lat: 32.1, lon: 34.9 }), P({ gs_kt: 20, alt_ft: 134, lat: 32.005, lon: 34.88 })];
-const park = [P({ gs_kt: 8, alt_ft: 134, lat: 32.006, lon: 34.881 }), P({ gs_kt: 0, alt_ft: 134, lat: 32.007, lon: 34.882 }), P({ gs_kt: 0, alt_ft: 134, lat: 32.007, lon: 34.882 })];
+const stop = P({ gs_kt: 0, alt_ft: 134, lat: 32.007, lon: 34.882 });
+const park = [P({ gs_kt: 8, alt_ft: 134, lat: 32.006, lon: 34.881 }), stop, stop, stop];
 
 test('a normal flight: armed → OUT → OFF → ON → IN', () => {
   const { s, path } = replay([...gate, ...pushTaxi, ...takeoff, ...cruise, ...landing, ...park]);
@@ -42,7 +43,7 @@ test('a normal flight: armed → OUT → OFF → ON → IN', () => {
   assert.equal(s.out_at, t(2));
   assert.equal(s.off_at, t(4));
   assert.equal(s.on_at, t(8));
-  assert.equal(s.in_at, t(10));                        // first of two stopped minutes
+  assert.equal(s.in_at, t(10));                        // first of three stopped minutes
   assert.deepEqual(s.landing, { lat: 32.005, lon: 34.88 });
 });
 
@@ -124,10 +125,19 @@ test('acknowledged OFP is never armed again', () => {
   assert.equal(again.ofp, null);
 });
 
-test('arrived waits for the app, whatever the feed says', () => {
+test('arrived waits for the app; moving again soon after means it was a taxi hold', () => {
   const { s } = replay([...gate, ...pushTaxi, ...takeoff, ...landing, ...park]);
   assert.equal(step(s, { now: t(40), feedOk: true, pilot: null }).state.state, 'arrived');
-  assert.equal(step(s, { now: t(40), feedOk: true, pilot: P({ gs_kt: 20 }) }).state.state, 'arrived');
+  assert.equal(step(s, { now: t(40), feedOk: true, pilot: P({ gs_kt: 20 }) }).state.state, 'arrived');   // 30 min later: next flight, not ours
+  const back = step(s, { now: t(14), feedOk: true, pilot: P({ gs_kt: 12, alt_ft: 134 }) }).state;
+  assert.equal(back.state, 'taxi_in');
+  assert.equal(back.in_at, null);
+});
+
+test('a 2-minute hold on the taxiway is not the gate', () => {
+  const hold = [stop, stop, P({ gs_kt: 10, alt_ft: 134 })];
+  const { path } = replay([...gate, ...pushTaxi, ...takeoff, ...landing, ...hold, ...park]);
+  assert.deepEqual(path, ['armed', 'taxi_out', 'airborne', 'taxi_in', 'arrived']);
 });
 
 test('SimBrief is called sparingly', () => {
