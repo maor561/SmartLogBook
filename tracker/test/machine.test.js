@@ -53,6 +53,12 @@ test('no OFP match → stays idle (wrong route and callsign)', () => {
   assert.equal(matches({ ...other, callsign: 'ely2569' }, OFP), true);   // callsign alone is enough, case-insensitive
 });
 
+test('matched while already taxiing → OUT at that same minute', () => {
+  const { s, path } = replay([P({ gs_kt: 19, lat: GATE.lat + 0.002 }), P({ gs_kt: 9, lat: GATE.lat + 0.004 })]);
+  assert.deepEqual(path, ['armed', 'taxi_out']);
+  assert.equal(s.out_at, t(0));
+});
+
 test('must be near the origin to arm', () => {
   const far = P({ lat: 40, lon: -3 });
   assert.deepEqual(replay([far, far]).path, []);

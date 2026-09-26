@@ -115,6 +115,8 @@ function run(s, p, now, cfg, go) {
       } else if (distNm(p.lat, p.lon, o.lat, o.lon) <= cfg.armRadiusNm) {
         s.gate = { lat: p.lat, lon: p.lon };
         go('armed', `matched OFP ${s.ofp.callsign ?? ''} at ${o.icao}`.trim());
+        // Matched while already moving (pushback/taxi): OUT is now, not a minute later.
+        if (p.gs_kt >= cfg.outGsKt) { s.out_at = now; go('taxi_out', 'already moving when matched'); }
       }
       return;
     }
