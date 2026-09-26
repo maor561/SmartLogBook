@@ -103,7 +103,7 @@ export async function editFlight(id: number, e: EditInput): Promise<{ ok: true }
   });
   const money = (v: number | null) => (v != null && Number.isFinite(v) && v >= 0 && v < 10_000_000 ? Math.round(v * 100) / 100 : null);
   draft.manual = { fuel: money(e.fuel), ground: money(e.ground), catering: money(e.catering) };
-  draft.fpm = e.fpm != null && Number.isInteger(e.fpm) && Math.abs(e.fpm) <= 5000 ? e.fpm : null;
+  draft.fpm = e.fpm != null && Number.isInteger(e.fpm) && Math.abs(e.fpm) <= 5000 ? -Math.abs(e.fpm) : null;   // always a descent
 
   const input = toEngineInput(draft);
   const t = draft.times;

@@ -87,7 +87,8 @@ async function crewLocation(home: string): Promise<Place & { since: string | nul
 async function recentFlights(): Promise<RecentFlight[]> {
   const rows = await db()`
     SELECT f.id, coalesce(f.in_at, f.closed_at) AS at, f.origin_icao, coalesce(f.dest_actual_icao, f.dest_planned_icao) AS dest,
-           f.dest_actual_icao <> f.dest_planned_icao AS diverted, f.aircraft_type, f.block_min, f.fpm, f.source,
+           f.dest_actual_icao <> f.dest_planned_icao AS diverted, f.aircraft_type,
+           coalesce(f.block_min, f.legacy_planned_air_min) AS block_min, f.fpm, f.source,   -- same rule as the logbook
            coalesce(sum(l.amount_cents), 0)::bigint AS profit
     FROM flights f LEFT JOIN ledger_lines l ON l.flight_id = f.id
     WHERE f.status IN ('closed', 'historical')

@@ -31,7 +31,8 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
     const given = p.times[k] && !Number.isNaN(Date.parse(p.times[k]!)) ? new Date(p.times[k]!).toISOString() : null;
     times[k] = f.tracked[k] ?? given;
   }
-  const fpm = p.fpm != null && Number.isInteger(p.fpm) && Math.abs(p.fpm) <= 5000 ? p.fpm : null;
+  // Touchdown rate is a descent: stored negative whatever sign was typed (the engine uses |fpm|).
+  const fpm = p.fpm != null && Number.isInteger(p.fpm) && Math.abs(p.fpm) <= 5000 ? -Math.abs(p.fpm) : null;
   const draft: Draft = {
     ofp: f.ofp, times, fpm,
     manual: { fuel: money(p.manual.fuel), ground: money(p.manual.ground), catering: money(p.manual.catering) },
