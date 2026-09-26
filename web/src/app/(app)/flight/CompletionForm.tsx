@@ -43,7 +43,9 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   const { ofp, tracked, params } = form;
   const interrupted = form.trackerState === 'interrupted';
   const [hhmm, setHhmm] = useState<Record<string, string>>({ out: '', off: '', on: '', in: '' });
-  const [money, setMoney] = useState({ fuel: '', ground: '', catering: '' });
+  // Start from the GSX costs entered during the flight, if any.
+  const str = (v: number | null | undefined) => (v == null ? '' : String(v));
+  const [money, setMoney] = useState({ fuel: str(form.draft?.fuel), ground: str(form.draft?.ground), catering: str(form.draft?.catering) });
   const [fpmText, setFpmText] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, start] = useTransition();

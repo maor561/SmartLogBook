@@ -81,6 +81,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
   }
 
   await ackTracker(view, f.ofp.id);
+  await db()`DELETE FROM flight_drafts WHERE ofp_id = ${f.ofp.id}`;
   await syncMilestones().catch(() => {});   // recomputed on the analysis screen too
   revalidatePath('/');
   return { ok: true };
@@ -100,6 +101,21 @@ export async function discardFlight(ofpId: string): Promise<CloseResult> {
   const view = await getFlightView();
   if (view.base.tracker?.ofp?.id !== ofpId) return { ok: false, errors: ['אין טיסה כזו במעקב'] };
   await trackerAck(ofpId);
+  await db()`DELETE FROM flight_drafts WHERE ofp_id = ${ofpId}`;
   revalidatePath('/');
+  return { ok: true };
+}
+
+// GSX costs entered while the flight is still in progress (at the gate, taxiing,
+// airborne…). Saved per OFP; the completion form starts from them.
+export async function saveDraftCosts(ofpId: string, c: Manual): Promise<CloseResult> {
+  await verifySession();
+  const view = await getFlightView();
+  const active = view.kind === 'live' || view.kind === 'disc' ? view.ofp.id : view.kind === 'done' || view.kind === 'manual' ? view.form.ofp.id : null;
+  if (active !== ofpId) return { ok: false, errors: ['אין טיסה פעילה עם התוכנית הזו'] };
+  const fuel = money(c.fuel), ground = money(c.ground), catering = money(c.catering);
+  await db()`
+    INSERT INTO flight_drafts (ofp_id, fuel, ground, catering, updated_at) VALUES (${ofpId}, ${fuel}, ${ground}, ${catering}, now())
+    ON CONFLICT (ofp_id) DO UPDATE SET fuel = EXCLUDED.fuel, ground = EXCLUDED.ground, catering = EXCLUDED.catering, updated_at = now()`;
   return { ok: true };
 }

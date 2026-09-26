@@ -38,6 +38,14 @@ export type Base = {
   trackerError: string | null;
   nextMilestone: { name: string; unit: string; current: number; next: number } | null;
 };
+export type DraftCosts = { fuel: number | null; ground: number | null; catering: number | null };
+
+export async function getDraft(ofpId: string): Promise<DraftCosts | null> {
+  const [r] = await db()`SELECT fuel, ground, catering FROM flight_drafts WHERE ofp_id = ${ofpId}`;
+  const n = (v: unknown) => (v == null ? null : Number(v));
+  return r ? { fuel: n(r.fuel), ground: n(r.ground), catering: n(r.catering) } : null;
+}
+
 export type FormView = {
   mode: 'tracked' | 'manual';
   ofp: OfpSummary;
@@ -52,12 +60,13 @@ export type FormView = {
   rating: number | null;           // company rating before this flight (ADR-037); null = still building
   trackerState: TrackerDoc['state'] | null;
   disconnectedAt: string | null;
+  draft: DraftCosts | null;        // GSX costs already entered during the flight
 };
 
 export type FlightView =
   | { kind: 'idle'; base: Base }
   | { kind: 'plan'; base: Base; ofp: OfpSummary; expiresInMin: number; positioningNm: number | null }
-  | { kind: 'live' | 'disc'; base: Base; t: TrackerDoc; ofp: OfpSummary }
+  | { kind: 'live' | 'disc'; base: Base; t: TrackerDoc; ofp: OfpSummary; draft: DraftCosts | null }
   | { kind: 'done' | 'manual'; base: Base; form: FormView };
 
 const LIVE = new Set(['armed', 'taxi_out', 'airborne', 'taxi_in']);
@@ -148,12 +157,12 @@ export async function buildForm(ofp: OfpSummary, t: TrackerDoc | null, crew: str
     }
   }
   const at = tracked.out ?? tracked.off;
-  const [rs, fuel, positioningNm, rating] = await Promise.all([rateSetAt(at), fuelAt(at), nmBetween(crew, ofp.origin.icao), currentRating()]);
+  const [rs, fuel, positioningNm, rating, draft] = await Promise.all([rateSetAt(at), fuelAt(at), nmBetween(crew, ofp.origin.icao), currentRating(), getDraft(ofp.id)]);
   const mode = t && t.ofp?.id === ofp.id && t.state === 'arrived' && !t.joined && tracked.out && tracked.off && tracked.on && tracked.in ? 'tracked' : 'manual';
   return {
     mode, ofp, tracked, actual, diverted, diversionNm, positioningNm,
     params: rs.params, rateSetId: rs.id, fuel, rating,
-    trackerState: t?.state ?? null, disconnectedAt: t?.disconnected_at ?? null,
+    trackerState: t?.state ?? null, disconnectedAt: t?.disconnected_at ?? null, draft,
   };
 }
 
@@ -177,8 +186,8 @@ export async function getFlightView(opts: { manual?: boolean } = {}): Promise<Fl
       const form = await buildForm(ofp, tracker, crew.icao);
       return { kind: form.mode === 'tracked' && !opts.manual ? 'done' : 'manual', base, form };
     }
-    if (LIVE.has(tracker.state)) return { kind: 'live', base, t: tracker, ofp };
-    if (tracker.state === 'disconnected') return { kind: 'disc', base, t: tracker, ofp };
+    if (LIVE.has(tracker.state)) return { kind: 'live', base, t: tracker, ofp, draft: await getDraft(ofp.id) };
+    if (tracker.state === 'disconnected') return { kind: 'disc', base, t: tracker, ofp, draft: await getDraft(ofp.id) };
   }
 
   // Otherwise: is there a fresh, unflown plan in SimBrief?

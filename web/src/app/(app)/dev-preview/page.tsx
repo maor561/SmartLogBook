@@ -73,7 +73,7 @@ const form = (o: Partial<FormView> = {}): FormView => ({
   mode: 'tracked', ofp: OFP,
   tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: '2026-09-25T15:49:00.000Z', in: '2026-09-25T15:58:00.000Z' },
   actual: { icao: 'LGAV', name: 'Athens' }, diverted: false, diversionNm: null, positioningNm: 0,
-  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, ...o,
+  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, ...o,
 });
 
 export default async function DevPreview({ searchParams }: PageProps<'/dev-preview'>) {
@@ -82,8 +82,8 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
   const lostAt = new Date(Date.parse(T0.last_seen_at!) - 11 * 60e3).toISOString();
   switch (s) {
     case 'plan': return <PlanView base={base} ofp={OFP} expiresInMin={702} positioningNm={0} />;
-    case 'live': return <LiveView initial={T0} ofp={OFP} />;
-    case 'disc': return <LiveView initial={{ ...T0, state: 'disconnected', prev_state: 'airborne', disconnected_at: lostAt }} ofp={OFP} />;
+    case 'live': return <LiveView initial={T0} ofp={OFP} draft={{ fuel: 8568, ground: null, catering: 725 }} />;
+    case 'disc': return <LiveView initial={{ ...T0, state: 'disconnected', prev_state: 'airborne', disconnected_at: lostAt }} ofp={OFP} draft={null} />;
     case 'done': return <CompletionForm form={form()} crewIcao="LLBG" />;
     case 'divert': return <CompletionForm form={form({ actual: { icao: 'LGTS', name: 'Thessaloniki' }, diverted: true, diversionNm: 160 })} crewIcao="LLBG" />;
     case 'manual': return <CompletionForm form={form({ mode: 'manual', trackerState: 'interrupted', disconnectedAt: '2026-09-25T15:13:00.000Z', tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: null, in: null }, actual: null })} crewIcao="LLBG" />;

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTracker } from '@/components/TrackerProvider';
-import type { TrackerDoc } from '@/lib/flight-view';
+import type { DraftCosts, TrackerDoc } from '@/lib/flight-view';
+import { DraftCostsPanel } from './DraftCosts';
 import type { OfpSummary } from '@/lib/ofp';
 import { distanceNm } from '@/lib/geo';
 import { hm, minsBetween, nf, z } from '@/lib/format';
@@ -22,7 +23,7 @@ function useNow(ms = 1000) {
 
 // States 3 (live) and 4 (disconnected). Server gives the first snapshot; the
 // tracker context keeps it fresh without reloading the page.
-export function LiveView({ initial, ofp }: { initial: TrackerDoc; ofp: OfpSummary }) {
+export function LiveView({ initial, ofp, draft }: { initial: TrackerDoc; ofp: OfpSummary; draft: DraftCosts | null }) {
   const live = useTracker().tracker;
   const t = live && live.ofp?.id === ofp.id ? live : initial;
   const now = useNow();
@@ -123,6 +124,7 @@ export function LiveView({ initial, ofp }: { initial: TrackerDoc; ofp: OfpSummar
         </section>
       </div>
       <aside className="stack">
+        <DraftCostsPanel ofpId={ofp.id} initial={draft} />
         <section className="panel">
           <div className="panel-head"><span className="label">{disc ? 'מה נשמר' : 'אחרי GATE'}</span></div>
           <div className="pb small" style={{ lineHeight: 1.7 }}>
