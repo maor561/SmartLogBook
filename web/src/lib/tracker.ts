@@ -30,4 +30,17 @@ async function call(path: string, init?: RequestInit) {
 }
 
 export const trackerState = () => call('/v1/state');
+// Which pilot to follow and whose SimBrief plans to read (from the settings screen).
+export const trackerConfig = (vatsimCid: number | null, simbriefId: string | null) =>
+  call('/v1/config', { method: 'POST', body: JSON.stringify({ vatsim_cid: vatsimCid, simbrief_id: simbriefId }) });
+
+// Pushes the settings to the Worker when they differ from what it uses.
+export async function syncTrackerConfig(state: { config?: { vatsim_cid: number | null; simbrief_id: string | null } },
+  settings: { vatsimCid: number | null; simbriefId: string | null }) {
+  const c = state.config;
+  if (c && c.vatsim_cid === settings.vatsimCid && c.simbrief_id === settings.simbriefId) return false;
+  await trackerConfig(settings.vatsimCid, settings.simbriefId);
+  return true;
+}
+
 export const trackerAck = (ofpId: string) => call('/v1/ack', { method: 'POST', body: JSON.stringify({ ofp_id: ofpId }) });

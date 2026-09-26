@@ -10,6 +10,7 @@ import { createRateVersion, getSettings, listRateVersions, updateAccounts } from
 import { FIELDS } from '@/lib/rates/catalogue';
 import { validate, withChanges, type RateParams } from '@/lib/rates/params';
 import { hasLegacy, runLegacyImport } from '@/lib/legacy';
+import { hasTracker, trackerConfig } from '@/lib/tracker';
 import { syncMilestones } from '@/lib/analysis-data';
 
 // Manual theme override (ADR-016). 'auto' removes it so the OS preference applies.
@@ -35,6 +36,14 @@ export async function saveAccounts(_prev: AccountsState, form: FormData): Promis
   if (!airport) return { error: `לא נמצא שדה ${home} במאגר` };
 
   const vatsimCid = cidRaw ? Number(cidRaw) : null;
+  // The tracker must follow the same pilot (it refuses a new CID mid-flight).
+  if (hasTracker()) {
+    try { await trackerConfig(vatsimCid, simbriefId); }
+    catch (e) {
+      const msg = (e as Error).message;
+      return { error: msg.includes('409') ? 'יש טיסה פעילה במעקב: אי אפשר להחליף CID עד שהיא תיסגר' : `מנוע המעקב לא עודכן: ${msg}` };
+    }
+  }
   await updateAccounts({ simbriefId, vatsimCid, homeBaseIcao: home });
   const [simbrief, vatsim] = await Promise.all([
     simbriefId ? checkSimbrief(simbriefId) : Promise.resolve({ ok: false, text: 'לא הוגדר' }),

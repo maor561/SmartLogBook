@@ -7,9 +7,19 @@ import { fetchOfp } from './ofp.js';
 import { IDLE, step, acknowledge, wantsOfp } from './machine.js';
 import { verifyToken } from './auth.js';
 
+// Tracker state + account ids in one D1 round trip. Ids come from the app's
+// settings (POST /v1/config); wrangler.toml vars are only the fallback.
 async function load(env) {
-  const row = await env.DB.prepare('SELECT data, ofp_checked_at FROM tracker WHERE id = 1').first();
-  return row ? { s: { ...IDLE, ...JSON.parse(row.data) }, ofpCheckedAt: row.ofp_checked_at } : { s: { ...IDLE }, ofpCheckedAt: null };
+  const [st, cf] = await env.DB.batch([
+    env.DB.prepare('SELECT data, ofp_checked_at FROM tracker WHERE id = 1'),
+    env.DB.prepare('SELECT vatsim_cid, simbrief_id FROM config WHERE id = 1'),
+  ]);
+  const row = st.results[0], c = cf.results[0];
+  return {
+    s: row ? { ...IDLE, ...JSON.parse(row.data) } : { ...IDLE },
+    ofpCheckedAt: row?.ofp_checked_at ?? null,
+    cfg: { cid: Number(c?.vatsim_cid ?? env.VATSIM_CID) || null, simbrief: c?.simbrief_id ?? env.SIMBRIEF_ID ?? null },
+  };
 }
 
 async function save(env, s, ofpCheckedAt, now, events = []) {
@@ -25,7 +35,7 @@ async function save(env, s, ofpCheckedAt, now, events = []) {
 }
 
 export async function tick(env, now) {
-  const { s, ofpCheckedAt } = await load(env);
+  const { s, ofpCheckedAt, cfg } = await load(env);
   // Cloudflare occasionally fires the same minute twice. While a flight is
   // active every tick counts (e.g. the 30-min reconnect window), so process
   // each minute once. Idle ticks are harmless and skip the extra write.
@@ -36,7 +46,7 @@ export async function tick(env, now) {
   try {
     const res = await fetch(FEED_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const found = findPilot(await res.text(), Number(env.VATSIM_CID));
+    const found = cfg.cid ? findPilot(await res.text(), cfg.cid) : null;
     pilot = found ? pilotSample(found, now) : null;
   } catch {
     feedOk = false;                                     // feed outage ≠ disconnect (ADR-024)
@@ -44,8 +54,8 @@ export async function tick(env, now) {
 
   const input = { now, feedOk, pilot };
   let checkedAt = ofpCheckedAt;
-  if (feedOk && env.SIMBRIEF_ID && wantsOfp(s, Boolean(pilot), now, ofpCheckedAt)) {
-    try { input.ofp = await fetchOfp(env.SIMBRIEF_ID); checkedAt = now; } catch { /* SimBrief down: try next time */ }
+  if (feedOk && cfg.simbrief && wantsOfp(s, Boolean(pilot), now, ofpCheckedAt)) {
+    try { input.ofp = await fetchOfp(cfg.simbrief); checkedAt = now; } catch { /* SimBrief down: try next time */ }
   }
 
   const { state, events } = step(s, input);
@@ -84,9 +94,28 @@ export default {
     if (!(await verifyToken(env.TRACKER_SECRET, token))) return json({ error: 'unauthorized' }, 401, h);
 
     if (request.method === 'GET' && url.pathname === '/v1/state') {
-      const { s } = await load(env);
+      const { s, cfg } = await load(env);
       const { results } = await env.DB.prepare('SELECT at, from_state, to_state, reason FROM tracker_events ORDER BY id DESC LIMIT 20').all();
-      return json({ tracker: s, events: results, server_time: new Date().toISOString() }, 200, h);
+      return json({ tracker: s, config: { vatsim_cid: cfg.cid, simbrief_id: cfg.simbrief }, events: results, server_time: new Date().toISOString() }, 200, h);
+    }
+
+    // The app's settings changed: which pilot to follow and whose SimBrief plans to read.
+    if (request.method === 'POST' && url.pathname === '/v1/config') {
+      const body = await request.json().catch(() => ({}));
+      const cid = body.vatsim_cid == null ? null : Number(body.vatsim_cid);
+      const sb = body.simbrief_id == null ? null : String(body.simbrief_id).trim().slice(0, 64) || null;
+      if (cid != null && !(Number.isInteger(cid) && cid > 0 && cid < 1e9)) return json({ error: 'bad vatsim_cid' }, 400, h);
+      const { s, cfg } = await load(env);
+      // Switching pilots mid-flight would look like a disconnect and end the flight as interrupted.
+      if (s.state !== 'idle' && cid !== cfg.cid) return json({ error: 'flight in progress' }, 409, h);
+      const now = new Date().toISOString();
+      await env.DB.prepare(
+        `INSERT INTO config (id, vatsim_cid, simbrief_id, updated_at) VALUES (1, ?1, ?2, ?3)
+         ON CONFLICT (id) DO UPDATE SET vatsim_cid = ?1, simbrief_id = ?2, updated_at = ?3`,
+      ).bind(cid, sb, now).run();
+      // A different SimBrief account: look for its plan on the next tick.
+      if (sb !== cfg.simbrief) await env.DB.prepare('UPDATE tracker SET ofp_checked_at = NULL WHERE id = 1').run();
+      return json({ ok: true, vatsim_cid: cid, simbrief_id: sb }, 200, h);
     }
 
     // The app stored the flight in Neon — tracked, finished manually mid-flight,
