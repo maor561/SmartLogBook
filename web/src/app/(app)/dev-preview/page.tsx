@@ -5,6 +5,7 @@ import type { Base, FormView, TrackerDoc } from '@/lib/flight-view';
 import { IdleView, PlanView } from '../flight/IdlePlan';
 import { LiveView } from '../flight/LiveView';
 import { CompletionForm } from '../flight/CompletionForm';
+import { TerminalScreen } from '../flight/TerminalScreen';
 import { Logbook } from '../logbook/Logbook';
 import { AnalysisView } from '../analysis/AnalysisView';
 import { inRange, rangeOf } from '@/lib/analysis';
@@ -76,6 +77,9 @@ const form = (o: Partial<FormView> = {}): FormView => ({
   params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, ...o,
 });
 
+// Server-side clock for the terminal fixture (a whole minute, so reloads agree).
+const minutesFromNow = (min: number) => new Date(Math.round((Date.now() + min * 60e3) / 60e3) * 60e3).toISOString();
+
 export default async function DevPreview({ searchParams }: PageProps<'/dev-preview'>) {
   if (process.env.NODE_ENV === 'production') notFound();
   const s = (await searchParams).s ?? 'idle';
@@ -95,6 +99,13 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
         achieved={[{ cat: 'flights', threshold: 10, at: '2026-09-21T15:51:00Z', flightId: 5 }]} />;
     }
     case 'logbook': return <Logbook flights={LOG} airports={APS} home="LLBG" initial={NO_FILTERS} />;
+    case 'terminal': {
+      // ?min=50 → PUSHBACK in 50 minutes (negative: already past); ?size=large|medium|small
+      const sp = await searchParams, min = Number(sp.min ?? 50);
+      const out = minutesFromNow(min);
+      const type = `${sp.size ?? 'large'}_airport`;
+      return <TerminalScreen ofp={{ ...OFP, sched: { ...OFP.sched, out } }} tag={<span className="tag plan">תוכנית מוכנה</span>} airportType={type} />;
+    }
     default: return <IdleView base={base} />;
   }
 }

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Base } from '@/lib/flight-view';
 import type { OfpSummary } from '@/lib/ofp';
 import { ddmm, hm, minsBetween, nf, z } from '@/lib/format';
-import { Head, LogbookLink, MilestoneAside, MonthAside, RecentTable } from './Parts';
+import { FlightTabs, Head, LogbookLink, MilestoneAside, MonthAside, RecentTable } from './Parts';
 
 // State 1 · no active flight (sketch s1a).
 export function IdleView({ base }: { base: Base }) {
@@ -54,6 +54,7 @@ export function PlanView({ base, ofp, expiresInMin, positioningNm }: { base: Bas
           <Head ofp={ofp} tag={<span className="tag plan">תוכנית מוכנה</span>}>
             נוצרה ב-SimBrief ב-<bdi>{z(ofp.generated_at)}Z</bdi>{left != null && <> · פגה בעוד <b>{hm(left)}</b></>}
           </Head>
+          <FlightTabs active="flight" />
           <div className="idle" style={{ padding: 14 }}>
             <div className="ring" aria-hidden>…</div>
             <div>

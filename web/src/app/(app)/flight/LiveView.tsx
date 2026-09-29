@@ -9,7 +9,7 @@ import type { OfpSummary } from '@/lib/ofp';
 import { distanceNm } from '@/lib/geo';
 import { hm, minsBetween, nf, z } from '@/lib/format';
 import { TIME_LABEL } from '@/lib/flight-input';
-import { Head } from './Parts';
+import { FlightTabs, Head } from './Parts';
 
 const PHASES = ['בגייט', 'הסעה', 'באוויר', 'הסעה לגייט', 'בחניה'];
 const INDEX: Record<string, number> = { armed: 0, taxi_out: 1, airborne: 2, taxi_in: 3, arrived: 4 };
@@ -52,6 +52,7 @@ export function LiveView({ initial, ofp, draft }: { initial: TrackerDoc; ofp: Of
             {!disc && seenAgo != null && <>VATSIM · עודכן לפני {seenAgo < 90 ? `${seenAgo} שנ׳` : `${Math.round(seenAgo / 60)} דק׳`}</>}
             {t.joined && <span className="chip warn" style={{ marginInlineStart: 6 }}>הצטרפות באמצע</span>}
           </Head>
+          {t.state === 'armed' && <FlightTabs active="flight" />}
 
           {disc && (
             <div className="banner warn">

@@ -9,6 +9,12 @@ export async function getAirport(icao: string): Promise<Airport | null> {
   return (row as Airport) ?? null;
 }
 
+// OurAirports type (large_airport, medium_airport, …): sizes the terminal (ADR-053).
+export async function airportType(icao: string): Promise<string | null> {
+  const [row] = await db()`SELECT type FROM airports WHERE icao = ${icao.toUpperCase()}`;
+  return (row?.type as string) ?? null;
+}
+
 export async function nmBetween(a: string, b: string): Promise<number | null> {
   if (a === b) return 0;
   const [x, y] = await Promise.all([getAirport(a), getAirport(b)]);

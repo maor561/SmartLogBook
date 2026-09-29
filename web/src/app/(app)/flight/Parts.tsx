@@ -16,6 +16,16 @@ export function Route({ ofp, actual, diverted }: { ofp: OfpSummary; actual?: { i
   );
 }
 
+// Flight / terminal tabs: from a plan until PUSHBACK (ADR-053).
+export function FlightTabs({ active }: { active: 'flight' | 'terminal' }) {
+  return (
+    <nav className="subtabs" aria-label="תצוגה">
+      <Link href="/" aria-current={active === 'flight' ? 'page' : undefined}>טיסה</Link>
+      <Link href="/?tab=terminal" aria-current={active === 'terminal' ? 'page' : undefined}>טרמינל</Link>
+    </nav>
+  );
+}
+
 export function Head({ ofp, tag, children, actual, diverted }: {
   ofp: OfpSummary; tag: React.ReactNode; children?: React.ReactNode; actual?: { icao: string; name: string | null } | null; diverted?: boolean;
 }) {
