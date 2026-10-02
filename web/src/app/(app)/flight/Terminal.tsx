@@ -177,9 +177,14 @@ export function Terminal({ input, utcOffset, title }: { input: SimInput; utcOffs
               <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} role="img" aria-label="מבט-על של הטרמינל">
                 <image href="/terminal-topdown.jpg" x={0} y={0} width={MAP_W} height={MAP_H} />
                 <g>
-                  {L.closed.map(([x, y], k) => <path key={k} className="tm-closed" d={`M${x - 6},${y - 6}L${x + 6},${y + 6}M${x + 6},${y - 6}L${x - 6},${y + 6}`} />)}
+                  {L.closed.map(([x, y], k) => (
+                    <g key={k} className="tm-closed">
+                      <circle cx={x} cy={y} r={13} />
+                      <path d={`M${x - 6},${y - 6}L${x + 6},${y + 6}M${x + 6},${y - 6}L${x - 6},${y + 6}`} />
+                    </g>
+                  ))}
                   {(Object.keys(L.rings) as QueueId[]).map((id) => L.rings[id].map(([x, y], k) => (
-                    <circle key={`${id}${k}`} cx={x} cy={y} r={14} className="tm-srv" ref={(el) => { (rings.current[id] ??= [])[k] = el; }} />
+                    <circle key={`${id}${k}`} cx={x} cy={y} r={16} className="tm-srv" ref={(el) => { (rings.current[id] ??= [])[k] = el; }} />
                   )))}
                 </g>
                 <g>{sim.pax.map((p) => <circle key={p.i} r={R_DOT} className="tm-p" visibility="hidden" ref={(el) => { dots.current[p.i] = el; }} />)}</g>
@@ -200,8 +205,9 @@ export function Terminal({ input, utcOffset, title }: { input: SimInput; utcOffs
           <div className="tm-legend">
             {([['walk', 'בדרך'], ['queue', 'בתור'], ['serve', 'בשירות / עולה'], ['shop', 'בדיוטי-פרי'], ['gate', 'ממתין בשער'], ['seat', 'יושב במטוס'], ['late', 'איחר']] as [DotClass, string][])
               .map(([c, l]) => <span key={c}><i className={`tm-${c}`} />{l}</span>)}
-            <span><i className="tm-open" />עמדה פתוחה לטיסה</span>
-            <span><b className="tm-x">✕</b>עמדה סגורה</span>
+            <span><i className="tm-open" />עמדה פתוחה</span>
+            <span><i className="tm-busy" />עמדה בשירות</span>
+            <span><i className="tm-shut">✕</i>עמדה סגורה</span>
           </div>
         </div>
 

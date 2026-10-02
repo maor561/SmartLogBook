@@ -234,7 +234,7 @@ function Detail({ f, airports, onClose, onDeleted, onSaved, onCard }: {
             <table className="tbl ledger">
               <tbody>
                 {rev.length > 0 && <tr className="grp"><td colSpan={2}>הכנסות</td></tr>}
-                {rev.map((l, i) => <LineRow key={`r${i}`} code={l.code} cents={l.cents} source={l.source} />)}
+                {rev.map((l, i) => <LineRow key={`r${i}`} code={l.code} cents={l.cents} source={l.source} pax={l.code === 'tickets' ? f.pax : null} />)}
                 {rev.length > 0 && <tr className="sub"><td>סה״כ הכנסות</td><td className="n pos">{usd(total(rev))}</td></tr>}
                 {exp.length > 0 && <tr className="grp"><td colSpan={2}>הוצאות</td></tr>}
                 {exp.map((l, i) => <LineRow key={`e${i}`} code={l.code} cents={l.cents} source={l.source} />)}
@@ -259,9 +259,17 @@ function Detail({ f, airports, onClose, onDeleted, onSaved, onCard }: {
   );
 }
 
-function LineRow({ code, cents, source }: { code: string; cents: number; source: string }) {
+function LineRow({ code, cents, source, pax = null }: { code: string; cents: number; source: string; pax?: number | null }) {
   const [txt, cls] = SRCS[source] ?? [source, ''];
-  return <tr><td>{LINE_LABEL[code] ?? code}<span className={`srcs ${cls}`}>{txt}</span></td><td className="n">{usd(cents)}</td></tr>;
+  return (
+    <tr>
+      <td>
+        {LINE_LABEL[code] ?? code}<span className={`srcs ${cls}`}>{txt}</span>
+        {pax ? <div className="small">{nf(pax)} נוסעים × <bdi>{usd(cents / pax, false)}</bdi> לכרטיס</div> : null}
+      </td>
+      <td className="n">{usd(cents)}</td>
+    </tr>
+  );
 }
 
 // ---------- edit (ADR-021): GSX amounts, FPM, manually entered times only
