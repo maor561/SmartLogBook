@@ -115,7 +115,7 @@ ul.pts b { color: var(--ink); }
         <div class="panel-head"><span class="label">מה בתמונה, ומה לא</span></div>
         <div class="pb">
           <ul class="pts">
-            <li><b>יש:</b> אות קריאה, מטוס ורישום, מפת המסלול, מרחק, ארבעת זמני הבלוק, משך הבלוק, FPM, נוסעים ותפוסה, וציון הטיסה.</li>
+            <li><b>יש:</b> אות קריאה, מטוס ורישום, מפת המסלול, מרחק, ארבעת זמני הבלוק (PUSHBACK, TAKEOFF, LANDING, GATE, באנגלית בשתי השפות), משך הבלוק, FPM, נוסעים ותפוסה, וציון הטיסה.</li>
             <li><b>רווח:</b> רק במצב "עם רווח". במצב "בלי רווח" מופיע במקומו הזמן באוויר, כדי שלא יישאר חור.</li>
             <li><b>אין:</b> פירוט ההכנסות וההוצאות, מחיר הכרטיס, ושם המשתמש שלך.</li>
             <li><b>טיסה שהוסטה:</b> המפה והיעד הם של השדה שבו נחתת בפועל, עם הערה קטנה על היעד המתוכנן.</li>
@@ -142,13 +142,15 @@ const F = {                                    // example flight (see the note b
 const T = {
   he: { brand: 'SMARTLOGBOOK', block: 'זמן בלוק', air: 'זמן באוויר', landing: 'נחיתה', pax: 'נוסעים', score: 'ציון הטיסה', profit: 'רווח נקי', dep: 'יציאה',
         onTime: 'בזמן', late: 'באיחור', lf: 'תפוסה', soft: 'נחיתה רכה', normal: 'נחיתה רגילה', hard: 'נחיתה קשה', utc: 'UTC',
-        times: ['PUSHBACK', 'המראה', 'נחיתה', 'GATE'], tracked: 'נעקבה ב-VATSIM',
+        tracked: 'נעקבה ב-VATSIM',
         months: ['בינואר', 'בפברואר', 'במרץ', 'באפריל', 'במאי', 'ביוני', 'ביולי', 'באוגוסט', 'בספטמבר', 'באוקטובר', 'בנובמבר', 'בדצמבר'], plus: (m) => `${m} דק׳ אחרי המתוכנן` },
   en: { brand: 'SMARTLOGBOOK', block: 'Block time', air: 'Air time', landing: 'Landing', pax: 'Passengers', score: 'Flight score', profit: 'Net profit', dep: 'Departure',
         onTime: 'On time', late: 'Late', lf: 'load', soft: 'Soft landing', normal: 'Normal landing', hard: 'Hard landing', utc: 'UTC',
-        times: ['OUT', 'OFF', 'ON', 'IN'], tracked: 'Tracked on VATSIM',
+        tracked: 'Tracked on VATSIM',
         months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], plus: (m) => `+${m} min vs plan` },
 };
+// The four block times keep their English names in both languages (the user, 02.10).
+const TIMES = ['PUSHBACK', 'TAKEOFF', 'LANDING', 'GATE'];
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const stars = (v, x, y, size) => Array.from({ length: 5 }, (_, i) => `<text x="${x + i * size * 1.05}" y="${y}" font-size="${size}" fill="${i < Math.round(v) ? '#f0b13a' : '#2c3644'}">★</text>`).join('');
 
@@ -214,7 +216,7 @@ function card({ lang, profit }) {
 
     <line x1="60" y1="968" x2="1020" y2="968" stroke="${C.line}"/>
     ${[F.out, F.off, F.on, F.in].map((v, i) => { const cx = (he ? 1020 - 90 - i * 180 : 60 + 90 + i * 180);
-      return `<text x="${cx}" y="1004" text-anchor="middle" direction="${dir}" font-size="18" font-weight="600" fill="${C.faint}">${esc(t.times[i])}</text><text x="${cx}" y="1040" text-anchor="middle" font-size="28" font-weight="700" fill="${C.ink}">${v}<tspan font-size="16" fill="${C.faint}" dx="4">Z</tspan></text>`; }).join('')}
+      return `<text x="${cx}" y="1004" text-anchor="middle" font-size="18" font-weight="600" letter-spacing="1" fill="${C.faint}">${TIMES[i]}</text><text x="${cx}" y="1040" text-anchor="middle" font-size="28" font-weight="700" fill="${C.ink}">${v}<tspan font-size="16" fill="${C.faint}" dx="4">Z</tspan></text>`; }).join('')}
     <text x="${E}" y="1026" ${far} font-size="20" fill="${C.faint}">${esc(t.tracked)}</text>
   </svg>`;
 }
