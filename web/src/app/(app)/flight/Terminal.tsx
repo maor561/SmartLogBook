@@ -51,7 +51,6 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
   const [mode, setMode] = useState<Mode>('live');
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(60);
-  const [view, setView] = useState<'map' | 'pipe'>('map');
   // Published by the frame loop: simulated time and wall-clock time (set after mount: the clock is the browser's).
   const [clock, setClock] = useState<{ t: number; wall: number } | null>(null);
 
@@ -72,7 +71,7 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
         tRef.current += dt * speed;
         if (tRef.current >= sim.end) { tRef.current = sim.end; setPlaying(false); }
       }
-      if (view === 'map') { drawDots(sim, L, tRef.current, dots.current, rings.current, xy.current, snap.current); snap.current = false; }
+      drawDots(sim, L, tRef.current, dots.current, rings.current, xy.current, snap.current); snap.current = false;
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
@@ -83,7 +82,7 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
     };
     const first = setTimeout(publish, 0), id = setInterval(publish, 250);
     return () => { cancelAnimationFrame(raf); clearTimeout(first); clearInterval(id); };
-  }, [sim, L, mode, playing, speed, view]);
+  }, [sim, L, mode, playing, speed]);
 
   function goReplay() { if (mode === 'live') { setMode('replay'); } }
   function scrub(v: number) { goReplay(); setPlaying(false); tRef.current = sim.start + (v / 1000) * (sim.end - sim.start); snap.current = true; setClock({ t: tRef.current, wall: Date.now() }); }
@@ -126,10 +125,6 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
           <input type="range" min={0} max={1000} value={Math.round(((t - sim.start) / (sim.end - sim.start)) * 1000)} aria-label="ציר זמן" onChange={(e) => scrub(+e.target.value)} />
           <div className="tm-marks"><span>T−3:20</span><span>T−2:00</span><span>T−1:00</span><span>עלייה T−0:40</span><span>PUSHBACK</span></div>
         </div>
-        <div className="seg" role="group" aria-label="תצוגה">
-          <button type="button" aria-pressed={view === 'map'} onClick={() => { setView('map'); snap.current = true; }}>מפה</button>
-          <button type="button" aria-pressed={view === 'pipe'} onClick={() => setView('pipe')}>צינור</button>
-        </div>
       </div>
 
       <div className="metrics tm-kpis">
@@ -144,7 +139,7 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
 
       <div className="tm-body">
         <div className="tm-stage">
-          <div className="tm-mapscroll" hidden={view !== 'map'}>
+          <div className="tm-mapscroll">
             <div className="tm-map">
               <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} role="img" aria-label="מבט-על של הטרמינל">
                 <image href="/terminal-topdown.jpg" x={0} y={0} width={MAP_W} height={MAP_H} />
@@ -168,7 +163,6 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
               })}
             </div>
           </div>
-          {view === 'pipe' && <Pipeline sim={sim} S={S} t={t} hot={hot} />}
           <div className="tm-legend">
             {([['walk', 'בדרך'], ['queue', 'בתור'], ['serve', 'בשירות / עולה'], ['shop', 'בדיוטי-פרי'], ['gate', 'ממתין בשער'], ['seat', 'יושב במטוס'], ['late', 'איחר']] as [DotClass, string][])
               .map(([c, l]) => <span key={c}><i className={`tm-${c}`} />{l}</span>)}
@@ -267,82 +261,6 @@ function Timeline({ sim, t }: { sim: Sim; t: number }) {
       {TL.map(([at, x], k) => (
         <div key={k} className={k < cur ? 'done' : k === cur ? 'now' : undefined}><span className="t"><bdi>{hhmm(at)}</bdi></span><span>{x}</span></div>
       ))}
-    </div>
-  );
-}
-
-function Pipeline({ sim, S, t, hot }: { sim: Sim; S: StationState[]; t: number; hot: (st: number) => boolean }) {
-  const N = sim.pax.length;
-  const peak = Math.max(25, ...S.map((x) => x.queue.length + x.serve + x.dwell));
-  return (
-    <>
-      <div className="tm-pipe">
-        {STATIONS.map((s, st) => {
-          const x = S[st], n = x.queue.length + x.serve + x.dwell, w = expWait(sim, st, x);
-          const avg = x.waits.length ? Math.round(x.waits.reduce((a, b) => a + b, 0) / x.waits.length / MIN) : null;
-          const through = x.done + (s.id === 'aircraft' ? x.dwell : 0);
-          const qh = (x.queue.length / peak) * 100, sh = ((s.kind === 'queue' ? x.serve : x.dwell) / peak) * 100;
-          return (
-            <div key={s.id} className={`tm-st${hot(st) ? ' hot' : ''}`} style={{ '--c': s.c } as React.CSSProperties}>
-              {hot(st) && <span className="flag">עומס</span>}
-              <div className="hd"><div className="nm">{s.he}</div><div className="en">{s.en}</div></div>
-              <div className="big">{n}<small> {s.kind === 'queue' ? 'בתחנה' : s.id === 'aircraft' ? 'יושבים' : 'כאן'}</small></div>
-              <div className="tube">
-                <div className="sv" style={{ bottom: `${qh}%`, height: `${sh}%` }} /><div className="q" style={{ height: `${qh}%` }} />
-                {!n && <span className="cap">ריק</span>}
-              </div>
-              <div className="ft">
-                {s.kind === 'queue' && <>
-                  <div><span>בתור</span><b>{x.queue.length}</b></div>
-                  <div><span>בשירות</span><b>{x.serve}/{sim.servers[s.id as QueueId]}</b></div>
-                  <div><span>המתנה עכשיו</span><b>{w ? `~${w} דק׳` : '—'}</b></div>
-                  <div><span>המתנה ממוצעת</span><b>{avg != null ? `${avg} דק׳` : '—'}</b></div>
-                </>}
-                <div><span>{s.id === 'aircraft' ? 'על המטוס' : 'עברו'}</span><b>{through}/{N}</b></div>
-                <div className="done"><div style={{ width: `${(through / Math.max(1, N)) * 100}%` }} /></div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="tm-flow">
-        {STATIONS.slice(1).map((s, k) => <span key={s.id}>{S[k + 1].walking ? <>◀ <b>{S[k + 1].walking}</b> בדרך</> : ''}</span>)}
-      </div>
-      <Cfd sim={sim} t={t} />
-    </>
-  );
-}
-
-// Cumulative flow: how many passed each stage over time. Time runs right to left (ADR-035).
-function Cfd({ sim, t }: { sim: Sim; t: number }) {
-  const W = { x0: 20, x1: 860, y0: 200, y1: 14 };
-  const X = (at: number) => W.x1 - ((at - sim.start) / (sim.end - sim.start)) * (W.x1 - W.x0);
-  const Y = (n: number) => W.y0 - (n / Math.max(1, sim.pax.length)) * (W.y0 - W.y1);
-  const series = useMemo(() => {
-    const times: number[] = []; for (let at = sim.start; at <= sim.end; at += 2 * MIN) times.push(at);
-    const reached = (st: number, at: number) => sim.pax.filter((p) => (st === 0 ? p.arr <= at : p.steps.some((x) => x.st === st && x.ready <= at))).length;
-    return ([[0, 'הגיעו'], [SI.security, 'עברו בידוק'], [SI.gate, 'בשער'], [SI.aircraft, 'במטוס']] as [number, string][])
-      .map(([st, label]) => ({ st, label, pts: times.map((at) => [at, reached(st, at)] as const) }));
-  }, [sim]);
-  const ticks: number[] = []; for (let m = -180; m <= 0; m += 30) ticks.push(sim.t0 + m * MIN);
-  return (
-    <div className="tm-cfd">
-      <div className="label">כמה נוסעים עברו כל שלב לאורך הזמן · הקו האדום = עכשיו</div>
-      <svg viewBox="0 0 900 230">
-        {[0, 50, 100, 150, sim.pax.length].map((n) => (
-          <g key={n}><line x1={W.x0} x2={W.x1} y1={Y(n)} y2={Y(n)} stroke="var(--line-2)" /><text x={W.x1 + 6} y={Y(n) + 4}>{n}</text></g>
-        ))}
-        {series.map(({ st, label, pts }, k) => (
-          <g key={st}>
-            <path d={`M ${W.x1},${W.y0} L ${pts.map(([at, n]) => `${X(at).toFixed(1)},${Y(n).toFixed(1)}`).join(' L ')} L ${W.x0},${W.y0} Z`}
-              fill={STATIONS[st].c} fillOpacity={0.18 + k * 0.08} stroke={STATIONS[st].c} strokeWidth={1.6} />
-            <rect x={W.x1 - 100 - k * 110} y={18} width={10} height={10} fill={STATIONS[st].c} />
-            <text x={W.x1 - 86 - k * 110} y={27}>{label}</text>
-          </g>
-        ))}
-        {ticks.map((at) => <text key={at} x={X(at)} y={222} textAnchor="middle">{hhmm(at)}</text>)}
-        <line x1={X(t)} x2={X(t)} y1={W.y1} y2={W.y0} stroke="var(--bad)" strokeWidth={1.6} />
-      </svg>
     </div>
   );
 }
