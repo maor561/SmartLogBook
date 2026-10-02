@@ -2,7 +2,8 @@
 // Money totals by line come from SQL (SUM … GROUP BY code) and are passed in;
 // everything per-flight uses each flight's own ledger sum, never a re-price.
 import type { LogFlight } from './logbook-filter';
-import { onTime } from './rating';
+import { durationOnTime, onTime } from './rating';
+import { scoreOf } from './flight-score';
 
 export type PeriodKind = 'm' | 'q' | 'y' | 'all' | 'custom';
 export type Range = { kind: PeriodKind; from: Date | null; to: Date | null; label: string };
@@ -156,11 +157,20 @@ export function ops(list: LogFlight[]) {
   for (const f of list) if (f.times.out && f.times.off) (taxi[f.origin] ??= []).push((Date.parse(f.times.off) - Date.parse(f.times.out)) / 60000);
   return {
     otp: timed.length ? timed.filter((f) => delay(f) <= 15).length / timed.length : null,
+    durOk: (() => { const k = list.map(durationOnTime).filter((x): x is boolean => x != null); return k.length ? k.filter(Boolean).length / k.length : null; })(),
     late: timed.filter((f) => delay(f) > 15).length,
     early: timed.filter((f) => delay(f) < -5).length,
     blockVsPlanMin: blockDiff.length ? sum(blockDiff, (x) => x) / blockDiff.length : null,
     taxiOut: Object.entries(taxi).map(([icao, xs]) => ({ icao, min: sum(xs, (x) => x) / xs.length, n: xs.length })).sort((a, b) => b.min - a.min).slice(0, 3),
   };
+}
+
+// ---------- 12 · flight score over time (ADR-058), oldest first, the last 30 of the period
+
+export function scores(list: LogFlight[]) {
+  const all = list.map((f) => ({ id: f.id, date: f.date, s: scoreOf(f) })).filter((x) => x.s != null)
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map((x) => ({ id: x.id, date: x.date, total: x.s!.total, partial: x.s!.partial }));
+  return { avg: all.length ? Math.round((all.reduce((s, x) => s + x.total, 0) / all.length) * 10) / 10 : null, n: all.length, last: all.slice(-30) };
 }
 
 // ---------- 7 · landings

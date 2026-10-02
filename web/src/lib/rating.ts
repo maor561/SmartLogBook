@@ -1,5 +1,6 @@
 // Company rating (ADR-036), ranks and milestones (ADR-038). Pure.
 import type { LogFlight } from './logbook-filter';
+import { durOnTime, ON_TIME_MIN, scoreInput } from './flight-score';
 
 // ---------- rating: 4 pillars over the last 30 closed flights, 0–5 each
 
@@ -12,7 +13,7 @@ const r1 = (x: number) => Math.round(x * 10) / 10;
 export type Pillar = { key: 'safety' | 'punctuality' | 'profit' | 'efficiency'; name: string; score: number; why: string };
 export type Rating = { overall: number; pillars: Pillar[]; flights: number } | null;
 
-export const OTP_MINUTES = 15;           // ADR-035: OUT within 15 min of scheduled OUT
+export const OTP_MINUTES = ON_TIME_MIN;   // ADR-035: OUT within 15 min of scheduled OUT
 export const RATING_WINDOW = 30;
 export const RATING_MIN_FLIGHTS = 5;
 
@@ -20,6 +21,15 @@ export function onTime(f: LogFlight): boolean | null {
   if (!f.times.out || !f.sched.out) return null;
   return (Date.parse(f.times.out) - Date.parse(f.sched.out)) / 60000 <= OTP_MINUTES;
 }
+
+// Block time within 15 minutes of the planned block (ADR-058): a late departure is not counted twice.
+export function durationOnTime(f: LogFlight): boolean | null {
+  return durOnTime(scoreInput(f.times, f.sched, null));
+}
+const rate = (flags: (boolean | null)[]) => {
+  const known = flags.filter((x): x is boolean => x != null);
+  return known.length ? known.filter(Boolean).length / known.length : null;
+};
 
 const revenue = (f: LogFlight) => f.lines.filter((l) => l.cents > 0).reduce((s, l) => s + l.cents, 0);
 
@@ -33,9 +43,10 @@ export function companyRating(flights: LogFlight[]): Rating {
   const hardRate = fpms.length ? fpms.filter((x) => x > 400).length / fpms.length : 0;
   const safety = 0.7 * lerp(avgFpm, 450, 120) + 0.3 * lerp(hardRate, 0.2, 0);
 
-  const otpFlags = win.map(onTime).filter((x): x is boolean => x != null);
-  const otp = otpFlags.length ? otpFlags.filter(Boolean).length / otpFlags.length : null;
-  const punctuality = otp == null ? 2.5 : lerp(otp, 0.4, 0.9);
+  // Punctuality (ADR-058): the mean of departures on time and flights that kept their planned duration.
+  const otp = rate(win.map(onTime)), dur = rate(win.map(durationOnTime));
+  const both = otp == null ? dur : dur == null ? otp : (otp + dur) / 2;
+  const punctuality = both == null ? 2.5 : lerp(both, 0.4, 0.9);
 
   const rev = win.reduce((s, f) => s + revenue(f), 0);
   const net = win.reduce((s, f) => s + f.profitCents, 0);
@@ -49,7 +60,8 @@ export function companyRating(flights: LogFlight[]): Rating {
 
   const pillars: Pillar[] = [
     { key: 'safety', name: 'בטיחות', score: r1(safety), why: `FPM ממוצע ${Math.round(avgFpm)} · ${Math.round(hardRate * 100)}% נחיתות קשות` },
-    { key: 'punctuality', name: 'דיוק', score: r1(punctuality), why: otp == null ? 'אין עדיין זמני יציאה' : `${Math.round(otp * 100)}% יציאות בזמן` },
+    { key: 'punctuality', name: 'דיוק', score: r1(punctuality), why: both == null ? 'אין עדיין זמני יציאה'
+      : [otp != null && `${Math.round(otp * 100)}% יציאות בזמן`, dur != null && `${Math.round(dur * 100)}% לא חרגו במשך הטיסה`].filter(Boolean).join(' · ') },
     { key: 'profit', name: 'רווחיות', score: r1(profit), why: `שוליים ${Math.round(margin * 100)}% (יעד 20%)` },
     { key: 'efficiency', name: 'יעילות', score: r1(efficiency), why: `תפוסה ${Math.round(lf * 100)}% · ${Math.round(extraRate * 100)}% עם הקפצה או הסטה` },
   ];

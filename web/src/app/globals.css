@@ -566,3 +566,27 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .tm-line { padding-inline: 12px; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .tm-live i { animation: none; } }
+
+/* ---------- flight score (sketch s9, ADR-058) ---------- */
+.sc-total { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.sc-total .v { font-size: 38px; font-weight: 700; line-height: 1; }
+.sc-total .v small { font-size: 14px; color: var(--muted); font-weight: 500; }
+.sc.compact .sc-total .v { font-size: 30px; }
+.sc-part { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 9px 14px; border-bottom: 1px solid var(--line-2); }
+.sc-part:last-child { border-bottom: none; }
+.sc-part .nm { font-weight: 600; }
+.sc-part .nm small { font-weight: 400; font-size: 11.5px; color: var(--muted); margin-inline-start: 6px; }
+.sc-part .pts { font-size: 18px; font-weight: 700; }
+.sc-part .why { grid-column: 1 / -1; font-size: 13px; }
+.sc-part .why small { display: block; font-size: 11.5px; color: var(--muted); }
+.sc-part .meter { height: 6px; border-radius: 3px; background: var(--line-2); overflow: hidden; margin-top: 5px; }
+.sc-part .meter div { height: 100%; margin-inline-start: auto; border-radius: 3px; background: var(--go); }
+.sc-part .meter div.mid, .sc-bars div.mid { background: var(--warn); }
+.sc-part .meter div.low, .sc-bars div.low { background: var(--bad); }
+.sc-dot { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.sc-dot i { width: 8px; height: 8px; border-radius: 50%; background: var(--go); }
+.sc-dot.mid i { background: var(--warn); } .sc-dot.low i { background: var(--bad); }
+/* oldest on the right (ADR-035) */
+.sc-bars { display: flex; align-items: flex-end; gap: 4px; height: 110px; padding: 18px 14px 0; border-bottom: 1px solid var(--line); }
+.sc-bars div { flex: 1; min-width: 0; max-width: 46px; border-radius: 2px 2px 0 0; background: var(--go); position: relative; min-height: 1px; }
+.sc-bars div span { position: absolute; top: -16px; inset-inline: 0; text-align: center; font-size: 11px; color: var(--ink); }

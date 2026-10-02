@@ -8,6 +8,8 @@ import type { FormView } from '@/lib/flight-view';
 import { hm, minsBetween, usd, z } from '@/lib/format';
 import { closeFlight, discardFlight } from '../flight-actions';
 import { Head } from './Parts';
+import { flightScore, scoreInput } from '@/lib/flight-score';
+import { ScoreCard } from '@/components/FlightScore';
 
 const LABEL: Record<LedgerCode, string> = {
   tickets: 'כרטיסים', cargo: 'מטען', fuel: 'דלק', ground_handling: 'צוות קרקע', catering: 'קייטרינג',
@@ -76,6 +78,7 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   const costs = result?.lines.filter((l) => l.amountCents < 0) ?? [];
   const sum = (ls: typeof revenue) => ls.reduce((s, l) => s + l.amountCents, 0);
   const hint = fpmHint(draft.fpm, params);
+  const score = flightScore(scoreInput(times, ofp.sched, draft.fpm));
   const allTracked = KEYS.every((k) => tracked[k]);
   // A time that rolled over to the next UTC day (e.g. IN 00:20 after ON 23:50) is flagged, so a typo stands out.
   const day0 = (times.out ?? ofp.sched.out ?? '').slice(0, 10);
@@ -208,6 +211,11 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
             {form.fuel ? <> · דלק EIA <bdi>${form.fuel.usdPerKg.toFixed(2)}</bdi>/ק״ג</> : ' · בלי מחיר EIA (תוספת 0%)'}
             {form.rating != null ? <> · דירוג <bdi>{form.rating.toFixed(1)}</bdi>★</> : ' · דירוג בבנייה (נייטרלי)'}
           </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-head"><span className="label">ציון הטיסה</span><span className="small" style={{ marginInlineStart: 'auto' }}>שביעות רצון הנוסעים · לא משנה את הכסף של הטיסה</span></div>
+          {score ? <ScoreCard score={score} /> : <div className="pb small">יופיע אחרי שיהיו זמנים או FPM.</div>}
         </section>
       </aside>
     </div>

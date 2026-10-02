@@ -8,6 +8,8 @@ import {
   type Filters, type LogFlight, type Period, type Tag,
 } from '@/lib/logbook-filter';
 import { TIME_LABEL } from '@/lib/flight-input';
+import { scoreOf } from '@/lib/flight-score';
+import { ScoreCard, ScoreDot } from '@/components/FlightScore';
 import type { ApPoint } from '@/lib/logbook';
 import { ddmm, hm, nf, usd, z } from '@/lib/format';
 import { deleteFlightAction, editFlightAction, importBackupAction } from './actions';
@@ -106,7 +108,7 @@ export function Logbook({ flights, airports, home, initial }: Props) {
               <div className="lb-empty">הלוגבוק ריק. טיסות שייסגרו במסך ״טיסה״ יופיעו כאן.</div>
             ) : (
               <table className="tbl">
-                <thead><tr><th>תאריך</th><th className="hide-m">אות קריאה</th><th>מסלול</th><th className="hide-m">מטוס</th><th className="n">בלוק</th><th className="n hide-m">FPM</th><th className="hide-m">מקור ותגים</th><th className="n">רווח / הפסד</th></tr></thead>
+                <thead><tr><th>תאריך</th><th className="hide-m">אות קריאה</th><th>מסלול</th><th className="hide-m">מטוס</th><th className="n">בלוק</th><th className="n hide-m">FPM</th><th className="hide-m">ציון</th><th className="hide-m">מקור ותגים</th><th className="n">רווח / הפסד</th></tr></thead>
                 <tbody className="rows">
                   {list.map((x) => (
                     <tr key={x.id} aria-selected={x.id === selId} onClick={() => { setSelId(x.id); setDrawer(true); }}>
@@ -116,6 +118,7 @@ export function Logbook({ flights, airports, home, initial }: Props) {
                       <td className="hide-m">{x.aircraft ?? '—'}</td>
                       <td className="n">{hm(x.blockMin)}</td>
                       <td className={`n hide-m${x.fpm != null && Math.abs(x.fpm) > 400 ? ' neg' : ''}`}>{x.fpm ?? '—'}</td>
+                      <td className="hide-m"><ScoreDot score={scoreOf(x)} /></td>
                       <td className="hide-m"><Chips f={x} /></td>
                       <td className={`n ${x.profitCents < 0 ? 'neg' : 'pos'}`}>{usd(x.profitCents)}</td>
                     </tr>
@@ -188,6 +191,13 @@ function Detail({ f, airports, onClose, onDeleted, onSaved }: {
         <EditForm f={f} onCancel={() => setEditing(false)} onSaved={() => { setEditing(false); onSaved(); }} />
       ) : (
         <>
+          {scoreOf(f) && (
+            <div className="d-sec">
+              <div className="panel-head"><span className="label">ציון הטיסה</span><span className="small" style={{ marginInlineStart: 'auto' }}>שביעות רצון הנוסעים</span></div>
+              <ScoreCard score={scoreOf(f)!} compact />
+            </div>
+          )}
+
           <div className="d-sec">
             <div className="panel-head"><span className="label">זמני בלוק · UTC</span>
               {f.source !== 'historical' && <span className="small" style={{ marginInlineStart: 'auto' }}><span className="t-vat">ירוק</span> = VATSIM · <span className="t-man">כתום</span> = ידני</span>}

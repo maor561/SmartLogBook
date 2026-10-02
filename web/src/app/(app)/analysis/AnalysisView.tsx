@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import type { LogFlight } from '@/lib/logbook-filter';
 import {
-  aircraft, FPM_LABELS, groundByAirport, inRange, kpis, landings, network, ops, previousRange, rangeOf, routes, shift, trend, units,
+  aircraft, FPM_LABELS, groundByAirport, inRange, kpis, landings, network, ops, previousRange, rangeOf, routes, scores, shift, trend, units,
   type Kpis, type PeriodKind,
 } from '@/lib/analysis';
 import { companyRating, MILESTONES, milestoneCrossings, nextMilestones, rankFor } from '@/lib/rating';
+import { scoreTone } from '@/lib/flight-score';
 import { hm, nf, usd } from '@/lib/format';
 import { PrintButton, HistToggle } from './Controls';
 
@@ -50,7 +51,7 @@ export function AnalysisView({ kind, anchor, hist, from, to, flights, pnl, achie
   const prevList = prev ? pool.filter((f) => inRange(f, prev)) : null;
 
   const K = kpis(list), P: Kpis | null = prevList ? kpis(prevList) : null;
-  const U = units(list), T = trend(list, range), G = groundByAirport(list), R = routes(list), O = ops(list);
+  const U = units(list), T = trend(list, range), G = groundByAirport(list), R = routes(list), O = ops(list), SC = scores(list);
   const L = landings(list, flights), A = aircraft(list), N = network(list, flights, range);
   const rating = companyRating(flights);
   const { totals, best } = milestoneCrossings(flights);
@@ -251,12 +252,27 @@ export function AnalysisView({ kind, anchor, hist, from, to, flights, pnl, achie
             <thead><tr><th>מדד</th><th className="n">ערך</th></tr></thead>
             <tbody>
               <tr><td>יציאה בזמן (עד 15 דק׳ מה-PUSHBACK המתוכנן)</td><td className="n pos">{pct(O.otp)}</td></tr>
+              <tr><td>טיסות שלא חרגו במשך (עד 15 דק׳ מהבלוק המתוכנן)</td><td className="n pos">{pct(O.durOk)}</td></tr>
               <tr><td>יציאות באיחור</td><td className="n">{O.late}</td></tr>
               <tr><td>יציאות מוקדמות</td><td className="n">{O.early}</td></tr>
               <tr><td>בלוק בפועל מול מתוכנן</td><td className="n">{O.blockVsPlanMin == null ? '—' : `${O.blockVsPlanMin >= 0 ? '+' : '−'}${Math.abs(Math.round(O.blockVsPlanMin))} דק׳`}</td></tr>
               {O.taxiOut.map((t) => <tr key={t.icao}><td>זמן הסעה להמראה · <bdi>{t.icao}</bdi></td><td className="n">{Math.round(t.min)} דק׳</td></tr>)}
             </tbody>
           </table>
+        </section>
+
+        {/* 12 · flight score */}
+        <section className="panel">
+          <div className="panel-head"><span className="label">12 · ציון הטיסה</span><span className="small">שביעות רצון הנוסעים · יציאה, משך ונחיתה · הציר מתחיל מימין</span></div>
+          {SC.n === 0 ? <div className="pb small">אין עדיין טיסות עם ציון בתקופה הזו.</div> : (
+            <>
+              <div className="sc-bars">{SC.last.map((x) => <div key={x.id} className={scoreTone(x.total)} style={{ height: `${(x.total / 5) * 100}%` }} title={x.partial ? 'ציון חלקי' : undefined}><span>{x.total.toFixed(1)}</span></div>)}</div>
+              <div className="units">
+                <div><div className="label">ממוצע</div><div className="v">{SC.avg?.toFixed(1)} <span className="small">/ 5</span></div></div>
+                <div><div className="label">טיסות עם ציון</div><div className="v">{SC.n}</div></div>
+              </div>
+            </>
+          )}
         </section>
 
         {/* 7 · landings */}
