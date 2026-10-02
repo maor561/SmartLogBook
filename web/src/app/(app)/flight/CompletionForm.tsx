@@ -89,7 +89,7 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
     start(async () => {
       const r = await closeFlight({ ofpId: ofp.id, manualMode: form.mode === 'manual', times, manual: draft.manual, fpm: draft.fpm });
       if (!r.ok) setErrors(r.errors);
-      else router.replace('/');
+      else router.replace('/?closed=1');            // the flight screen confirms it and links to the picture
     });
   }
   function discard() {

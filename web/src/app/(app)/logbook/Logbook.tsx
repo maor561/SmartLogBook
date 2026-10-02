@@ -10,6 +10,7 @@ import {
 import { TIME_LABEL } from '@/lib/flight-input';
 import { scoreOf } from '@/lib/flight-score';
 import { ScoreCard, ScoreDot } from '@/components/FlightScore';
+import { FlightCardDialog } from './FlightCard';
 import type { ApPoint } from '@/lib/logbook';
 import { ddmm, hm, nf, usd, z } from '@/lib/format';
 import { deleteFlightAction, editFlightAction, importBackupAction } from './actions';
@@ -27,14 +28,18 @@ const LINE_LABEL: Record<string, string> = {
 const SRCS: Record<string, [string, string]> = { manual: ['ידני', 'm'], auto: ['אוטו׳', 'a'], simbrief: ['SimBrief', ''], legacy: ['ישן', ''] };
 const KEYS = ['out', 'off', 'on', 'in'] as const;
 
-type Props = { flights: LogFlight[]; airports: Record<string, ApPoint>; home: string; initial: Filters };
+type Props = { flights: LogFlight[]; airports: Record<string, ApPoint>; home: string; initial: Filters; openCard?: number | null };
 
-export function Logbook({ flights, airports, home, initial }: Props) {
+export function Logbook({ flights, airports, home, initial, openCard = null }: Props) {
   const router = useRouter();
   const [f, setF] = useState<Filters>(initial);
   const [now] = useState(() => new Date());
   const [view, setView] = useState<'list' | 'map'>('list');
-  const [selId, setSelId] = useState<number | null>(flights[0]?.id ?? null);
+  // `?card=<id>` (the link shown right after closing a flight) opens that flight with its picture.
+  const linked = openCard != null && flights.some((x) => x.id === openCard && x.source !== 'historical') ? openCard : null;
+  const [selId, setSelId] = useState<number | null>(linked ?? flights[0]?.id ?? null);
+  const [cardId, setCardId] = useState<number | null>(linked);
+  const cardFlight = flights.find((x) => x.id === cardId) ?? null;
   const [drawer, setDrawer] = useState(false);
 
   const list = useMemo(() => applyFilters(flights, f, now), [flights, f, now]);
@@ -129,13 +134,14 @@ export function Logbook({ flights, airports, home, initial }: Props) {
             {flights.length > 0 && list.length === 0 && <div className="lb-empty">אין טיסות שעונות על הסינון</div>}
           </div>
           <aside className={`detail${drawer ? ' open' : ''}`}>
-            {sel ? <Detail key={sel.id} f={sel} airports={airports} onClose={() => setDrawer(false)} onDeleted={() => { setSelId(null); setDrawer(false); router.refresh(); }} onSaved={() => router.refresh()} />
+            {sel ? <Detail key={sel.id} f={sel} airports={airports} onClose={() => setDrawer(false)} onDeleted={() => { setSelId(null); setDrawer(false); router.refresh(); }} onSaved={() => router.refresh()} onCard={() => setCardId(sel.id)} />
               : <div className="lb-empty">בחר טיסה מהרשימה</div>}
           </aside>
         </div>
       ) : (
         <RouteMap list={list} airports={airports} home={home} />
       )}
+      {cardFlight && <FlightCardDialog key={cardFlight.id} flight={cardFlight} airports={airports} onClose={() => setCardId(null)} />}
     </div>
   );
 }
@@ -151,8 +157,8 @@ function Chips({ f }: { f: LogFlight }) {
 
 // ---------- detail drawer
 
-function Detail({ f, airports, onClose, onDeleted, onSaved }: {
-  f: LogFlight; airports: Record<string, ApPoint>; onClose: () => void; onDeleted: () => void; onSaved: () => void;
+function Detail({ f, airports, onClose, onDeleted, onSaved, onCard }: {
+  f: LogFlight; airports: Record<string, ApPoint>; onClose: () => void; onDeleted: () => void; onSaved: () => void; onCard: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -242,6 +248,7 @@ function Detail({ f, airports, onClose, onDeleted, onSaved }: {
             {f.editable
               ? <button type="button" className="btn btn-sm" onClick={() => setEditing(true)}>ערוך נתונים ידניים</button>
               : <span className="small">{f.source === 'historical' ? 'טיסה היסטורית: לא ניתנת לעריכה' : ''}</span>}
+            {f.source !== 'historical' && <button type="button" className="btn btn-sm" onClick={onCard}>סיכום כתמונה</button>}
             <button type="button" className="btn btn-sm btn-ghost-bad end" disabled={pending} onClick={remove}>מחק טיסה</button>
           </div>
           {errors.length > 0 && <div className="pb err">{errors.join(' · ')}</div>}

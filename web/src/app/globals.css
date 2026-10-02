@@ -590,3 +590,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .sc-bars { display: flex; align-items: flex-end; gap: 4px; height: 110px; padding: 18px 14px 0; border-bottom: 1px solid var(--line); }
 .sc-bars div { flex: 1; min-width: 0; max-width: 46px; border-radius: 2px 2px 0 0; background: var(--go); position: relative; min-height: 1px; }
 .sc-bars div span { position: absolute; top: -16px; inset-inline: 0; text-align: center; font-size: 11px; color: var(--ink); }
+
+/* ---------- flight summary picture (sketch s11, ADR-059) ---------- */
+dialog.card-dlg { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+/* the whole dialog fits the screen: the picture shrinks, the buttons stay in view */
+.card-canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 190px); margin: 0 auto; border-radius: 6px; background: #0b1119; }
+.card-bar { flex-wrap: wrap; align-items: center; }
+.card-bar .end { margin-inline-start: auto; display: flex; gap: 8px; }
+.banner.go { background: var(--go-bg); align-items: center; }
+.banner.go b { color: var(--go); }
+@media (max-width: 560px) { .card-bar .end { margin-inline-start: 0; width: 100%; } .card-bar .end .btn { flex: 1; } }

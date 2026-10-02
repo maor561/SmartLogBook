@@ -1,15 +1,22 @@
 import Link from 'next/link';
 import type { Base } from '@/lib/flight-view';
 import type { OfpSummary } from '@/lib/ofp';
-import { ddmm, hm, minsBetween, nf, z } from '@/lib/format';
+import { ddmm, hm, minsBetween, nf, usd, z } from '@/lib/format';
 import { FlightTabs, Head, LogbookLink, MilestoneAside, MonthAside, RecentTable } from './Parts';
 
 // State 1 · no active flight (sketch s1a).
-export function IdleView({ base }: { base: Base }) {
+export function IdleView({ base, justClosed = false }: { base: Base; justClosed?: boolean }) {
   const s = base.settings;
+  const last = justClosed ? base.recent[0] : null;
   return (
     <div className="main">
       <div className="stack">
+        {last && (
+          <div className="banner go">
+            <span className="grow"><b>✓ הטיסה נרשמה בלוגבוק.</b> <bdi>{last.origin}</bdi> ← <bdi>{last.dest}</bdi> · {last.profitCents < 0 ? 'הפסד' : 'רווח נקי'} <bdi>{usd(last.profitCents)}</bdi></span>
+            {last.source !== 'historical' && <Link className="btn btn-sm" href={`/logbook?card=${last.id}`}>סיכום כתמונה</Link>}
+          </div>
+        )}
         <section className="panel">
           <div className="idle">
             <div className="ring" aria-hidden>✈</div>

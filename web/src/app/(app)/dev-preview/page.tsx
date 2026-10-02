@@ -106,6 +106,7 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
       const type = `${sp.size ?? 'large'}_airport`;
       return <TerminalScreen ofp={{ ...OFP, sched: { ...OFP.sched, out } }} tag={<span className="tag plan">תוכנית מוכנה</span>} airportType={type} />;
     }
+    case 'closed': return <IdleView base={base} justClosed />;     // right after closing a flight
     default: return <IdleView base={base} />;
   }
 }

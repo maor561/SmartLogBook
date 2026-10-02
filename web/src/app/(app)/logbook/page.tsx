@@ -15,5 +15,5 @@ export default async function LogbookPage({ searchParams }: PageProps<'/logbook'
   const sp = await searchParams;
   const qs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === 'string' ? [[k, v]] : [])));
   const [{ flights, airports }, settings] = await Promise.all([loadLogbook(), getSettings()]);
-  return <Logbook flights={flights} airports={airports} home={settings.homeBaseIcao} initial={filtersFromQuery(qs)} />;
+  return <Logbook flights={flights} airports={airports} home={settings.homeBaseIcao} initial={filtersFromQuery(qs)} openCard={/^d+$/.test(qs.get('card') ?? '') ? Number(qs.get('card')) : null} />;
 }

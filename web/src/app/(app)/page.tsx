@@ -33,7 +33,7 @@ export default async function FlightPage({ searchParams }: PageProps<'/'>) {
   }
 
   switch (view.kind) {
-    case 'idle': return <IdleView base={view.base} />;
+    case 'idle': return <IdleView base={view.base} justClosed={sp.closed === '1'} />;
     case 'plan': return <PlanView base={view.base} ofp={view.ofp} expiresInMin={view.expiresInMin} positioningNm={view.positioningNm} />;
     case 'live':
     case 'disc': return <LiveView initial={view.t} ofp={view.ofp} draft={view.draft} />;
