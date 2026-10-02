@@ -485,3 +485,84 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   .tm-body { grid-template-columns: minmax(0, 1fr); }
   .tm-stage { border-inline-end: none; border-bottom: 1px solid var(--line); }
 }
+
+/* ---------- terminal, full screen (sketch s8, WP10) ----------
+   Always dark: it sits next to a cockpit, often at night. */
+.tm-fullbtn { margin-inline-start: auto; }
+.tm-full {
+  --bg: #0b0e12; --bar: #12161c; --panel: #12161c; --line: #262d37; --line-2: #222a34;
+  --ink: #e9edf2; --muted: #93a0b0; --faint: #66717f;
+  --accent: #5b9df0; --go: #43c083; --go-bg: #143024; --warn: #f0a93a; --warn-bg: #3a2a0c; --bad: #f07167; --bad-bg: #3b1d1b;
+  position: fixed; inset: 0; z-index: 100; background: var(--bg); color: var(--ink); color-scheme: dark;
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+.tm-full > * { min-width: 0; }
+.tm-full .tm-kpis, .tm-full .tm-side, .tm-full .tm-legend { display: none; }
+.tm-full .tm-body { display: block; min-height: 0; }
+.tm-full .tm-stage { container-type: size; height: 100%; display: grid; place-items: center; overflow: hidden; border: none; }
+.tm-full .tm-mapscroll { overflow: visible; width: min(100cqw, calc(100cqh * 1.9821)); }
+.tm-full .tm-map { min-width: 0; background: none; }
+.tm-full .tm-chip { font-size: clamp(10px, 1.15cqw, 15px); }
+.tm-full .tm-chip b { font-size: 1em; } .tm-full .tm-chip .n { font-size: 1.3em; } .tm-full .tm-chip .s { font-size: .88em; }
+
+/* top bar: the four things a pilot checks */
+.tm-ftop { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px 28px; padding: 10px 18px; padding-top: max(10px, env(safe-area-inset-top)); background: var(--bar); border-bottom: 1px solid var(--line); }
+.tm-count { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.tm-count .t { font-size: 44px; font-weight: 700; letter-spacing: .5px; line-height: 1; }
+.tm-count .t.over { color: var(--warn); }
+.tm-count .lbl { display: grid; gap: 1px; }
+.tm-count .lbl b { font-size: 15px; }
+.tm-count small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.tm-nums { display: grid; grid-template-columns: repeat(3, minmax(96px, max-content)) minmax(0, 1fr); gap: 0 26px; align-items: end; }
+.tm-nums .l { font-size: 12px; color: var(--muted); font-weight: 600; }
+.tm-nums .v { font-size: 26px; font-weight: 700; line-height: 1.1; }
+.tm-nums .v small { font-size: 13px; color: var(--muted); font-weight: 500; }
+.tm-next { border-inline-start: 1px solid var(--line); padding-inline-start: 26px; min-width: 0; }
+.tm-next .v { font-size: 18px; line-height: 1.2; }
+.tm-next .v span { color: var(--accent); white-space: nowrap; }
+.tm-tools { display: flex; align-items: center; gap: 10px; }
+.tm-ib { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: #171c23; color: inherit; cursor: pointer; font: inherit; font-size: 18px; }
+.tm-ib:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* timeline: an indicator, left to right like the plan */
+.tm-track { position: relative; height: 44px; margin: 8px 18px 0; direction: ltr; }
+.tm-track .rail { position: absolute; inset: 9px 0 auto 0; height: 6px; border-radius: 3px; background: var(--line-2); }
+.tm-track .fill { position: absolute; top: 9px; left: 0; height: 6px; border-radius: 3px; background: var(--accent); }
+.tm-track .mk { position: absolute; top: 4px; width: 2px; height: 16px; background: #55606e; transform: translateX(-1px); }
+.tm-track .mk.past { background: var(--accent); }
+.tm-track .ml { position: absolute; top: 23px; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; direction: rtl; }
+.tm-track .ml.past { color: var(--faint); }
+.tm-track .ml.end { transform: translateX(-100%); }
+.tm-track .knob { position: absolute; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); transform: translateX(-9px); }
+
+/* one line of alerts */
+.tm-line { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 18px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 15px; font-weight: 500; background: #10151b; border-top: 1px solid var(--line); }
+.tm-line.warn { background: var(--warn-bg); } .tm-line.bad { background: var(--bad-bg); } .tm-line.go { background: var(--go-bg); }
+.tm-line .ic { font-weight: 700; }
+.tm-line.warn .ic { color: var(--warn); } .tm-line.bad .ic { color: var(--bad); } .tm-line.go .ic { color: var(--go); }
+.tm-line .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tm-line .more { margin-inline-start: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* tablet upright and narrower: the numbers go under the countdown */
+@media (max-width: 900px) {
+  .tm-ftop { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; }
+  .tm-nums { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 16px; }
+  .tm-next { grid-column: 1 / -1; border-inline-start: none; padding-inline-start: 0; border-top: 1px solid var(--line); padding-top: 6px; }
+  .tm-count .t { font-size: 36px; }
+}
+/* phone, upright: the plan is twice as wide as tall, so it scrolls sideways at full height */
+@media (max-width: 640px) and (orientation: portrait) {
+  .tm-full .tm-stage { display: block; overflow-x: auto; overflow-y: hidden; direction: ltr; }
+  .tm-full .tm-mapscroll { width: auto; height: 100cqh; aspect-ratio: 1776 / 896; }
+  .tm-full .tm-map, .tm-full .tm-map svg { height: 100%; width: auto; }
+  .tm-full .tm-chip { font-size: 11px; }
+  .tm-ftop { padding: 8px 12px; gap: 6px 10px; }
+  .tm-count { min-width: 0; white-space: normal; gap: 8px; }
+  .tm-count .t { font-size: 30px; }
+  .tm-nums { gap: 6px 12px; } .tm-nums .v { font-size: 20px; }
+  .tm-next .v { font-size: 15px; }
+  .tm-ib { width: 40px; height: 40px; }
+  .tm-track { margin-inline: 12px; } .tm-track .ml.mid { display: none; }
+  .tm-line { padding-inline: 12px; font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .tm-live i { animation: none; } }

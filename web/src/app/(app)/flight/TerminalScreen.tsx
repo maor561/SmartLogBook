@@ -21,6 +21,7 @@ export function TerminalScreen({ ofp, tag, airportType }: { ofp: OfpSummary; tag
           <Terminal
             input={{ seed: ofp.id, pax, bags: ofp.weights.bag_count, seats: ofp.aircraft.seats, outMs: out, size }}
             utcOffset={ofp.orig_utc_offset}
+            title={[ofp.callsign, `${ofp.origin.icao}→${ofp.dest.icao}`].filter(Boolean).join(' ')}
           />
         ) : (
           <div className="pb small">בתוכנית חסרים מספר הנוסעים או שעת ה-OUT המתוכננת, ולכן אין סימולציה של הטרמינל.</div>

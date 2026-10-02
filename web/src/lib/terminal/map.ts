@@ -48,7 +48,7 @@ const WAY: Record<string, Pt[]> = {
 // Where the station labels sit: on the apron, above or below their own zone.
 export const CHIP_AT: Record<StationId, Pt> = {
   terminal: [168, 120], checkin: [390, 150], bagdrop: [565, 752], security: [765, 150], passport: [962, 752],
-  dutyfree: [1098, 150], gate: [1285, 752], boarding: [1480, 752], aircraft: [1712, 110],
+  dutyfree: [1098, 150], gate: [1285, 752], boarding: [1480, 752], aircraft: [1668, 110],
 };
 
 const SPACING = 11;

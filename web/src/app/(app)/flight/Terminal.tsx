@@ -43,12 +43,16 @@ function drawDots(sim: Sim, L: Layout, time: number, dots: (SVGCircleElement | n
   }
 }
 
-export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: number | null }) {
+export function Terminal({ input, utcOffset, title }: { input: SimInput; utcOffset: number | null; title: string }) {
   const sim = useMemo(() => simulate(input), [input]);
   const L = useMemo(() => layout(sim), [sim]);
 
   // Published by the timer: simulated time (the real clock, held inside the simulated window) and the real time.
   const [clock, setClock] = useState<{ t: number; wall: number } | null>(null);
+
+  // Full screen (sketch 8, WP10): the same map over the whole display, for a tablet next to the cockpit.
+  const [full, setFull] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
 
   const snap = useRef(true);
   const dots = useRef<(SVGCircleElement | null)[]>([]), rings = useRef<Rings>({});
@@ -69,6 +73,35 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
     return () => { cancelAnimationFrame(raf); clearTimeout(first); clearInterval(id); };
   }, [sim, L]);
 
+  useEffect(() => {
+    if (!full) return;
+    const el = root.current;
+    // Real full screen where the browser has it (not on iPhone: the overlay still covers the page).
+    el?.requestFullscreen?.().catch(() => {});
+    const onFs = () => { if (!document.fullscreenElement) setFull(false); };       // Esc, or the browser's own exit
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFull(false); };
+    document.addEventListener('fullscreenchange', onFs);
+    document.addEventListener('keydown', onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Keep the display awake; the lock is dropped whenever the tab is hidden, so take it again on return.
+    let lock: WakeLockSentinel | null = null, gone = false;
+    const wake = () => navigator.wakeLock?.request('screen').then((l) => { if (gone) l.release(); else lock = l; }).catch(() => {});
+    const onVisible = () => { if (!document.hidden) wake(); };
+    wake();
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      gone = true; lock?.release().catch(() => {});
+      document.removeEventListener('fullscreenchange', onFs);
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('visibilitychange', onVisible);
+      document.body.style.overflow = overflow;
+      if (document.fullscreenElement === el) document.exitFullscreen().catch(() => {});
+    };
+  }, [full]);
+
   if (!clock) return <div className="pb small">מכין את הטרמינל…</div>;
   const { t, wall } = clock;
 
@@ -83,14 +116,49 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
   const shown = wall;                                       // the real time, also before and after the simulated window
   const local = utcOffset != null ? hhmm(shown + utcOffset * 3600e3) : null;
   const hot = (st: number) => { const w = expWait(sim, st, S[st]); return w != null && w >= HOT; };
+  const list = alerts({ sim, S, t, arrived, lateNow, seated, overdue });
+  const next = nextEvent(sim, t);
+  const frac = (at: number) => Math.min(1, Math.max(0, (at - sim.start) / (sim.end - sim.start)));
+  const one = list[Math.floor(wall / 5000) % list.length];      // full screen: one line, rotating every 5 seconds
 
   return (
-    <div className="tm">
-      <div className="tm-ctrl">
-        <div className="tm-clock"><b><bdi>{hhmm(shown)}</bdi></b><span className="small">Z{local && ` · ${local} מקומי`}</span></div>
-        <span className="tm-tminus">{shown < T0 ? `T−${mmss(T0 - shown)} ל-PUSHBACK` : 'PUSHBACK'}</span>
-        <span className="tm-live"><i />חי</span>
-      </div>
+    <div className={`tm${full ? ' tm-full' : ''}`} ref={root}>
+      {!full && (
+        <div className="tm-ctrl">
+          <div className="tm-clock"><b><bdi>{hhmm(shown)}</bdi></b><span className="small">Z{local && ` · ${local} מקומי`}</span></div>
+          <span className="tm-tminus">{shown < T0 ? `T−${mmss(T0 - shown)} ל-PUSHBACK` : 'PUSHBACK'}</span>
+          <span className="tm-live"><i />חי</span>
+          <button type="button" className="btn btn-sm tm-fullbtn" onClick={() => setFull(true)}>מסך מלא</button>
+        </div>
+      )}
+
+      {full && (
+        <header className="tm-ftop">
+          <div className="tm-count">
+            <span className={`t${overdue ? ' over' : ''}`}><bdi>{overdue ? `+${mmss(overdue)}` : mmss(T0 - shown)}</bdi></span>
+            <span className="lbl">
+              <b>{overdue ? 'אחרי PUSHBACK' : 'ל-PUSHBACK'}</b>
+              <small><bdi>{title}</bdi> · <bdi>{hhmm(shown)}Z</bdi>{local && <> · <bdi>{local}</bdi></>}</small>
+            </span>
+          </div>
+          <div className="tm-nums">
+            <div><div className="l">בדרך לשער</div><div className="v">{arrived - seated - lateNow - S[SI.gate].dwell}</div></div>
+            <div><div className="l">ממתינים בשער</div><div className="v">{S[SI.gate].dwell}</div></div>
+            <div>
+              <div className="l">יושבים במטוס</div><div className="v">{seated}<small> / {N}</small></div>
+              <div className="tm-bar"><div style={{ width: `${(seated / Math.max(1, N)) * 100}%` }} /></div>
+            </div>
+            <div className="tm-next">
+              <div className="l">הבא</div>
+              <div className="v">{next ? <>{next[1]} <span>בעוד {mmss(next[0] - t)}</span></> : 'מוכן לדחיפה'}</div>
+            </div>
+          </div>
+          <div className="tm-tools">
+            <span className="tm-live"><i />חי</span>
+            <button type="button" className="tm-ib" onClick={() => setFull(false)} aria-label="סגור מסך מלא" title="סגור">✕</button>
+          </div>
+        </header>
+      )}
 
       <div className="metrics tm-kpis">
         <Kpi label="הגיעו לשדה" v={arrived} of={N} />
@@ -117,8 +185,9 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
                 <g>{sim.pax.map((p) => <circle key={p.i} r={R_DOT} className="tm-p" visibility="hidden" ref={(el) => { dots.current[p.i] = el; }} />)}</g>
               </svg>
               {STATIONS.map((s, st) => {
-                const x = S[st], n = x.queue.length + x.serve + x.dwell, w = expWait(sim, st, x);
-                const sub = s.kind === 'queue' ? `תור ${x.queue.length} · ${w ? `~${w} דק׳` : 'בלי המתנה'}` : s.id === 'aircraft' ? `מתוך ${N}` : `עברו ${x.done}`;
+                const x = S[st], w = expWait(sim, st, x);
+                const n = s.id === 'aircraft' ? seated : x.queue.length + x.serve + x.dwell;     // seated: the same number as the counters
+                const sub = s.kind === 'queue' ? `תור ${x.queue.length} · ${w ? `~${w} דק׳` : 'בלי המתנה'}` : s.id === 'aircraft' ? `יושבים, מתוך ${N}` : `עברו ${x.done}`;
                 return (
                   <div key={s.id} className={`tm-chip${hot(st) ? ' hot' : ''}`}
                     style={{ '--c': s.c, left: `${(CHIP_AT[s.id][0] / MAP_W) * 100}%`, top: `${(CHIP_AT[s.id][1] / MAP_H) * 100}%` } as React.CSSProperties}>
@@ -156,7 +225,7 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
 
           <div className="panel-head"><span className="label">התראות</span></div>
           <div className="tm-alerts">
-            {alerts({ sim, S, t, arrived, lateNow, seated, overdue }).map(([c, text], k) => <div key={k} className={`tm-alert ${c}`}>{text}</div>)}
+            {list.map(([c, text], k) => <div key={k} className={`tm-alert ${c}`}>{text}</div>)}
           </div>
 
           {t >= sim.doorClose && <Summary sim={sim} />}
@@ -165,8 +234,41 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
           <Timeline sim={sim} t={t} />
         </aside>
       </div>
+
+      {full && (
+        <>
+          {/* where we are on the way to PUSHBACK: an indicator, not a control (ADR-055) */}
+          <div className="tm-track" aria-hidden>
+            <div className="rail" /><div className="fill" style={{ width: `${frac(t) * 100}%` }} />
+            {([[sim.t0 - 180 * MIN, "צ'ק-אין נפתח"], [sim.boardOpen, 'עלייה'], [sim.gateClose, null], [sim.doorClose, null], [sim.t0, 'PUSHBACK']] as [number, string | null][]).map(([at, label], k, all) => (
+              <span key={k}>
+                <i className={`mk${at <= t ? ' past' : ''}`} style={{ left: `${frac(at) * 100}%` }} />
+                {label && <span className={`ml${k === all.length - 1 ? ' end' : ''}${k === 1 ? ' mid' : ''}${at <= t ? ' past' : ''}`}
+                  style={{ left: `${k === all.length - 1 ? 100 : Math.max(5, frac(at) * 100)}%` }}>{label} · {hhmm(at)}</span>}
+              </span>
+            ))}
+            <div className="knob" style={{ left: `${frac(t) * 100}%` }} />
+          </div>
+          <div className={`tm-line ${one[0]}`} role="status" aria-live="polite">
+            <span className="ic">{ICON[one[0]] ?? '·'}</span><span className="txt">{one[1]}</span>
+            {list.length > 1 && <span className="more">{(Math.floor(wall / 5000) % list.length) + 1} / {list.length}</span>}
+          </div>
+        </>
+      )}
     </div>
   );
+}
+
+const ICON: Record<string, string> = { warn: '▲', bad: '●', go: '✓' };
+
+// What comes next, in the order a departure unfolds.
+function nextEvent(sim: Sim, t: number): [number, string] | null {
+  const all: [number, string][] = [
+    [sim.t0 - 180 * MIN, "הצ'ק-אין נפתח"], [sim.boardOpen, 'העלייה מתחילה'],
+    [sim.zoneCall[2], 'אזור 2 נקרא לעלות'], [sim.zoneCall[3], 'אזור 3 נקרא לעלות'], [sim.zoneCall[4], 'אזור 4 נקרא לעלות'],
+    [sim.gateClose, 'השער נסגר'], [sim.doorClose, 'הדלת נסגרת'], [sim.t0, 'PUSHBACK'],
+  ];
+  return all.find(([at]) => at > t) ?? null;
 }
 
 function Kpi({ label, v, of, text }: { label: string; v?: number; of?: number; text?: string }) {
@@ -179,20 +281,22 @@ function Kpi({ label, v, of, text }: { label: string; v?: number; of?: number; t
   );
 }
 
+// Most urgent first: the full-screen line shows one at a time.
 function alerts({ sim, S, t, arrived, lateNow, seated, overdue }: {
   sim: Sim; S: StationState[]; t: number; arrived: number; lateNow: number; seated: number; overdue: number;
 }): [string, React.ReactNode][] {
   const A: [string, React.ReactNode][] = [];
-  if (t <= sim.start) A.push(['', <>הנוסעים יתחילו להגיע ב-<bdi>{hhmm(Math.min(...sim.pax.map((p) => p.arr)))}Z</bdi>.</>]);
+  if (overdue >= MIN) A.push(['warn', <>הנוסעים יושבים וממתינים <b>{Math.round(overdue / MIN)} דק׳</b> מעבר ל-PUSHBACK המתוכנן</>]);
+  if (lateNow) A.push(['bad', <><b>{lateNow}</b> {lateNow === 1 ? 'נוסע הגיע' : 'נוסעים הגיעו'} לשער אחרי שנסגר</>]);
+  const missing = sim.pax.length - arrived;
+  if (t >= sim.boardOpen && missing > 0) A.push(['bad', <><b>{missing}</b> נוסעים עוד לא הגיעו לשדה, והעלייה כבר התחילה</>]);
   STATIONS.forEach((s, st) => {
     const w = expWait(sim, st, S[st]);
     if (w != null && w >= HOT) A.push(['warn', <><b>{s.he}:</b> {S[st].queue.length} בתור, המתנה של כ-{w} דקות</>]);
   });
-  const missing = sim.pax.length - arrived;
-  if (t >= sim.boardOpen && missing > 0) A.push(['bad', <><b>{missing}</b> נוסעים עוד לא הגיעו לשדה, והעלייה כבר התחילה</>]);
-  if (lateNow) A.push(['bad', <><b>{lateNow}</b> {lateNow === 1 ? 'נוסע הגיע' : 'נוסעים הגיעו'} לשער אחרי שנסגר</>]);
   if (t >= sim.doorClose) A.push(['go', <>הדלת נסגרה ב-<bdi>{hhmm(sim.doorClose)}Z</bdi>, {seated} נוסעים על המטוס</>]);
-  if (overdue >= MIN) A.push(['warn', <>הנוסעים יושבים וממתינים <b>{Math.round(overdue / MIN)} דק׳</b> מעבר ל-PUSHBACK המתוכנן</>]);
+  else if (t >= sim.boardOpen) A.push(['', <>העלייה למטוס בעיצומה: {seated} מתוך {sim.pax.length} כבר יושבים</>]);
+  if (t <= sim.start) A.push(['', <>הנוסעים יתחילו להגיע ב-<bdi>{hhmm(Math.min(...sim.pax.map((p) => p.arr)))}Z</bdi>.</>]);
   if (!A.length) A.push(['', 'הכל זורם. אין תורים חריגים.']);
   return A;
 }
