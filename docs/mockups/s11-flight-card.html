@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 11 · סיכום טיסה כתמונה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
+<style>
+:root {
+  --bg: #eef0f3; --bar: #ffffff; --panel: #ffffff; --line: #d9dde3; --line-2: #eceef2;
+  --ink: #151a21; --muted: #5d6673; --faint: #8b93a0;
+  --accent: #0b4f9c; --accent-bg: #e4edf8; --go: #147a47; --go-bg: #e3f2ea; --warn: #9a5b00; --warn-bg: #fbeed7;
+  --r: 4px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+bdi.l { direction: ltr; unicode-bidi: isolate; }
+button { font: inherit; }
+
+.switch { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; border-bottom: 1px solid #000; }
+.switch button { border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 3px 9px; border-radius: 4px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; }
+.frame { padding: 16px; }
+.note-bar { max-width: 1180px; margin: 0 auto 10px; color: #b9bec7; font-size: 13px; line-height: 1.55; }
+.note-bar b { color: #fff; }
+.app { max-width: 1180px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden; font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.main { padding: 16px 20px 20px; display: grid; grid-template-columns: minmax(0, 620px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.panel-head { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.pb { padding: 12px 14px; }
+.where { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .3px; margin: 0 0 6px; }
+
+/* the dialog: the picture and its three choices */
+.card { display: block; width: 100%; height: auto; border-radius: 6px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg button { font-size: 13px; border: none; border-inline-start: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 6px 12px; cursor: pointer; min-height: 36px; }
+.seg button:first-child { border-inline-start: none; }
+.seg button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.btn { font-weight: 600; font-size: 14px; padding: 8px 16px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; min-height: 36px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.bar .end { margin-inline-start: auto; display: flex; gap: 8px; }
+
+.side { display: grid; gap: 16px; }
+.snip { border: 1px dashed var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 8px; }
+.snip .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.snip .ok { color: var(--go); font-weight: 600; }
+.link { color: var(--accent); font-weight: 600; text-decoration: underline; }
+ul.pts { margin: 0; padding-inline-start: 18px; display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
+ul.pts b { color: var(--ink); }
+
+@media (max-width: 980px) { .main { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .frame { padding: 0; } .app { border-radius: 0; } .main { padding: 10px; } .bar .end { margin-inline-start: 0; width: 100%; } .bar .end .btn { flex: 1; } }
+</style>
+</head>
+<body>
+<div class="switch">
+  <b>סקיצה 11 · סיכום טיסה כתמונה</b>
+  <span style="margin-inline-start:auto">ערכה של האתר:</span>
+  <button data-th="light" aria-pressed="true">בהיר</button><button data-th="dark" aria-pressed="false">כהה</button>
+</div>
+
+<div class="frame">
+<div class="note-bar">
+  <b>מה רואים:</b> התמונה שתרד מכל טיסה סגורה, ריבוע של 1080×1080. שלושת הכפתורים שמתחתיה הם חלק מהמוצר: שפה, רווח, והורדה.
+  המסלול, המטוס ומספר הנוסעים הם מהתוכנית האחרונה שלך (ELY2569 ל-OMDB). <b>הזמנים, ה-FPM והרווח הם נתוני דוגמה.</b> בסקיצה כפתורי ההורדה והשיתוף לא פעילים.
+</div>
+
+<div class="app">
+  <div class="main">
+    <section class="panel">
+      <div class="panel-head"><span class="label">סיכום הטיסה</span><span class="small" style="margin-inline-start:auto">התמונה תמיד כהה, כדי שתיראה אותו דבר בכל מקום</span></div>
+      <div class="pb" id="card"></div>
+      <div class="bar">
+        <div class="seg" role="group" aria-label="שפה"><button data-lang="he" aria-pressed="true">עברית</button><button data-lang="en" aria-pressed="false">English</button></div>
+        <div class="seg" role="group" aria-label="רווח"><button data-profit="1" aria-pressed="true">עם רווח</button><button data-profit="0" aria-pressed="false">בלי רווח</button></div>
+        <div class="end"><button class="btn" disabled title="בסקיצה לא פעיל">שתף</button><button class="btn btn-primary" disabled title="בסקיצה לא פעיל">הורד תמונה</button></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head"><span class="label">מאיפה פותחים</span></div>
+        <div class="pb" style="display:grid;gap:12px">
+          <div>
+            <div class="where">1 · בלוגבוק, בפרטי הטיסה</div>
+            <div class="snip">
+              <div class="row"><b><bdi class="l">ELY2569 · LLBG → OMDB</bdi></b><span class="small">02.10 · נעקבה</span></div>
+              <div class="row"><button class="btn">ערוך</button><button class="btn">סיכום כתמונה</button></div>
+            </div>
+          </div>
+          <div>
+            <div class="where">2 · מיד אחרי סגירת הטיסה</div>
+            <div class="snip">
+              <div class="row"><span class="ok">✓ הטיסה נרשמה בלוגבוק</span></div>
+              <div class="row"><span class="small">רווח נקי <b style="color:var(--ink)">+$18,420</b> · ציון 4.9</span><a class="link">סיכום כתמונה</a></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span class="label">מה בתמונה, ומה לא</span></div>
+        <div class="pb">
+          <ul class="pts">
+            <li><b>יש:</b> אות קריאה, מטוס ורישום, מפת המסלול, מרחק, ארבעת זמני הבלוק, משך הבלוק, FPM, נוסעים ותפוסה, וציון הטיסה.</li>
+            <li><b>רווח:</b> רק במצב "עם רווח". במצב "בלי רווח" מופיע במקומו הזמן באוויר, כדי שלא יישאר חור.</li>
+            <li><b>אין:</b> פירוט ההכנסות וההוצאות, מחיר הכרטיס, ושם המשתמש שלך.</li>
+            <li><b>טיסה שהוסטה:</b> המפה והיעד הם של השדה שבו נחתת בפועל, עם הערה קטנה על היעד המתוכנן.</li>
+            <li><b>טיסה היסטורית:</b> אין כפתור, כי אין לה זמנים, נחיתה או ציון.</li>
+            <li><b>שתף:</b> פותח את חלון השיתוף של הטלפון. במחשב, שבו אין חלון כזה, מופיע רק "הורד תמונה".</li>
+          </ul>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+</div>
+
+<script>
+// The route, projected once from the same Natural Earth data the logbook map uses.
+const MAP = {"land":"M0,103.1L3.5,104.5L10.2,110.8L12.3,111.8L17.7,112.5L20.8,116L34.7,119.6L41.8,124.1L45.7,127.4L48.2,128.5L50.5,128.8L53.7,128.2L57.9,126.9L62.5,124.9L72.2,119.4L75.5,118.7L77.5,119.3L80,119.5L81.3,117.9L82.8,116.8L83.7,115.5L85.3,114L89.9,114.1L99.4,112.4L98.2,113.6L89.5,115.8L93,116.7L96.8,116L101.1,115.9L102,114.6L102.9,112L103.8,111.8L106.5,112.6L114.6,117.7L116.7,118L123.1,116.6L124.4,116.2L126.2,117.7L130.1,123.2L128.5,122.9L124.2,118.1L123.6,120.2L120.4,123.6L123.6,125.6L126.4,126.5L127.6,128.8L128.3,130.7L131.2,130.3L133.4,128L132.6,126.4L132,124.9L132.9,124.9L134.7,126.4L139.6,131.8L141.3,133L143.4,133.1L148.1,132.2L149.3,132.5L155.4,131.4L156,132.8L156.8,134.2L161.8,133.3L169.3,134L175.7,133.1L183.2,130L183.9,129.5L189.3,125.1L191.9,122.1L192.1,121.9L198.1,113L202.3,104.1L206.6,91.5L209.4,85.2L211.6,81L212.8,77.5L214.3,75.2L215.7,72.3L217.3,68.3L219.9,65.1L225.5,53.9L228.5,49.4L230,42.8L234.5,37.4L237.6,35.9L239.2,34.4L239.4,31.9L238,24.8L238,21.8L238.4,18.4L240.3,13.5L239.8,11.1L239.9,9.5L239.7,7.3L236.8,2.4L237.5,0L960,0L960,296.8L957.6,296.9L955.1,297.6L951.8,299.8L950.5,301.4L948.5,302.3L946.5,300.6L945,299.9L943.8,300.6L942.2,302.5L937.3,303.9L932.8,304.3L927.7,303.5L928.3,302.9L926.8,303.4L925.8,304.8L923.8,306.7L919,306.1L915.2,305.3L902.5,303.8L901,302.5L900,300L897.8,299.6L895.2,303.8L884.6,302.8L881.1,304L878.9,303L873.2,303.6L868.6,301.7L862.4,304.1L857.5,305L850.2,301.5L842.8,301.2L836.8,302.2L833.7,302.2L828.6,301.2L826.1,299.8L822.3,301.4L820.3,299.4L809.2,298.5L806.8,294.7L805,291.2L804.5,287.5L801.2,281.2L799.5,271.8L798.1,268.1L796.4,265L794.1,262.5L791.2,259.8L788.8,258.9L778.4,257.6L776.5,258.1L772.1,259.9L767.6,263.6L759.8,266.1L758.2,267.7L756.5,271L754.1,273.1L750.5,272.9L746.8,275.1L740.1,280.8L736.5,282.7L733.3,282.8L729.7,280.6L722,277.9L717.1,277.1L710.3,278.4L707.1,278L701.3,274.5L699.8,271.8L696.5,270.1L686.5,266.5L678.1,261.4L676.5,259.4L675.4,256.3L671.7,252.7L663.8,250L659.2,247L654.1,246.5L649.3,246.9L647.2,246.4L645.1,245.1L638.3,238.6L638.1,235.8L633.8,229.4L632.7,227L631.5,220.5L630.4,218.8L626.1,216.3L625.3,214.5L626.2,212.1L626.1,210.3L623.8,208.8L620.5,208L619.7,206L620.1,202.1L619.5,199.6L616.4,195.8L612.1,191.9L607.6,186.1L605.9,184.7L604.7,180.8L603,176.2L600.7,176L589.5,182L586,178.9L575.8,173.8L575,173L574.3,171.8L575.5,171L576.8,170.7L579.3,171.6L580.8,170.4L580.2,168.6L577.6,167.5L574.2,167.7L575.2,169.4L572,171.1L571.4,173.3L572,175.9L572.4,179.7L571.1,181.5L570.1,182.4L565.8,182.7L563.8,184.4L562.5,184.8L560.1,185.6L557.4,185.1L551.7,182.7L549.8,182.6L547.5,183.7L547.4,184.6L547.2,185.7L548.1,189.1L550.2,192.7L551.9,195.7L552.1,197.2L550.6,197L549.5,196.4L547.3,195.9L543.4,200L540.9,202.2L540.9,202.9L544.2,203.7L546.6,203.6L548.3,203L549.7,203.9L550.8,206.4L551.2,208.3L553.6,215.4L555.5,217.8L557.9,222L558.8,224.2L559.4,226L560.9,228.7L562.5,231.6L563.2,234.5L566.2,241.2L570.4,246.5L571.3,248.4L572.1,251.3L571.4,252.5L571.2,253.7L574.2,256.6L579.3,258.9L581.2,259.5L583.4,260.5L581.8,262.2L584.8,266.1L588.3,270L592,270.8L597.2,276.6L604.6,280.3L609.4,285.3L609,285.4L607.6,284.9L606,284.3L605.5,284.9L605.6,287.1L606.1,289.6L608.5,291.7L610.7,293.1L611.6,296.1L610.1,302.6L609.6,302.6L608.5,302.1L607.3,302L606.7,302.4L608.3,307L609.7,310.5L611.5,313.2L613.1,317.2L614.2,318.9L619.3,323.1L620.8,326.7L622.5,333.4L625.7,337L627.5,339.9L629.8,342.3L630.6,340.4L630.8,339.2L628.5,330.3L627.6,323.5L627.8,322.1L628.8,320.4L630.6,316.8L631.3,313.3L633.8,305.2L636.5,302.1L640.7,299.6L644.4,303.8L648.9,307L649.8,310.7L648.7,313.8L647.8,318.7L648.6,320.9L648.9,322.8L650.3,326L651.6,330.2L651.9,333.1L651.4,335.9L650,338.2L647.4,345.2L646.6,346L643,347.3L645,348.5L647.1,348.2L647.3,349.5L646.1,351.2L644.5,355.5L647,356L649.2,356.2L651,356.9L651.9,356.8L652.8,355.2L653.4,356.3L654.7,357.7L656.6,357.3L657.5,357.5L658.5,363L660,364.9L661.9,365.6L667.9,365.7L671.5,364.7L678.7,360.7L682.4,359.2L693.1,358.8L701.7,359.8L715,359.7L717.6,359.4L724.5,356L728.7,353.1L731.3,352.1L732.9,349.5L733.8,346.3L734.6,344.1L735.9,343L736.9,341.1L737.6,338.1L739.9,335L749.2,327.1L754.4,320.6L754.8,318.7L757.7,315.5L759.9,312.1L770.8,301.9L772.8,298L773.8,293.6L773.9,293.3L775.9,288.7L776.7,287.9L777.5,288.1L779.7,287.5L780.5,284.9L781.3,283.5L782.3,283.6L782.8,284.3L782.8,288L783.1,291.1L782.7,300.6L781.5,302.3L781.1,303.7L781,305.5L783,307.8L784.6,324.8L785.2,326L788.7,333.8L793.6,341.1L797.7,344.9L802,350.2L808.4,354.9L811.2,356.4L822.5,359L828.6,359.8L837,360.2L843,362.5L845,362.4L847.8,361.3L850,361.1L855.9,364.5L857.9,368L860.4,369.6L862.7,372.5L864.3,375.5L869.4,380L873.3,385.1L877,388.8L880.2,391L884.8,391.5L888.6,392.2L889.3,394.8L889.2,398.5L888.8,401.2L885.9,406.7L885.4,410L882.2,415.6L878.8,424.8L877.2,427L873.5,430L294.5,430L294.5,430L295.6,425.7L296.2,420.5L297.4,417.8L298.2,414.8L297.6,408.6L296,405.2L296.3,403L294.4,401.9L292.9,399.4L294.5,399.5L291.7,396L290.7,394.2L289.8,389.6L288.5,386.1L284.3,378L282.3,373.1L277.7,366.8L272.5,361.9L269.3,359.7L267.8,357.7L265,357.4L262.1,354.5L260,354.3L257.4,353.7L254.6,348.3L252.2,343.4L248.2,336.7L249.4,335.2L250.9,332.6L250.5,329L250,326.6L248.3,322.2L242.6,310.9L241.1,309.2L238.5,307.2L237.2,302.4L236.7,298.2L232.5,295.8L226.2,280.1L222.3,274.5L220.9,270.8L216.4,264.6L214.5,258.6L209.9,252.8L206.4,243.2L200.6,233.3L197.9,231.4L191.3,230.2L188.4,229.2L185.6,231L185.6,228.5L187.8,225L191,217.8L192.2,211.2L198,192.1L199.2,188.1L199.1,186L197.1,188.1L195.5,189.4L192,194.1L187.3,209.7L181.7,221.6L180.5,229.3L179.4,232L176.8,235.7L173.8,239.3L169.3,236.8L162.2,229.3L158.4,222.5L154,217.9L150,211.9L149.2,207.8L149.6,205.3L148.2,198.9L147,195.8L142.3,188.7L141.1,185L140,183.3L139.1,181L138.1,172.2L136.5,166.6L133.9,167.8L134,170.1L131.6,173.1L129.8,176.6L130.6,179.7L134.5,184.7L135.2,186.8L135.8,191.2L134.9,197.1L135.4,199.1L138.3,203.8L139.3,206.5L139.7,208.8L140.7,211L143.6,215.2L147.7,222.8L151.7,228.2L154.9,230.9L156,233.4L155.7,239.5L155.2,242.4L157.6,248.1L158.5,251L161.1,253.5L162.1,256.2L162.9,260.5L163.5,273L165.8,276.3L172,293.2L177.6,304.1L180.2,312.1L184.2,321.8L192.1,343.2L197.2,350L199.2,353.7L203.1,356.7L207.3,361.1L203,360.3L202,360.5L200.5,361L199.6,363.4L199.1,365.4L198.9,375.8L199.6,381.1L202.6,391.5L205.3,394.7L206.6,396.7L208.3,398.3L217.1,402.4L221.9,410L233.1,420L234.1,422.6L234.1,423.2L234.1,430L0,430ZM701.5,354.8L699.4,355.1L697.5,354.1L701.3,352.3L702.4,351.5L703.4,350L704.4,351.2L703.5,353.1L702.8,354ZM681.3,355.1L680.8,355.4L680.3,353.7L680.3,353.2L681.6,352.4L682.4,353.7ZM718.3,356.2L718.4,357.3L715.5,357.1L714.8,357.7L712.4,357.6L710.1,357L711.6,355.6L715.5,353.8L717.3,355.1ZM732.9,346.9L732.6,347.6L731.8,347.6L729.9,347.1L729.1,346.3L730.3,345.2L730.8,345.1L731.7,346.1ZM241.6,318.9L240.9,318.8L239.1,316.6L238.1,314.9L236.9,313.8L231.8,311.4L231.1,310L232.1,308.7L232.5,310.1L233.4,310.9L237.7,313.1L242.3,317.6L243.2,318ZM233.8,308.1L233.5,308.5L232.4,307.3L232.6,304.9L233.7,303.6L233.5,305.5L233.9,307.4ZM555.5,195.5L554,196.2L553,195.9L551.9,194.3L550.2,190.2L551.1,188.6L551,188L551.2,187.5L551.7,187.1L552.2,185.2L552.9,184.5L554,185.9L557.3,190.5L557.4,192.5L557.2,193.2ZM774.6,266.6L772.3,270.5L768.8,274L767,273.2L765.8,273.3L763.2,274.7L761.2,275.1L757.7,277.5L754.6,278.9L752.3,278.9L751.5,278.8L750.9,277.4L750.8,276.8L752.3,277L757.2,274.6L763.3,271L763.7,269.6L762.6,267.3L762.8,266.8L766.9,267.6L771.3,265L775.1,264L777.1,265.4ZM202.1,0L190.3,6.6L189.1,9.3L189.6,11.3L191.1,13.8L191.5,14.4L192,16.3L189.1,16.5L186.2,16.4L184.6,16L183.1,15.9L177.9,20.5L175.2,21.9L172.1,22.6L169,22.9L167.5,22.7L166,23.2L165,24.3L164.9,25.5L164.3,26.3L162.7,25.9L162.2,24L161.1,23.1L158.2,23.2L156.7,23L152.2,20.7L150.9,19.8L150.2,18.2L148.4,12.6L148.5,8.5L150.7,9.8L152.9,8.8L155.2,7L157.7,6.5L159.1,7L159.1,7L160.6,7.5L163.4,7.2L164.9,4.3L165.7,0.9L170.1,2.4L174.7,3.4L178.4,4L182.2,3.8L193.9,1.3L196.5,0L202.1,0ZM622.9,308.8L622.1,311.2L621.2,310.4L618.9,306.4L619.4,303.5L618.3,299.5L618.7,298.3L621.3,297.6L621.9,297.8L621.2,299.1L622.7,301.3L623.1,305.1Z","borders":"M785.2,326L784.3,326.3L783.3,327.7L782.1,329.7L780.5,330.9L779.2,332.2L777.9,333.8L776.8,334.2L775.1,332.5L773.9,330.7L774.1,330.3L774.9,330.1L775.1,329.1L774.5,327.7L773.5,327.3L772.2,327.4L770.9,328.1L769.7,329.5L769,330.8L769.1,333.5L769.8,336.5L769.8,338L769.2,339.9L769.2,342.6L769.9,344.6L770.4,345.8L770.6,346.8L769.5,350.3L770.7,350.7L774.3,350.7L775.6,352.8L776.4,354.3L776.3,355.2L773.7,356.1L770.6,357.2L768.3,357.1L764.1,358.5L762,360.2L762.8,361.2L763.6,361.8L764.1,363.8L763.6,366.8L762.7,369.7L761.5,373.4L760.1,377.5L758.2,383.8L756.6,388.8L756.6,392.2L756.8,394.5L756.9,399L755.1,401.6L754.7,401.7L752.4,401.6L751.7,401.5L749.6,401.4L746.2,401.3L741.8,401L736.6,400.7L730.8,400.4L724.7,400L718.3,399.6L711.9,399.1L705.8,398.7L700,398.3L694.9,398L690.4,397.7L687.1,397.4L685,397.3L684.2,397.2L681.8,397L680.4,395.4L678.7,393.5L677.1,391.6L675.5,389.6L673.7,387.7L672.1,385.7L670.5,383.9L668.8,381.9L667.1,380L665.5,378L663.9,376.1L662.2,374.2L660.5,372.2L658.9,370.3L657.2,368.3L655.6,366.4L654,364.4L652.9,363.1L652.2,361.7L651.9,357.7L651.9,356.8M773.9,293.3L774.9,293.1L776.3,293.6L776.8,296.7L776.5,299.8L776.7,302.9L776.6,304.7L777.8,306L779.7,306.4L780.5,306.3L781,305.5M781.6,318.4L781.7,317L781.3,316.3L780.1,316.3L779.7,317.6L779.6,319.2L780.6,319.3L781.6,318.4M376,0L377,3.7L377.1,6.3L376.9,8.9L375.6,11.6L373.9,15.4L373,19.6L372.3,27.6L372,34.5L371.8,35.6L369.2,40.3L366.1,45.9L364.7,47.1L358.4,48.6L351.4,52.4L343.4,56.7L336.3,60.5L328.8,64.6L320.9,68.7L315.2,71.7L307.7,75.7L300.8,79.4L293.8,83.3L288.4,86.1L280.4,90.7L275.6,93.4L268.5,97.3L262.3,100.7L254.9,104.8L246.2,102.7L243.5,101.7L241.4,99.4L239.8,98.1L235.8,96.6L233.4,92.2L232,90.7L229.3,89.8L229.8,88.4L231.5,86L233.1,83.4L232.5,81.9L232.3,80.6L232.4,79L233.4,77.7L233.1,75.9L232.5,74L232.1,73.1L232.2,71.5L232.7,70.3L233.3,68.5L234.6,67.5L235,66.5L236.1,65.5L237.6,64.8L238,64.1L237.8,63.7L236.5,62.8L235.8,61.4L236.7,59.4L237.2,58.9L238.1,58L240.1,56.6L241.6,56.5L242.9,56.6L245,56.9L246.6,57.3L247.1,57L247.1,56.5L245.1,55.1L245.1,54.1L245.7,53.2L247.3,51.7L249.1,50.6L250,50.4L252.2,48.2L253.7,45.7L252.2,39L251.1,37.9L249.1,36.8L248,36.5L247.9,36.1L249.6,34.6L250.9,33.3L249.8,31.8L247.6,31L246.7,32.3L243.8,32.2L239.4,31.9M0,399.1L5,399.8L15.8,401.3L26.6,402.7L37.3,404.1L48.1,405.4L58.9,406.8L69.7,408L73.1,408.4L74.5,408.3L77.9,402.9L79.1,402.6L80.8,403.1L81.4,404.6L80.6,406.5L79.4,409.1L84.7,409.7L94,410.7L103.3,411.7L112.7,412.7L122,413.7L131.3,414.6L140.6,415.5L149.9,416.4L159.3,417.2L168.6,418.1L178,418.9L187.4,419.7L196.7,420.4L206,421.2L215.4,421.9L224.7,422.6L234.1,423.2M198,192.1L203.6,193.6L208.2,194.9L214.9,196.7L222,198.5L226.1,199.6L227.4,199.4L233.6,195.1L239.1,191.1L242.6,186.1L246,181.2L247.4,180.2L252.1,179.7L259.5,178.6L266.8,177.6L267.3,177.2L269.3,173.2L271.7,168.1L272.2,167.6L272.8,167.1L278.1,164.5L281.3,162.9L277.2,157.5L273.4,152.3L269.1,146.4L265.6,141.9L260.1,135L256.6,130.5L263.5,129L270.9,127.4L278.4,125.7L287.4,123.6L294.4,122L304.9,119.6L310,118.4L311,118.1L315,114.6L320.8,116L329.5,118L337.8,119.8L346.7,122L349.6,123.5L357.9,129L363.5,132.6L369.8,136.8L377.9,142L383.4,145.6L390.6,150.1L396,155.2L403.1,161.7L410.8,168.7L417.2,174.2L426.1,181.7L434.9,189.1L443.5,196.3L450.5,202.1L459.3,209.3L460,209.6L468.9,210.4L481.1,211.6L493.2,212.6L504.2,213.6L508.9,212.5L514.1,213.1L521.1,213.9L525.3,214.5L533.3,215.5L535.8,220.2L536.7,223.4L537.5,226.6L539.9,229.5L545.4,229.3L550.2,229.1L556.1,228.9L560.9,228.7M629.8,342.3L631.4,345.6L633.5,348.1L634.6,348.7L636.2,348.9L638.2,348.8L640.5,348.1L643,347.3M756.9,399L759.2,402.3L761.1,405.1L763.7,408.9L766.6,412.9L769.4,416.7L771.3,419.6L770.6,422.8L769.8,426.3L769,429.8L769,430M928.3,302.9L928.7,300.3L928.3,291L928.6,287.5L928.2,285.7L928.3,285.2L930,283.3L930.3,282.6L930.5,277.8L930.6,272.4L931.2,270.4L931.9,269.8L937.5,266.6L938.4,264.9L941.5,264.9L941.7,264.5L941.8,262.6L942.9,260.5L944.7,258.6L946.1,257.8L951.2,256L954.2,254.2L955.1,253.9L960,253.4M960,234.5L956.1,235.7L953.3,235.7L951.8,235.3L951.5,234.8L951.6,233.7L951.4,232L952,229.1L952.1,227.5L950,218.2L947.9,212.2L947.6,206L947.3,204.7L947.1,204.5L946.3,204.6L942.2,205.7L938.2,202.3L935.8,201L929.6,199.9L927,199.9L922.9,198.7L918.8,195.5L914.8,192.1L913,189.9L910.8,186L905.2,178.6L905,176.5L904.2,175.4L899.1,170.8L895.5,167.4L889.7,162.1L900.2,164.1L908.4,165.6L921.6,168L931.9,169.8L934.7,169.9L960,163.5M233.3,68.5L232.5,68.9L231,70.2L229.6,71.3L226.7,72.8L225.9,73.8L225.5,72.8L224.2,73.3L222.8,77.3L220.6,78.5L217.9,78.1L215.8,77.5L212.8,77.5M508.9,212.5L513.3,207.4L515.3,204.7L518.9,198.8L520.7,194.6L522.4,189.9L523.9,186.3L524.3,185.7L525.1,184.4L527.1,183.1L530,181.9L534.9,181.3L538.4,181.2L539.1,181.2L541.3,181.8L547.4,184.6M307.7,75.7L309.2,82.6L310.5,89.4L312,96.4L313.4,103.2L311.4,103.7L312.6,108.9L315.3,108.3L318.1,107.8L319.1,111.2L315,114.6M199.1,186L201.1,178.9L202.2,175.6L202.9,173.1L205.2,168.3L205.1,166.6L206.1,160.8L206,159.6L207.2,156.5L209.2,152L211.2,148.2L212,146.5L213.9,142.9L215.9,138.4L215.2,135.8L215.1,135.2L215.9,132.4L217.1,127.7L217.7,125.2L218.8,121.9L220.7,119.1L220.6,112.3L221,108.7L222.4,104.6L222.3,99.7L223.4,92.8L223.5,92.2L224.1,91.4L224.6,91L227.9,89.8L229.3,89.8M222.3,99.7L220.5,99.4L218.5,97.7L218.3,96.3L217.6,95.8L216.2,95.5L213.3,94.6L209.9,96.6L208.1,100.2L207.6,101.9L206.1,105.6L206.4,107.9L206.3,110.8L206.3,113.3L205.9,114.7L205.2,115.4L205.3,116L205.8,116.2L207.7,115.8L209.6,116.6L211.3,118L211.4,118.8L210,119.2L206.7,120.7L204.4,122.7L203.6,124.7L201.7,128.9L201.8,129.8L202.5,130.4L207.6,130.4L212.3,129.1L216,127.5L217.1,127.7M197.1,188.1L196.4,185.4L195,177.6L194,172.2L192.6,165.5L189.9,157.4L189.8,155.5L189.3,152.7L187.6,145.3L186.3,139.9L184.7,133.1L187.7,130.8L187.9,128.7L193.1,124.1L193,123.6L191.9,122.1M184.7,133.1L184.2,130.5L183.9,129.5M481.8,0L482.5,0.4L484.7,1.9L486.6,4.7L487.9,5.2L492.1,4.7L497.8,5.1L500.4,6.6L500.2,7.5L498.1,8.5L494.6,9.7L493.5,11.7L492.9,14.3L493,15.8L493.9,17.4L496.4,20.6L496.6,21.7L497.1,23.3L497.6,24.4L497,26.6L494.8,28L491.7,29.6L485.6,36.7L485.1,38.3L485.1,42.4L484.5,43.7L482.6,43.6L481,43.4L481,44.9L480,46.8L479.5,48.5L481.8,52.6L482.1,54.7L481.8,56.6L479.6,60L478.4,62.2L478.7,62.7L480.4,63.6L485.6,71L487.1,73.6L489.4,72.9L490.2,72.9L490.8,73.4L491.2,74.2L491.2,75.3L490.7,77L493.5,77.6L494.5,79.3L497.8,85.1L497.6,86.8L496.1,89.5L496.1,91.3L496.4,92.9L496.9,93.5L501.7,93.6L503.8,94.3L508.8,97.2L514.5,101.6L519.3,105.3L523.3,108.3L527.6,108L528.8,108.6L529.8,109.5L531.1,112.1L533.6,117.9L535.8,119.8L539.1,124.4L542.2,128.8L540.3,134.7L538.5,141L538.7,149L538.8,153.3L542.9,153.3L547.5,153.5L547.7,158.6L547.8,163.7L548,169.6L549.4,169.9L551.6,171.1L552.5,173L553.8,174L555.1,174.1L556.6,175L558,176.7L558.5,178L558.1,178.8L558.4,180.4L559.5,182.6L560.7,183.6L562.5,184.8M874.5,0L874.1,1.4L873.8,3L873.3,5.5L873.9,7.5L873.2,9.4L872.1,11.1L871.5,12.4L871.6,14.2L870.8,14.9L869.3,16.6L868.4,17.8L866.8,18.3L866.6,19.2L866.9,19.9L867.7,20.3L869,21.9L871.6,24.7L865.5,25.9L864,28.9L862.5,33L864.6,40.6L864.1,44.7L865.1,46.9L866.9,48.2L869.1,48.8L872.9,48.3L875.6,48.6L876,49.6L874.7,51.3L872.8,54.5L871.7,55.9L868.5,62.1L868.9,64.5L869.5,66.5L872.1,72.4L874.6,78.2L879.2,88.6L879.6,91L879.3,96.8L879.8,100.1L880.8,104.5L880.8,106.8L882.3,111.8L883.1,112L890,112.1L896.2,112.2L904.5,112.2L907.4,114.9L909.9,121.2L910.5,126.1L910.2,128.7L905.3,136.7L900.4,144.8L895.4,152.8L889.7,162.1M191.1,13.8L190.1,13.9L188.6,12.9L187.8,12.5L186.8,13.2L185.7,13.7L184.8,13.9L184,13.9L182.7,14.4L181.2,14.1L179,13.3L177.6,14.4L177.4,14.2L177.5,11.2L176.8,9.9L175.9,9.1L174.5,9.3L172.5,9L171.1,8.3L168.2,8.8L165.8,9.5L164,10.2L162.8,10L160.7,8.9L159.2,7.8L159.1,7","arc":"M203.9,110L212.5,113.3L221.1,116.5L229.7,119.8L238.3,123.1L247,126.4L255.6,129.7L264.2,132.9L272.8,136.2L281.4,139.5L290.1,142.8L298.7,146L307.3,149.3L315.9,152.6L324.6,155.9L333.2,159.2L341.8,162.5L350.5,165.7L359.1,169L367.7,172.3L376.4,175.6L385,178.9L393.6,182.2L402.3,185.4L410.9,188.7L419.5,192L428.2,195.3L436.8,198.6L445.4,201.9L454.1,205.1L462.7,208.4L471.4,211.7L480,215L488.6,218.3L497.3,221.6L505.9,224.9L514.6,228.1L523.2,231.4L531.8,234.7L540.5,238L549.1,241.3L557.7,244.6L566.4,247.8L575,251.1L583.6,254.4L592.3,257.7L600.9,261L609.5,264.3L618.2,267.5L626.8,270.8L635.4,274.1L644.1,277.4L652.7,280.7L661.3,284L669.9,287.2L678.6,290.5L687.2,293.8L695.8,297.1L704.4,300.3L713,303.6L721.7,306.9L730.3,310.2L738.9,313.5L747.5,316.7L756.1,320","a":[204,110],"b":[756,320],"nm":1151};
+
+const F = {                                    // example flight (see the note bar)
+  callsign: 'ELY2569', type: 'B738', reg: 'N738PM', date: [2, 9, 2026],
+  from: { icao: 'LLBG', he: 'תל אביב', en: 'Tel Aviv' }, to: { icao: 'OMDB', he: 'דובאי', en: 'Dubai' },
+  nm: MAP.nm, out: '10:04', off: '10:18', on: '13:09', in: '13:16', block: '3:12', air: '2:51',
+  fpm: -142, pax: 128, seats: 189, score: 4.9, depLate: 4, profit: 18420,
+};
+const T = {
+  he: { brand: 'SMARTLOGBOOK', block: 'זמן בלוק', air: 'זמן באוויר', landing: 'נחיתה', pax: 'נוסעים', score: 'ציון הטיסה', profit: 'רווח נקי', dep: 'יציאה',
+        onTime: 'בזמן', late: 'באיחור', lf: 'תפוסה', soft: 'נחיתה רכה', normal: 'נחיתה רגילה', hard: 'נחיתה קשה', utc: 'UTC',
+        times: ['PUSHBACK', 'המראה', 'נחיתה', 'GATE'], tracked: 'נעקבה ב-VATSIM',
+        months: ['בינואר', 'בפברואר', 'במרץ', 'באפריל', 'במאי', 'ביוני', 'ביולי', 'באוגוסט', 'בספטמבר', 'באוקטובר', 'בנובמבר', 'בדצמבר'], plus: (m) => `${m} דק׳ אחרי המתוכנן` },
+  en: { brand: 'SMARTLOGBOOK', block: 'Block time', air: 'Air time', landing: 'Landing', pax: 'Passengers', score: 'Flight score', profit: 'Net profit', dep: 'Departure',
+        onTime: 'On time', late: 'Late', lf: 'load', soft: 'Soft landing', normal: 'Normal landing', hard: 'Hard landing', utc: 'UTC',
+        times: ['OUT', 'OFF', 'ON', 'IN'], tracked: 'Tracked on VATSIM',
+        months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], plus: (m) => `+${m} min vs plan` },
+};
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const stars = (v, x, y, size) => Array.from({ length: 5 }, (_, i) => `<text x="${x + i * size * 1.05}" y="${y}" font-size="${size}" fill="${i < Math.round(v) ? '#f0b13a' : '#2c3644'}">★</text>`).join('');
+
+function card({ lang, profit }) {
+  const t = T[lang], he = lang === 'he', C = { ink: '#eef2f6', muted: '#8fa0b3', faint: '#5f6f82', line: '#243040', accent: '#5b9df0', go: '#43c083', warn: '#f0a93a' };
+  // RTL mirrors the reading order: the start edge is on the right in Hebrew.
+  const S = he ? 1020 : 60, E = he ? 60 : 1020, aS = he ? 'end' : 'start', aE = he ? 'start' : 'end', dir = he ? 'rtl' : 'ltr';
+  // a string in the card's own language, pinned to the far edge: in RTL "end" is the left side
+  const far = `text-anchor="end" direction="${dir}"`;
+  const date = he ? `${F.date[0]} ${t.months[F.date[1]]} ${F.date[2]}` : `${F.date[0]} ${t.months[F.date[1]]} ${F.date[2]}`;
+  const land = Math.abs(F.fpm) <= 200 ? t.soft : Math.abs(F.fpm) > 400 ? t.hard : t.normal;
+  const lf = Math.round(F.pax / F.seats * 100);
+  const cells = [
+    [t.block, F.block, `${t.dep}: ${F.depLate <= 15 ? t.onTime : t.late}`, C.ink],
+    [t.landing, `${F.fpm < 0 ? '−' : ''}${Math.abs(F.fpm)}`, land, C.ink, 'FPM'],
+    [t.score, F.score.toFixed(1), null, C.ink, null, true],
+    [t.pax, `${F.pax}`, `${lf}% ${t.lf}`, C.ink, `/ ${F.seats}`],
+    profit ? [t.profit, `${F.profit < 0 ? '−' : '+'}$${Math.abs(F.profit).toLocaleString('en-US')}`, null, F.profit < 0 ? '#f07167' : C.go] : [t.air, F.air, null, C.ink],
+  ];
+  // five cells: three on the first row, two wide ones on the second
+  const cell = ([label, value, sub, color, unit, isScore], x, w, y) => {
+    const cx = x + w / 2;
+    return `<rect x="${x}" y="${y}" width="${w}" height="150" rx="14" fill="#101823" stroke="${C.line}"/>
+      <text x="${cx}" y="${y + 38}" text-anchor="middle" direction="${dir}" font-size="22" font-weight="600" fill="${C.muted}">${esc(label)}</text>
+      <text x="${cx}" y="${y + 96}" text-anchor="middle" font-size="54" font-weight="800" fill="${color}" direction="ltr">${esc(value)}${unit ? `<tspan font-size="24" font-weight="600" fill="${C.muted}" dx="8">${esc(unit)}</tspan>` : ''}</text>
+      ${isScore ? stars(F.score, cx - 62, y + 132, 24) : sub ? `<text x="${cx}" y="${y + 130}" text-anchor="middle" direction="${dir}" font-size="21" fill="${C.muted}">${esc(sub)}</text>` : ''}`;
+  };
+  const a = MAP.a, b = MAP.b;
+  return `<svg class="card" viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg" direction="ltr" font-family="Heebo, 'Segoe UI', Arial, sans-serif" role="img" aria-label="${esc(F.callsign)} ${F.from.icao} ${F.to.icao}">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c131c"/><stop offset="1" stop-color="#0a0f16"/></linearGradient>
+      <clipPath id="mapclip"><rect x="0" y="0" width="960" height="430" rx="18"/></clipPath>
+      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5"/></filter>
+    </defs>
+    <rect width="1080" height="1080" fill="url(#bg)"/>
+
+    <text x="${S}" y="92" text-anchor="${aS}" font-size="64" font-weight="800" fill="${C.ink}" direction="ltr">${F.callsign}</text>
+    <text x="${S}" y="134" text-anchor="${aS}" font-size="26" fill="${C.muted}" direction="ltr">${F.type} · ${F.reg}</text>
+    <text x="${E}" y="76" text-anchor="${aE}" font-size="22" font-weight="700" fill="${C.faint}" letter-spacing="3" direction="ltr">${t.brand}</text>
+    <text x="${E}" y="118" ${far} font-size="28" font-weight="600" fill="${C.ink}">${esc(date)}</text>
+
+    <g transform="translate(60 168)">
+      <g clip-path="url(#mapclip)">
+        <rect width="960" height="430" fill="#0b1826"/>
+        <path d="${MAP.land}" fill="#1b2634"/>
+        <path d="${MAP.borders}" fill="none" stroke="#2b394b" stroke-width="1"/>
+        <path d="${MAP.arc}" fill="none" stroke="${C.accent}" stroke-width="9" opacity=".45" filter="url(#glow)"/>
+        <path d="${MAP.arc}" fill="none" stroke="${C.accent}" stroke-width="4" stroke-linecap="round"/>
+      </g>
+      <rect width="960" height="430" rx="18" fill="none" stroke="${C.line}"/>
+      ${[[a, F.from, -1], [b, F.to, 1]].map(([p, ap, side]) => `
+        <circle cx="${p[0]}" cy="${p[1]}" r="11" fill="#0b1826" stroke="${C.accent}" stroke-width="4"/>
+        <text x="${p[0]}" y="${p[1] + (side < 0 ? -26 : 48)}" text-anchor="middle" font-size="34" font-weight="800" fill="${C.ink}" direction="ltr" paint-order="stroke" stroke="#0b1826" stroke-width="6">${ap.icao}</text>
+        <text x="${p[0]}" y="${p[1] + (side < 0 ? -62 : 78)}" text-anchor="middle" direction="${dir}" font-size="22" fill="${C.muted}" paint-order="stroke" stroke="#0b1826" stroke-width="5">${esc(ap[lang])}</text>`).join('')}
+      <g transform="translate(${(a[0] + b[0]) / 2} ${(a[1] + b[1]) / 2 - 30})">
+        <rect x="-78" y="-22" width="156" height="40" rx="20" fill="#0b1826" stroke="${C.line}"/>
+        <text y="6" text-anchor="middle" font-size="22" font-weight="700" fill="${C.ink}" direction="ltr">${F.nm.toLocaleString('en-US')} NM</text>
+      </g>
+    </g>
+
+    ${[0, 1, 2].map((i) => cell(cells[he ? 2 - i : i], 60 + i * 325, 310, 622)).join('')}
+    ${[0, 1].map((i) => cell(cells[3 + (he ? 1 - i : i)], 60 + i * 487.5, 472.5, 790)).join('')}
+
+    <line x1="60" y1="968" x2="1020" y2="968" stroke="${C.line}"/>
+    ${[F.out, F.off, F.on, F.in].map((v, i) => { const cx = (he ? 1020 - 90 - i * 180 : 60 + 90 + i * 180);
+      return `<text x="${cx}" y="1004" text-anchor="middle" direction="${dir}" font-size="18" font-weight="600" fill="${C.faint}">${esc(t.times[i])}</text><text x="${cx}" y="1040" text-anchor="middle" font-size="28" font-weight="700" fill="${C.ink}">${v}<tspan font-size="16" fill="${C.faint}" dx="4">Z</tspan></text>`; }).join('')}
+    <text x="${E}" y="1026" ${far} font-size="20" fill="${C.faint}">${esc(t.tracked)}</text>
+  </svg>`;
+}
+
+const state = { lang: 'he', profit: true };
+const draw = () => { document.getElementById('card').innerHTML = card(state); };
+const press = (sel, b) => document.querySelectorAll(sel).forEach((x) => x.setAttribute('aria-pressed', x === b));
+document.querySelectorAll('[data-lang]').forEach((b) => b.onclick = () => { state.lang = b.dataset.lang; press('[data-lang]', b); draw(); });
+document.querySelectorAll('[data-profit]').forEach((b) => b.onclick = () => { state.profit = b.dataset.profit === '1'; press('[data-profit]', b); draw(); });
+document.querySelectorAll('[data-th]').forEach((b) => b.onclick = () => { document.documentElement.dataset.theme = b.dataset.th; press('[data-th]', b); });
+{ const q = new URLSearchParams(location.search);
+  if (q.get('lang')) state.lang = q.get('lang'), press('[data-lang]', document.querySelector(`[data-lang="${state.lang}"]`));
+  if (q.get('profit') === '0') state.profit = false, press('[data-profit]', document.querySelector('[data-profit="0"]'));
+  if (q.get('th')) document.querySelector(`[data-th="${q.get('th')}"]`).click(); }
+draw();
+</script>
+</body>
+</html>
