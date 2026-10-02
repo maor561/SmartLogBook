@@ -29,6 +29,7 @@ export type LogFlight = {
   editedAt: string | null;
   crewFrom: string | null;
   editable: boolean;                  // ADR-021: closed flights with an OFP snapshot
+  cabin?: { served_share: number | null; climb_fpm: number | null; descent_fpm: number | null } | null;   // the tracked cabin (ADR-061); null on flights without it
   repair?: { cents: number; dueAt: string } | null;   // an unpaid repair after a hard landing: not in the ledger yet (ADR-060)
 };
 

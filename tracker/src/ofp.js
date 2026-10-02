@@ -27,6 +27,7 @@ export function summarizeOfp(j) {
     },
     sched: { out: iso(j.times?.sched_out), off: iso(j.times?.sched_off), on: iso(j.times?.sched_on), in: iso(j.times?.sched_in) },
     orig_utc_offset: num(j.times?.orig_timezone),
+    dest_utc_offset: num(j.times?.dest_timezone),
   };
 }
 

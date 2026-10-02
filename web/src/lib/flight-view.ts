@@ -12,6 +12,7 @@ import type { OfpSummary } from './ofp';
 import type { Times } from './flight-input';
 import type { RateParams } from './rates/params';
 import { aircraftStatus, settleOverdueRepairs, type AircraftStatus } from './fleet';
+import type { AirDoc } from './cabin/sim';
 
 // Everything the flight screen needs, derived on the server from the tracker
 // (Worker), the latest SimBrief OFP and Neon (sketch s1a, six states).
@@ -23,6 +24,7 @@ export type TrackerDoc = {
   out_at: string | null; off_at: string | null; on_at: string | null; in_at: string | null;
   landing: { lat: number; lon: number } | null; last: Sample | null; last_seen_at: string | null;
   prev_state: string | null; disconnected_at: string | null; joined: string | null;
+  air?: AirDoc | null;             // the air part (ADR-061); missing on a Worker from before it
 };
 
 export type Place = { icao: string; name: string | null };
@@ -63,6 +65,7 @@ export type FormView = {
   disconnectedAt: string | null;
   draft: DraftCosts | null;        // GSX costs already entered during the flight
   aircraft: AircraftStatus | null; // hours, checks and an open repair for this registration (ADR-060)
+  air: AirDoc | null;              // what the tracker measured in the air: the passenger mood of a tracked flight (ADR-061)
 };
 
 export type FlightView =
@@ -166,6 +169,7 @@ export async function buildForm(ofp: OfpSummary, t: TrackerDoc | null, crew: str
     mode, ofp, tracked, actual, diverted, diversionNm, positioningNm,
     params: rs.params, rateSetId: rs.id, fuel, rating,
     trackerState: t?.state ?? null, disconnectedAt: t?.disconnected_at ?? null, draft, aircraft,
+    air: mode === 'tracked' ? t?.air ?? null : null,
   };
 }
 

@@ -18,6 +18,7 @@ export type OfpSummary = {
   };
   sched: { out: string | null; off: string | null; on: string | null; in: string | null };
   orig_utc_offset: number | null;
+  dest_utc_offset?: number | null;       // plans stored before ADR-061 do not have it
 };
 
 type Raw = Record<string, Record<string, unknown> | undefined>;
@@ -47,5 +48,6 @@ export function summarizeOfp(j: Raw | null | undefined): OfpSummary | null {
     },
     sched: { out: iso(j.times?.sched_out), off: iso(j.times?.sched_off), on: iso(j.times?.sched_on), in: iso(j.times?.sched_in) },
     orig_utc_offset: num(j.times?.orig_timezone),
+    dest_utc_offset: num(j.times?.dest_timezone),
   };
 }

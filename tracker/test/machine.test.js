@@ -177,3 +177,48 @@ test('signed token: valid, expired, tampered, weak secret', async () => {
   assert.equal(await verifyToken('short', tok, now), false);
   assert.equal(await verifyToken(secret, await signToken(secret, now + 7200), now), false);   // too long-lived
 });
+
+// ---------- the air part (ADR-061)
+import { trackAir } from '../src/machine.js';
+
+function fly(alts, ofp = OFP) {
+  let air = null, prev = null;
+  alts.forEach((alt, i) => { const p = { at: t(i), alt_ft: alt }; air = trackAir(air, p, prev, t(i), ofp); prev = p; });
+  return air;
+}
+
+test('air: a step down in cruise is not the descent; the final descent starts where it left the level', () => {
+  const a = fly([2000, 6000, 10500, 20000, 30000, 36000, 36000, 36000, 34000, 34000, 34000, 32000, 30000, 20000, 9000, 3000]);
+  assert.equal(a.belt_off_at, t(2));
+  assert.equal(a.toc_at, t(6));
+  assert.equal(a.tod_at, t(10));                 // the last level minute before the real descent, not the step at minute 7
+  assert.equal(a.belt_on_at, t(14));
+  assert.equal(a.max_climb_fpm, 10000);
+  assert.equal(a.max_descent_fpm, 11000);
+});
+
+test('air: climbing back to the cruise level cancels a descent', () => {
+  const a = fly([5000, 12000, 30000, 30000, 30000, 28000, 26500, 30000, 30000]);
+  assert.equal(a.tod_at, null);
+  assert.equal(a.belt_on_at, null);
+});
+
+test('air: below 10,000 ft the sign never goes off; a high airport raises the threshold', () => {
+  assert.equal(fly([2000, 6000, 8000, 8000, 8000, 4000, 1000]).belt_off_at, null);
+  const high = { ...OFP, origin: { ...OFP.origin, elev_ft: 8360 } };
+  const a = fly([9000, 10500, 11000, 12000, 20000], high);
+  assert.equal(a.belt_off_at, t(3));             // 8,360 + 3,000 ft
+});
+
+test('air: a gap between samples gives no climb rate', () => {
+  let air = trackAir(null, { at: t(0), alt_ft: 5000 }, null, t(0), OFP);
+  air = trackAir(air, { at: t(10), alt_ft: 35000 }, { at: t(0), alt_ft: 5000 }, t(10), OFP);
+  assert.equal(air.max_climb_fpm, null);
+});
+
+test('air: a whole flight keeps the air part, and the app reset clears it', () => {
+  const { s } = replay([...gate, ...pushTaxi, ...takeoff, ...cruise, ...cruise, ...landing, ...park]);
+  assert.equal(s.state, 'arrived');
+  assert.ok(s.air.belt_off_at && s.air.top_alt_ft === 37000);
+  assert.equal(acknowledge(s).air, null);
+});

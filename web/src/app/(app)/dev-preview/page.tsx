@@ -77,7 +77,7 @@ const form = (o: Partial<FormView> = {}): FormView => ({
   mode: 'tracked', ofp: OFP,
   tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: '2026-09-25T15:49:00.000Z', in: '2026-09-25T15:58:00.000Z' },
   actual: { icao: 'LGAV', name: 'Athens' }, diverted: false, diversionNm: null, positioningNm: 0,
-  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, aircraft: null, ...o,
+  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, aircraft: null, air: null, ...o,
 });
 
 // Fleet fixtures (ADR-060). `REPAIR` is an open request: N738PM is grounded for another 3 days and 21 hours.
@@ -97,6 +97,22 @@ const fleetFixture = (grounded: boolean): FleetAircraft[] => {
     { reg: '4X-EKB', type: 'B738', mtowT: 79, airHours: 41.2, flights: 14, hardLandings: 0, spentCents: 0, open: null, checks: nextChecks(DEFAULTS, 41.2, 79), history: [] },
   ];
 };
+
+// A flight that pushed back `m` minutes ago, with the air part the tracker would have measured by now
+// (sketch s14): taxi 14 min, sign off 4 min after takeoff, level at 14, descent at 72, landing at 98, gate 7 later.
+function cabinFixture(m: number) {
+  const at = (min: number) => new Date(Math.floor(serverNow() / 60e3) * 60e3 + (min - m) * 60e3).toISOString();
+  const seen = (min: number) => (m >= min ? at(min) : null);
+  const off = 14, on = off + 98, gate = on + 7;
+  const ofp = { ...OFP, sched: { out: at(-3), off: at(11), on: at(109), in: at(116) }, dest_utc_offset: 3 };
+  const air = m > off ? {
+    belt_off_at: seen(off + 4), toc_at: seen(off + 14), tod_at: seen(off + 72), belt_on_at: seen(off + 84),
+    max_climb_fpm: 3180, max_descent_fpm: m >= off + 72 ? 2240 : 60, top_alt_ft: m >= off + 14 ? 36000 : 9000 + (m - off) * 1900,
+  } : null;
+  const times = { out: at(0), off: seen(off), on: seen(on), in: seen(gate) };
+  const state: TrackerDoc['state'] = m >= gate ? 'arrived' : m >= on ? 'taxi_in' : m >= off ? 'airborne' : 'taxi_out';
+  return { ofp, air, times, state };
+}
 
 // Server-side clock for the terminal fixture (a whole minute, so reloads agree).
 const minutesFromNow = (min: number) => new Date(Math.round((Date.now() + min * 60e3) / 60e3) * 60e3).toISOString();
@@ -126,6 +142,17 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
       const out = minutesFromNow(min);
       const type = `${sp.size ?? 'large'}_airport`;
       return <TerminalScreen ofp={{ ...OFP, sched: { ...OFP.sched, out } }} tag={<span className="tag plan">תוכנית מוכנה</span>} airportType={type} />;
+    }
+    case 'cabin': {
+      // ?m=40 → 40 minutes after PUSHBACK. 5 demo · 20 sign off · 26 drinks · 40 meals · 75 sales · 95 descent · 113 taxi in
+      const c = cabinFixture(Number((await searchParams).m ?? 40));
+      return <LiveView initial={{ ...T0, state: c.state, ofp: c.ofp, out_at: c.times.out, off_at: c.times.off, on_at: c.times.on, in_at: c.times.in, air: c.air, last_seen_at: new Date(serverNow()).toISOString() }}
+        ofp={c.ofp} draft={null} destName="Athens" />;
+    }
+    case 'cabin-done': {
+      // at the gate two minutes ago: the passengers are getting off, and the score has its fourth part
+      const c = cabinFixture(14 + 98 + 7 + Number((await searchParams).m ?? 2));
+      return <CompletionForm form={form({ ofp: c.ofp, tracked: c.times, air: c.air })} crewIcao="LLBG" />;
     }
     case 'closed': return <IdleView base={base} justClosed />;     // right after closing a flight
     case 'fleet': return <FleetView fleet={fleetFixture((await searchParams).g !== '0')} now={serverNow()} />;

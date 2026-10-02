@@ -10,6 +10,9 @@ import { closeFlight, discardFlight } from '../flight-actions';
 import { Head } from './Parts';
 import { flightScore, scoreInput } from '@/lib/flight-score';
 import { ScoreCard } from '@/components/FlightScore';
+import { cabinRecord } from '@/lib/cabin/mood';
+import { cabinFits } from '@/lib/cabin/sim';
+import { Cabin } from './Cabin';
 import { CHECK_LABEL, GROUND_DAYS, settle } from '@/lib/maintenance';
 import { PayRepairButton } from '@/components/PayRepair';
 
@@ -84,7 +87,10 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   const costs = result?.lines.filter((l) => l.amountCents < 0) ?? [];
   const sum = (ls: typeof revenue) => ls.reduce((s, l) => s + l.amountCents, 0);
   const hint = fpmHint(draft.fpm, params);
-  const score = flightScore(scoreInput(times, ofp.sched, draft.fpm));
+  // The cabin of a fully tracked flight adds the passenger mood to the score (ADR-061); the server computes the same record at closing.
+  const cabin = form.air && cabinFits(ofp.aircraft.type, ofp.weights.pax) && times.out && times.off && times.on && times.in
+    ? cabinRecord({ id: ofp.id, pax: ofp.weights.pax ?? 0, sched: ofp.sched }, times, form.air) : null;
+  const score = flightScore(scoreInput(times, ofp.sched, draft.fpm, cabin));
   const allTracked = KEYS.every((k) => tracked[k]);
   // A time that rolled over to the next UTC day (e.g. IN 00:20 after ON 23:50) is flagged, so a typo stands out.
   const day0 = (times.out ?? ofp.sched.out ?? '').slice(0, 10);
@@ -112,6 +118,10 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
 
   return (
     <div className="main wide">
+      {/* The passengers are still getting off (sketch s14): the cabin stays, over the whole width, until the last one is out. */}
+      {form.mode === 'tracked' && form.air && (
+        <Cabin ofp={ofp} outAt={tracked.out} offAt={tracked.off} onAt={tracked.on} inAt={tracked.in} air={form.air} destName={form.actual?.name ?? null} />
+      )}
       <div className="stack">
         <section className="panel">
           <Head ofp={ofp} tag={tag} actual={form.actual} diverted={form.diverted}>

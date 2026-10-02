@@ -10,6 +10,8 @@ import { hasTracker, trackerAck } from '@/lib/tracker';
 import { syncMilestones } from '@/lib/analysis-data';
 import { GROUND_DAYS, settle } from '@/lib/maintenance';
 import { payRepair } from '@/lib/fleet';
+import { cabinRecord } from '@/lib/cabin/mood';
+import { cabinFits } from '@/lib/cabin/sim';
 
 export type CloseResult = { ok: true } | { ok: false; errors: string[] };
 
@@ -54,6 +56,9 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
   const repair = result.repair;
   const ts = timesSource(f.tracked, times);
   const o = f.ofp;
+  // The cabin of a fully tracked flight (ADR-061): the measured air part and the share of the passengers served.
+  const cabin = f.air && ts === 'vvvv' && cabinFits(o.aircraft.type, o.weights.pax)
+    ? cabinRecord({ id: o.id, pax: o.weights.pax ?? 0, sched: o.sched }, times, f.air) : null;
   const lines = result.lines.map((l) => ({ code: l.code, amount_cents: l.amountCents, source: l.source, calc: l.calc }));
 
   const rows = await db()`
@@ -63,7 +68,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
         route_distance_nm, gc_distance_nm, aircraft_type, registration, seats, mtow_kg, mlw_kg, oew_kg,
         pax, cargo_kg, payload_kg, sched_out, sched_off, sched_on, sched_in, out_at, off_at, on_at, in_at, times_source,
         fpm, crew_location_icao, rate_set_id, eia_fuel_price_per_kg, local_out_hour, orig_utc_offset, rating_at_out,
-        airframe_hours_before, closed_at, ofp_doc)
+        airframe_hours_before, cabin, closed_at, ofp_doc)
       VALUES (
         ${o.callsign}, ${o.id}, ${o.generated_at}, 'closed', ${sourceOf(ts)}, ${o.origin.icao}, ${o.dest.icao},
         ${f.actual?.icao ?? o.dest.icao}, ${o.alternate},
@@ -73,7 +78,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
         ${o.sched.out}, ${o.sched.off}, ${o.sched.on}, ${o.sched.in},
         ${times.out}, ${times.off}, ${times.on}, ${times.in}, ${ts},
         ${fpm}, ${view.base.crew.icao}, ${f.rateSetId}, ${draft.fuelUsdPerKg}, ${input.out.hour}, ${o.orig_utc_offset}, ${f.rating},
-        ${draft.airframeHoursBefore ?? null}, now(), ${JSON.stringify(o)}::jsonb)
+        ${draft.airframeHoursBefore ?? null}, ${cabin ? JSON.stringify(cabin) : null}::jsonb, now(), ${JSON.stringify(o)}::jsonb)
       ON CONFLICT (ofp_id) DO NOTHING
       RETURNING id),
     r AS (

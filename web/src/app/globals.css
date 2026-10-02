@@ -641,3 +641,58 @@ dialog.card-dlg { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh
 .ledger tr.hl td { background: var(--warn-bg); font-weight: 600; }
 @media (max-width: 900px) { .fl-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .fl-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fl-req .amt { margin-inline-start: 0; width: 100%; } }
+
+/* ---------- the cabin in flight (sketch s14, ADR-061) ---------- */
+.main > .panel.cb, .main.with-cabin > .panel { grid-column: 1 / -1; min-width: 0; }
+.cb-status { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+.cb-status > div { padding: 10px 14px; border-inline-start: 1px solid var(--line); min-width: 0; }
+.cb-status > div:first-child { border-inline-start: none; }
+.cb-status .v { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cb-belt { width: 30px; height: 22px; border-radius: 4px; display: inline-grid; place-items: center; font-size: 13px; background: var(--line-2); border: 1px solid var(--line); filter: grayscale(1); opacity: .6; }
+.cb-belt.on { background: #f5b301; border-color: #c48f00; box-shadow: 0 0 8px rgba(245, 179, 1, .6); filter: none; opacity: 1; }
+.cb-bars { display: grid; gap: 4px; margin-top: 2px; }
+.cb-bars .ln { display: grid; grid-template-columns: 52px minmax(0, 1fr) 36px; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.cb-bars .tr { height: 6px; border-radius: 3px; background: var(--line-2); overflow: hidden; }
+.cb-bars .tr div { height: 100%; margin-inline-start: auto; border-radius: 3px; }
+.cb-scroll { overflow-x: auto; direction: ltr; }
+/* the picture is light in both themes */
+.cb-map { position: relative; direction: ltr; line-height: 0; min-width: 1040px; background: #f4f4f4; container-type: inline-size; }
+.cb-map svg { display: block; width: 100%; height: auto; }
+.cb-seat { fill: #3b7fd9; stroke: #173f7a; stroke-width: 1; } .cb-seat.exit { fill: #2c67b8; }
+.cb-head { fill: #173f7a; opacity: .6; }
+.cb-p { stroke: #10151c; stroke-width: 1.3; }
+.cb-sit { fill: #f2f5f9; } .cb-drink { fill: #7dd3fc; } .cb-eat { fill: #fb923c; } .cb-sleep { fill: #64748b; } .cb-walk { fill: #fff; }
+.cb-queue { fill: #ffb020; } .cb-call { fill: #fde047; } .cb-buy { fill: #c084fc; } .cb-out { fill: #22c55e; }
+.cb-crew { fill: #e11d74; stroke: #fff; stroke-width: 2; }
+.cb-cart rect { stroke: #10151c; stroke-width: 1.4; }
+.cb-lav { fill: none; stroke: #ef4444; stroke-width: 3.5; opacity: 0; } .cb-lav.on { opacity: 1; }
+/* the latest announcement sits on the picture, above the fuselage; sized in map widths so it scales with it */
+.cb-pa { position: absolute; top: .5cqw; left: 14%; width: 70%; padding: .45cqw 1cqw .55cqw; border-radius: .5cqw; background: rgba(15, 23, 36, .9); color: #fff; line-height: 1.35; box-shadow: 0 2px 10px rgba(0, 0, 0, .25); }
+.cb-pa .he { direction: rtl; text-align: right; font-size: max(13px, 1.22cqw); font-weight: 600; }
+.cb-pa .he b { font-size: max(10.5px, .85cqw); font-weight: 700; color: #ffd166; margin-inline-end: .7cqw; white-space: nowrap; }
+.cb-pa .en { direction: ltr; text-align: left; font-size: max(11.5px, 1cqw); color: #c3ccd9; }
+.cb-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.cb-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cb-legend i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; border: 1.5px solid #10151c; }
+.cb-legend i.cb-sit { background: #f2f5f9; } .cb-legend i.cb-drink { background: #7dd3fc; } .cb-legend i.cb-eat { background: #fb923c; } .cb-legend i.cb-sleep { background: #64748b; }
+.cb-legend i.cb-walk { background: #fff; } .cb-legend i.cb-queue { background: #ffb020; } .cb-legend i.cb-call { background: #fde047; } .cb-legend i.cb-buy { background: #c084fc; } .cb-legend i.cb-out { background: #22c55e; }
+.cb-legend i.sq { border-radius: 2px; transform: rotate(45deg); width: 9px; height: 9px; background: #e11d74; border-color: #fff; outline: 1px solid var(--line); }
+.cb-legend i.ct { border-radius: 3px; width: 16px; height: 9px; background: #93c5fd; }
+.cb-log-wrap { border-top: 1px solid var(--line); }
+.cb-log-wrap > .label { padding: 8px 14px 2px; }
+.cb-log { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; padding-bottom: 4px; }
+.cb-log div { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; padding: 4px 14px; font-size: 12.5px; }
+.cb-log div.cur { background: var(--accent-bg); font-weight: 600; }
+.cb-log div.next { color: var(--faint); }
+.cb-log .t { direction: ltr; text-align: left; color: var(--muted); }
+@media (max-width: 980px) {
+  .cb-status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cb-status > div:nth-child(3) { border-inline-start: none; }
+  .cb-status > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 640px) { .cb-log { grid-template-columns: minmax(0, 1fr); grid-template-rows: none !important; grid-auto-flow: row; } }
+/* the mood part of the flight score: its three sources */
+.sc-mood { display: grid; gap: 3px; margin-top: 2px; }
+.sc-mood > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; font-size: 12.5px; }
+.sc-mood > div b { font-weight: 700; }
+.sc-mood > div small { grid-column: 1 / -1; }

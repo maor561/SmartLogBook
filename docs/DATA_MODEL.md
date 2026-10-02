@@ -54,6 +54,8 @@
 - התשלום, או מעבר של `due_at` (4 ימים), כותב שורת `hard_landing` ל-`ledger_lines` של אותה טיסה. עד אז הסכום לא נמצא בספר החשבונות.
 - נמחקת עם הטיסה (`ON DELETE CASCADE`).
 
+**ב-`flights`:** `cabin` (jsonb, ADR-061). מה שה-Worker מדד באוויר ומה שזה אמר לשירות: `tier`, `served_share`, `climb_fpm`, `descent_fpm`, `belt_off_at`, `toc_at`, `tod_at`, `belt_on_at`, `top_alt_ft`. ריק בטיסות שנסגרו לפני WP16, בטיסות ידניות וחלקיות, ובמטוס בלי תמונת תא. ממנו מחושב מצב הרוח של הנוסעים.
+
 **ב-`flights`:** `airframe_hours_before`, שעות האוויר של הרישום לפני הטיסה. לפיו נקבע אם הטיסה חצתה טיפול תקופתי (שורת `maintenance_check`).
 
 ### `rate_sets`: תעריפים עם גרסאות (הצילום של ADR-021)
@@ -90,6 +92,7 @@
 | זמנים | `out_at`, `off_at`, `on_at`, `in_at` |
 | אחרון שנראה | `last_seen_at`, `lat`, `lon`, `alt_ft`, `gs_kt`, `hdg`, `squawk`, `phase` |
 | תקלות | `disconnected_at`, `feed_error_since` (ADR-024: תקלת פיד ≠ ניתוק) |
+| שלבי האוויר (ADR-061) | `air`: `belt_off_at`, `toc_at`, `tod_at`, `belt_on_at`, `max_climb_fpm`, `max_descent_fpm`, `top_alt_ft` |
 
 ### `tracker_events`: יומן מעברים (לדיבאג)
 `at`, `from_state`, `to_state`, `reason`. נמחק כשהטיסה עוברת ל-Neon. לפי ADR-022 לא נשמר מסלול.

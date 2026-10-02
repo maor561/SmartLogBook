@@ -10,6 +10,8 @@ import { distanceNm } from '@/lib/geo';
 import { hm, minsBetween, nf, z } from '@/lib/format';
 import { TIME_LABEL } from '@/lib/flight-input';
 import { FlightTabs, Head } from './Parts';
+import { Cabin } from './Cabin';
+import { cabinFits } from '@/lib/cabin/sim';
 
 const PHASES = ['בגייט', 'הסעה', 'באוויר', 'הסעה לגייט', 'בחניה'];
 const INDEX: Record<string, number> = { armed: 0, taxi_out: 1, airborne: 2, taxi_in: 3, arrived: 4 };
@@ -23,7 +25,7 @@ function useNow(ms = 1000) {
 
 // States 3 (live) and 4 (disconnected). Server gives the first snapshot; the
 // tracker context keeps it fresh without reloading the page.
-export function LiveView({ initial, ofp, draft }: { initial: TrackerDoc; ofp: OfpSummary; draft: DraftCosts | null }) {
+export function LiveView({ initial, ofp, draft, destName = null }: { initial: TrackerDoc; ofp: OfpSummary; draft: DraftCosts | null; destName?: string | null }) {
   const live = useTracker().tracker;
   const t = live && live.ofp?.id === ofp.id ? live : initial;
   const now = useNow();
@@ -44,9 +46,10 @@ export function LiveView({ initial, ofp, draft }: { initial: TrackerDoc; ofp: Of
   const deadline = t.disconnected_at ? Date.parse(t.disconnected_at) + 30 * 60e3 : null;
   const remain = deadline ? Math.max(0, deadline - now) : null;
 
-  return (
-    <div className="main">
-      <div className="stack">
+  // The cabin, from PUSHBACK on (sketch s14). While the link is lost nothing is known, so it is not shown.
+  const cabin = !disc && Boolean(t.out_at || t.off_at) && cabinFits(ofp.aircraft.type, ofp.weights.pax);
+
+  const dashboard = (
         <section className="panel">
           <Head ofp={ofp} tag={disc ? <span className="tag warn">מנותק</span> : <span className="tag go">{TAG[t.state] ?? t.state}</span>}>
             {!disc && seenAgo != null && <>VATSIM · עודכן לפני {seenAgo < 90 ? `${seenAgo} שנ׳` : `${Math.round(seenAgo / 60)} דק׳`}</>}
@@ -99,6 +102,8 @@ export function LiveView({ initial, ofp, draft }: { initial: TrackerDoc; ofp: Of
           </div>
         </section>
 
+  );
+  const blockTimes = (
         <section className="panel">
           <div className="panel-head"><span className="label">זמני בלוק · UTC</span></div>
           <div style={{ overflowX: 'auto' }}>
@@ -123,7 +128,18 @@ export function LiveView({ initial, ofp, draft }: { initial: TrackerDoc; ofp: Of
             <Link className="btn btn-sm btn-link-plain" href="/?manual=1">{disc ? 'סיים ידנית עכשיו' : 'סיים ידנית'}</Link>
           </div>
         </section>
-      </div>
+  );
+
+  // With the cabin, the dashboard and the cabin take the whole width, and the rest sits below them.
+  return (
+    <div className={`main${cabin ? ' with-cabin' : ''}`}>
+      {cabin ? (
+        <>
+          {dashboard}
+          <Cabin ofp={ofp} outAt={t.out_at} offAt={t.off_at} onAt={t.on_at} inAt={t.in_at} air={t.air ?? null} destName={destName} />
+          <div className="stack">{blockTimes}</div>
+        </>
+      ) : <div className="stack">{dashboard}{blockTimes}</div>}
       <aside className="stack">
         <DraftCostsPanel ofpId={ofp.id} initial={draft} />
         <section className="panel">

@@ -14,7 +14,7 @@
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | לוג החלטות (ADR), append-only |
 | [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | טבלאות Neon ו-D1, ספר החשבונות, מיפוי ההעברה |
 | [`docs/WORK_PACKAGES.md`](docs/WORK_PACKAGES.md) | חבילות העבודה, הסדר והגדרת "גמור" |
-| [`docs/mockups/`](docs/mockups/) | סקיצות מאושרות (s0 עד s9, s11, s12) |
+| [`docs/mockups/`](docs/mockups/) | סקיצות מאושרות (s0 עד s9, s11, s12, s14) |
 
 ## נוהל עבודה
 

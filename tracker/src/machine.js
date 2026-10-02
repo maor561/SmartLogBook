@@ -23,6 +23,13 @@ export const DEFAULTS = {
   armRadiusNm: 5,         // must be on the ground this close to the OFP origin to arm
   graceTicks: 30,         // ADR-020: 30 minutes to reconnect
   ofpMaxAgeH: 12,         // ADR-020: an unflown plan expires
+  // The air part (ADR-061), calibrated on the DLH314 recording.
+  beltFt: 10000,          // seat-belt sign: off climbing through this, on again descending through it …
+  beltAglFt: 3000,        // … but never lower than this above the field (high airports)
+  levelFpm: 300,          // slower than this up or down = level
+  todDropFt: 3000,        // this far below the highest altitude = the descent has started (a step down in cruise is less)
+  vsMinGapMin: 0.5,       // a climb rate is computed only between samples this far apart …
+  vsMaxGapMin: 2.5,       // … and no further (a reconnect after a gap says nothing about the rate)
 };
 
 export const IDLE = Object.freeze({
@@ -31,7 +38,47 @@ export const IDLE = Object.freeze({
   gate: null, landing: null, last: null, last_seen_at: null,
   prev_state: null, absent_ticks: 0, disconnected_at: null,
   stopped_ticks: 0, stopped_since: null, feed_error_since: null, joined: null, last_tick: null,
+  air: null,
 });
+
+const AIR = Object.freeze({
+  top_alt_ft: null, not_descending_at: null, level_ticks: 0,
+  belt_off_at: null, toc_at: null, tod_at: null, belt_on_at: null,
+  max_climb_fpm: null, max_descent_fpm: null,
+});
+// When the sample was really taken: the feed's own timestamp when it has one (the cron fires up to 15 s later).
+const takenAt = (p, fallback) => { const t = Date.parse(p.last_updated ?? ''); return Number.isNaN(t) ? Date.parse(p.at ?? fallback) : t; };
+
+// The air part of the flight, one sample a minute (ADR-061). `prev` is the previous sample, null after a gap.
+//   seat-belt sign   off climbing through 10,000 ft, on again descending through it
+//   top of climb     the first minute it stays level after the sign went off
+//   top of descent   where the continuous descent began, once it is 3,000 ft below the highest altitude
+//   steepest climb and descent, as minute averages
+export function trackAir(air, p, prev, now, ofp, cfg = DEFAULTS) {
+  const a = { ...AIR, ...air };
+  const gap = prev ? (takenAt(p, now) - takenAt(prev, now)) / 60000 : null;
+  const vs = gap != null && gap >= cfg.vsMinGapMin && gap <= cfg.vsMaxGapMin ? (p.alt_ft - prev.alt_ft) / gap : null;
+  if (vs != null) {
+    if (vs > (a.max_climb_fpm ?? 0)) a.max_climb_fpm = Math.round(vs);
+    if (-vs > (a.max_descent_fpm ?? 0)) a.max_descent_fpm = Math.round(-vs);
+  }
+  if (a.top_alt_ft == null || p.alt_ft > a.top_alt_ft) a.top_alt_ft = p.alt_ft;
+  // Back up near the highest altitude: that was not the final descent.
+  if (a.tod_at && p.alt_ft >= a.top_alt_ft - 500) { a.tod_at = null; a.belt_on_at = null; }
+
+  const offFt = Math.max(cfg.beltFt, (ofp?.origin?.elev_ft ?? 0) + cfg.beltAglFt);
+  const onFt = Math.max(cfg.beltFt, (ofp?.dest?.elev_ft ?? 0) + cfg.beltAglFt);
+  if (!a.belt_off_at && !a.tod_at && p.alt_ft >= offFt) a.belt_off_at = now;
+
+  const level = vs != null && Math.abs(vs) < cfg.levelFpm;
+  a.level_ticks = level ? a.level_ticks + 1 : 0;
+  if (a.belt_off_at && !a.toc_at && !a.tod_at && a.level_ticks >= 2) a.toc_at = prev.at ?? now;
+
+  if (vs == null || vs > -cfg.levelFpm || a.not_descending_at == null) { if (!a.tod_at) a.not_descending_at = now; }
+  if (!a.tod_at && p.alt_ft <= a.top_alt_ft - cfg.todDropFt) a.tod_at = a.not_descending_at;
+  if (a.tod_at && a.belt_off_at && !a.belt_on_at && p.alt_ft < onFt) a.belt_on_at = now;
+  return a;
+}
 
 const R_NM = 3440.065, rad = (d) => (d * Math.PI) / 180;
 export function distNm(lat1, lon1, lat2, lon2) {
@@ -141,6 +188,7 @@ function run(s, p, now, cfg, go) {
     }
     case 'airborne': {
       if (!p) return disconnect(s, now, go);
+      s.air = trackAir(s.air, p, s.last, now, s.ofp, cfg);
       if (p.gs_kt < cfg.onGsKt) {
         s.on_at = now;
         s.landing = { lat: p.lat, lon: p.lon };

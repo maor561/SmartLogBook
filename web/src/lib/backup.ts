@@ -95,7 +95,7 @@ const COLS = [
   'route_distance_nm', 'gc_distance_nm', 'aircraft_type', 'registration', 'seats', 'mtow_kg', 'mlw_kg', 'oew_kg',
   'pax', 'cargo_kg', 'payload_kg', 'sched_out', 'sched_off', 'sched_on', 'sched_in', 'out_at', 'off_at', 'on_at', 'in_at',
   'times_source', 'fpm', 'landing_lat', 'landing_lon', 'crew_location_icao', 'rate_set_id', 'eia_fuel_price_per_kg',
-  'local_out_hour', 'orig_utc_offset', 'rating_at_out', 'closed_at', 'edited_at', 'legacy_planned_air_min', 'legacy_doc', 'ofp_doc', 'created_at',
+  'local_out_hour', 'orig_utc_offset', 'rating_at_out', 'airframe_hours_before', 'cabin', 'closed_at', 'edited_at', 'legacy_planned_air_min', 'legacy_doc', 'ofp_doc', 'created_at',
 ] as const;
 
 // Re-creates flights from the backup that are not in the logbook any more.

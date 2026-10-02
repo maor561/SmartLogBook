@@ -1,4 +1,5 @@
-import { ON_TIME_MIN, SCORE_RANGE, SCORE_WEIGHT, scoreTone, scoreVerdict, type FlightScore, type ScorePart } from '@/lib/flight-score';
+import { ON_TIME_MIN, SCORE_RANGE, scoreTone, scoreVerdict, type FlightScore, type ScorePart } from '@/lib/flight-score';
+import { MOOD_RANGE, MOOD_WEIGHT, type Mood, type MoodPart } from '@/lib/cabin/mood';
 
 // Flight score (sketch s9, ADR-058): the total, and where every point came from
 // (ADR-006: every number has a source). Used by the completion form and the logbook.
@@ -13,11 +14,30 @@ export function ScoreDot({ score }: { score: FlightScore | null }) {
   return <span className={`sc-dot ${scoreTone(score.total)}`}><i />{score.total.toFixed(1)}{score.partial && <span className="chip">חלקי</span>}</span>;
 }
 
-const pct = (k: ScorePart) => `${Math.round(SCORE_WEIGHT[k] * 100)}%`;
+const nf = (n: number) => n.toLocaleString('en-US');
+
+// Where the mood came from (sketch s14, ADR-061): three lines under the mood part.
+function MoodParts({ mood }: { mood: Mood }) {
+  const i = mood.input, R = MOOD_RANGE;
+  const rows: { k: MoodPart; name: string; what: string }[] = [
+    { k: 'ground', name: 'המתנה על הקרקע', what: i.groundMin == null ? 'אין זמנים' : `${i.groundMin} דק׳ (מלא עד ${R.ground.good}, אפס מ-${R.ground.bad})` },
+    { k: 'service', name: 'שירות לפני ההנמכה', what: i.servedShare == null ? 'לא תוכנן שירות בטיסה הזאת' : `${Math.round(i.servedShare * 100)}% מהנוסעים (אפס מ-${R.service.bad * 100}%)` },
+    { k: 'comfort', name: 'נוחות', what: i.climbFpm == null && i.descentFpm == null ? 'לא נמדד'
+      : `טיפוס ${i.climbFpm == null ? '—' : nf(i.climbFpm)} · הנמכה ${i.descentFpm == null ? '—' : nf(i.descentFpm)} רגל לדקה (מלא עד ${nf(R.climb.good)} / ${nf(R.descent.good)})` },
+  ];
+  return (
+    <div className="sc-mood">
+      {rows.map(({ k, name, what }) => (
+        <div key={k}><span>{name} · {Math.round(MOOD_WEIGHT[k] * 100)}%</span><b>{mood.parts[k] == null ? '—' : mood.parts[k]!.toFixed(1)}</b><small>{what}</small></div>
+      ))}
+    </div>
+  );
+}
 const OnTime = ({ min }: { min: number }) => (min <= ON_TIME_MIN ? <span className="chip go">בזמן</span> : <span className="chip warn">באיחור</span>);
 
 export function ScoreCard({ score, compact = false }: { score: FlightScore; compact?: boolean }) {
   const { input: i, parts } = score, R = SCORE_RANGE;
+  const pct = (k: ScorePart) => `${Math.round(score.weights[k] * 100)}%`;
   const rows: { k: ScorePart; name: string; why: React.ReactNode; rule: string }[] = [
     {
       k: 'dep', name: 'יציאה', rule: `מלא עד ${R.dep.good} דק׳ · אפס מ-${R.dep.bad} דק׳`,
@@ -34,6 +54,8 @@ export function ScoreCard({ score, compact = false }: { score: FlightScore; comp
       why: i.fpm == null ? 'לא הוזן FPM'
         : <><bdi className="ltr">−{i.fpm} FPM</bdi> {i.fpm <= 200 ? <span className="chip go">רכה</span> : i.fpm > 400 ? <span className="chip bad">קשה</span> : <span className="chip">רגילה</span>}</>,
     },
+    // only on a flight whose cabin was tracked
+    ...(score.mood ? [{ k: 'mood' as const, name: 'מצב רוח הנוסעים', rule: 'מה שקרה בתא הנוסעים בטיסה', why: <MoodParts mood={score.mood} /> }] : []),
   ];
   return (
     <div className={`sc${compact ? ' compact' : ''}`}>

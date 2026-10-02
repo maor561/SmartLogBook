@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { verifySession } from '@/lib/dal';
 import { hasDb } from '@/lib/db';
-import { airportType } from '@/lib/airports';
+import { airportType, getAirport } from '@/lib/airports';
 import { getFlightView } from '@/lib/flight-view';
 import { IdleView, PlanView } from './flight/IdlePlan';
 import { LiveView } from './flight/LiveView';
@@ -36,7 +36,10 @@ export default async function FlightPage({ searchParams }: PageProps<'/'>) {
     case 'idle': return <IdleView base={view.base} justClosed={sp.closed === '1'} />;
     case 'plan': return <PlanView base={view.base} ofp={view.ofp} expiresInMin={view.expiresInMin} positioningNm={view.positioningNm} aircraft={view.aircraft} />;
     case 'live':
-    case 'disc': return <LiveView initial={view.t} ofp={view.ofp} draft={view.draft} />;
+    case 'disc': {
+      const dest = await getAirport(view.ofp.dest.icao).catch(() => null);      // the announcements name the city
+      return <LiveView initial={view.t} ofp={view.ofp} draft={view.draft} destName={dest?.city ?? dest?.name ?? null} />;
+    }
     case 'done':
     case 'manual': return <CompletionForm key={view.form.ofp.id} form={view.form} crewIcao={view.base.crew.icao} />;
   }

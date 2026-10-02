@@ -57,6 +57,7 @@ export async function loadLogbook(): Promise<{ flights: LogFlight[]; airports: R
     editedAt: iso(r.edited_at),
     crewFrom: trim(r.crew_location_icao),
     editable: r.status === 'closed' && Boolean(r.ofp_doc),
+    cabin: r.cabin ? { served_share: r.cabin.served_share ?? null, climb_fpm: r.cabin.climb_fpm ?? null, descent_fpm: r.cabin.descent_fpm ?? null } : null,
     repair: r.repair ? { cents: Number(r.repair.cents), dueAt: iso(r.repair.dueAt)! } : null,
   }));
 

@@ -1,8 +1,10 @@
 // Company rating (ADR-036), ranks and milestones (ADR-038). Pure.
 import type { LogFlight } from './logbook-filter';
 import { durOnTime, ON_TIME_MIN, scoreInput } from './flight-score';
+import { moodOf } from './cabin/mood';
 
-// ---------- rating: 4 pillars over the last 30 closed flights, 0–5 each
+// ---------- rating: 4 pillars over the last 30 closed flights, 0–5 each, and a fifth (passenger mood,
+// ADR-061) once enough of those flights had their cabin tracked
 
 const lerp = (v: number, bad: number, good: number) => {
   const t = (v - bad) / (good - bad);
@@ -10,12 +12,13 @@ const lerp = (v: number, bad: number, good: number) => {
 };
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
-export type Pillar = { key: 'safety' | 'punctuality' | 'profit' | 'efficiency'; name: string; score: number; why: string };
+export type Pillar = { key: 'safety' | 'punctuality' | 'profit' | 'efficiency' | 'mood'; name: string; score: number; why: string };
 export type Rating = { overall: number; pillars: Pillar[]; flights: number } | null;
 
 export const OTP_MINUTES = ON_TIME_MIN;   // ADR-035: OUT within 15 min of scheduled OUT
 export const RATING_WINDOW = 30;
 export const RATING_MIN_FLIGHTS = 5;
+export const MOOD_MIN_FLIGHTS = 3;        // the mood pillar appears once this many flights in the window have it
 
 export function onTime(f: LogFlight): boolean | null {
   if (!f.times.out || !f.sched.out) return null;
@@ -65,7 +68,13 @@ export function companyRating(flights: LogFlight[]): Rating {
     { key: 'profit', name: 'רווחיות', score: r1(profit), why: `שוליים ${Math.round(margin * 100)}% (יעד 20%)` },
     { key: 'efficiency', name: 'יעילות', score: r1(efficiency), why: `תפוסה ${Math.round(lf * 100)}% · ${Math.round(extraRate * 100)}% עם הקפצה או הסטה` },
   ];
-  return { overall: r1(pillars.reduce((s, p) => s + p.score, 0) / 4), pillars, flights: win.length };
+  // Passenger mood (ADR-061): the average over the flights whose cabin was tracked.
+  const moods = win.map((f) => (f.cabin ? moodOf(scoreInput(f.times, f.sched, null, f.cabin).mood!) : null)).filter((m) => m != null);
+  if (moods.length >= MOOD_MIN_FLIGHTS) {
+    const avg = moods.reduce((s, m) => s + m.value, 0) / moods.length;
+    pillars.push({ key: 'mood', name: 'נוסעים', score: r1(avg), why: `מצב רוח ממוצע ב-${moods.length} טיסות` });
+  }
+  return { overall: r1(pillars.reduce((s, p) => s + p.score, 0) / pillars.length), pillars, flights: win.length };
 }
 
 // ---------- ranks by total block hours (historical flights count by planned air time)
