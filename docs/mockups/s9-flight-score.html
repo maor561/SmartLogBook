@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 9 · ציון הטיסה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #eef0f3; --bar: #ffffff; --panel: #ffffff; --line: #d9dde3; --line-2: #eceef2;
+  --ink: #151a21; --muted: #5d6673; --faint: #8b93a0;
+  --accent: #0b4f9c; --accent-bg: #e4edf8;
+  --go: #147a47; --go-bg: #e3f2ea; --warn: #9a5b00; --warn-bg: #fbeed7; --bad: #b3261e; --bad-bg: #fbe7e5;
+  --r: 4px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+bdi.l { direction: ltr; unicode-bidi: isolate; }
+button, input { font: inherit; }
+
+.switch { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; border-bottom: 1px solid #000; }
+.switch button { border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 3px 9px; border-radius: 4px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; }
+.frame { padding: 16px; }
+.note-bar { max-width: 1200px; margin: 0 auto 10px; color: #b9bec7; font-size: 13px; line-height: 1.55; }
+.note-bar b { color: #fff; }
+.app { max-width: 1200px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden; font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.main { padding: 16px 20px 20px; display: grid; gap: 16px; }
+.where { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .3px; margin: 4px 0 -8px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.panel-head { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.new { font-size: 10.5px; font-weight: 700; color: var(--go); background: var(--go-bg); border-radius: 3px; padding: 0 5px; }
+.chip { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 3px; background: var(--line-2); color: var(--muted); white-space: nowrap; }
+.chip.go { background: var(--go-bg); color: var(--go); } .chip.warn { background: var(--warn-bg); color: var(--warn); } .chip.bad { background: var(--bad-bg); color: var(--bad); }
+
+/* ---------- 1. the score card ---------- */
+.score { display: grid; grid-template-columns: 190px minmax(0, 1fr); }
+.score .total { padding: 16px 14px; border-inline-end: 1px solid var(--line); display: grid; align-content: center; gap: 4px; }
+.score .total .v { font-size: 46px; font-weight: 700; line-height: 1; }
+.score .total .v small { font-size: 16px; color: var(--muted); font-weight: 500; }
+.stars { color: var(--warn); letter-spacing: 1px; font-size: 17px; }
+.stars .off { color: var(--line); }
+.parts { display: grid; }
+.part { display: grid; grid-template-columns: 150px minmax(0, 1fr) 54px; gap: 4px 14px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line-2); }
+.part:last-child { border-bottom: none; }
+.part .nm { font-weight: 600; }
+.part .nm small { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+.part .why { font-size: 13px; }
+.part .why small { display: block; font-size: 11.5px; color: var(--muted); }
+.part .meter { height: 6px; border-radius: 3px; background: var(--line-2); overflow: hidden; margin-top: 5px; }
+.part .meter div { height: 100%; margin-inline-start: auto; border-radius: 3px; background: var(--go); transition: width .2s; }
+.part .meter div.mid { background: var(--warn); } .part .meter div.low { background: var(--bad); }
+.part .pts { font-size: 20px; font-weight: 700; text-align: end; }
+.try { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 18px; padding: 10px 14px; border-top: 1px dashed var(--line); background: var(--bar); }
+.try label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.try input { width: 100%; accent-color: var(--accent); direction: ltr; }
+.try b { color: var(--ink); }
+
+/* ---------- 2. logbook ---------- */
+.lb { display: grid; grid-template-columns: minmax(0, 1fr) 320px; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--line-2); font-size: 13px; white-space: nowrap; }
+.tbl th { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.tbl td.n, .tbl th.n { text-align: left; direction: ltr; }
+.tbl tr.sel td { background: var(--accent-bg); }
+.tbl tbody tr { cursor: pointer; }
+.sc { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.sc i { width: 8px; height: 8px; border-radius: 50%; background: var(--go); }
+.sc.mid i { background: var(--warn); } .sc.low i { background: var(--bad); }
+.detail { border-inline-start: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 8px; align-content: start; }
+.kv { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.kv span { color: var(--muted); }
+
+/* ---------- 3. analysis ---------- */
+.an { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.an > div { padding: 12px 14px; }
+.an > div + div { border-inline-start: 1px solid var(--line); }
+.pillar-v { font-size: 30px; font-weight: 700; }
+.calc { font-size: 13px; display: grid; gap: 4px; margin-top: 8px; }
+.calc .ln { display: flex; justify-content: space-between; gap: 10px; }
+.calc .ln span { color: var(--muted); }
+.calc .sum { border-top: 1px solid var(--line); padding-top: 4px; font-weight: 700; }
+.was { font-size: 12px; color: var(--muted); margin-top: 8px; padding: 6px 8px; background: var(--line-2); border-radius: var(--r); }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; margin-top: 10px; border-bottom: 1px solid var(--line); direction: rtl; }
+.bars div { flex: 1; min-width: 0; border-radius: 3px 3px 0 0; background: var(--go); position: relative; }
+.bars div.mid { background: var(--warn); } .bars div.low { background: var(--bad); }
+.bars div span { position: absolute; top: -17px; inset-inline: 0; text-align: center; font-size: 11px; font-weight: 600; }
+.axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 3px; }
+
+.callouts { padding: 12px 20px 16px; background: var(--panel); border-top: 1px solid var(--line); display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
+.callouts b { color: var(--ink); }
+table.rules { border-collapse: collapse; margin-top: 4px; font-size: 12.5px; }
+table.rules td, table.rules th { border: 1px solid var(--line); padding: 3px 9px; text-align: right; }
+table.rules th { color: var(--muted); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .lb, .an { grid-template-columns: minmax(0, 1fr); }
+  .detail, .an > div + div { border-inline-start: none; border-top: 1px solid var(--line); }
+  .tblwrap { overflow-x: auto; }
+}
+@media (max-width: 640px) {
+  .frame { padding: 0; } .app { border-radius: 0; } .main { padding: 10px; }
+  .score { grid-template-columns: minmax(0, 1fr); }
+  .score .total { border-inline-end: none; border-bottom: 1px solid var(--line); grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; }
+  .part { grid-template-columns: minmax(0, 1fr) 54px; } .part .why { grid-column: 1 / -1; grid-row: 2; }
+  .try { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="switch">
+  <b>סקיצה 9 · ציון הטיסה (דיוק ושביעות רצון הנוסעים)</b>
+  <span style="margin-inline-start:auto">ערכה:</span>
+  <button data-th="light" aria-pressed="true">בהיר</button><button data-th="dark" aria-pressed="false">כהה</button>
+</div>
+
+<div class="frame">
+<div class="note-bar">
+  <b>מה חדש:</b> כל טיסה סגורה מקבלת ציון בין 0 ל-5, שמורכב משלושה דברים שכבר נמדדים: היציאה, משך הטיסה והנחיתה. הציון מופיע בשלושה מקומות, שמוצגים כאן אחד אחרי השני.
+  <b>הטיסות בסקיצה הן נתוני דוגמה</b>, לא הטיסות האמיתיות שלך. המחוונים בחלק 1 קיימים רק בסקיצה, כדי לראות איך הציון מגיב.
+</div>
+
+<div class="app">
+  <div class="main">
+
+    <div class="where">1 · טופס ההשלמה, בסוף הטיסה (וגם בפרטי הטיסה בלוגבוק)</div>
+    <section class="panel">
+      <div class="panel-head"><span class="label">ציון הטיסה</span><span class="new">חדש</span><span class="small" style="margin-inline-start:auto">שביעות רצון הנוסעים · לא משנה את הכסף של הטיסה הזאת</span></div>
+      <div class="score">
+        <div class="total"><div class="v" id="tot">—<small> / 5</small></div><div><div class="stars" id="stars"></div><div class="small" id="verdict"></div></div></div>
+        <div class="parts" id="parts"></div>
+      </div>
+      <div class="try">
+        <label>איחור ביציאה: <b id="vDep"></b><input type="range" id="sDep" min="-10" max="80" value="4"></label>
+        <label>חריגה ממשך הטיסה: <b id="vArr"></b><input type="range" id="sArr" min="-15" max="60" value="2"></label>
+        <label>נחיתה: <b id="vFpm"></b><input type="range" id="sFpm" min="60" max="600" step="2" value="142"></label>
+      </div>
+    </section>
+
+    <div class="where">2 · לוגבוק: עמודה חדשה, ופירוט בצד</div>
+    <section class="panel">
+      <div class="lb">
+        <div class="tblwrap">
+          <table class="tbl">
+            <thead><tr><th>תאריך</th><th>מסלול</th><th class="n">יציאה</th><th class="n">בלוק</th><th class="n">FPM</th><th>ציון <span class="new">חדש</span></th><th class="n">רווח</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <aside class="detail" id="detail"></aside>
+      </div>
+    </section>
+
+    <div class="where">3 · ניתוח: עמוד "דיוק" מתרחב, וגרף חדש</div>
+    <section class="panel">
+      <div class="an">
+        <div>
+          <div class="label">עמוד "דיוק" בדירוג החברה</div>
+          <div class="pillar-v" id="pilV"></div>
+          <div class="calc" id="pilCalc"></div>
+          <div class="was" id="pilWas"></div>
+        </div>
+        <div>
+          <div class="label">ציון הטיסה לאורך זמן <span class="new">חדש</span></div>
+          <div class="small" id="avg"></div>
+          <div class="bars" id="bars"></div>
+          <div class="axis"><span>הישנה ביותר</span><span>האחרונה</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="callouts">
+    <div><b>הנוסחה</b> (כל רכיב בין 0 ל-5, בקו ישר בין שני הקצוות, כמו עמודי הדירוג):
+      <table class="rules">
+        <tr><th>רכיב</th><th>משקל</th><th>מה נמדד</th><th>5 נקודות</th><th>0 נקודות</th><th>"בזמן"</th></tr>
+        <tr><td>יציאה</td><td>30%</td><td>PUSHBACK בפועל מול השעה שב-OFP</td><td>עד 5 דק׳ איחור</td><td>60 דק׳ ומעלה</td><td>עד 15 דק׳</td></tr>
+        <tr><td>משך הטיסה</td><td>30%</td><td>זמן הבלוק בפועל מול המתוכנן</td><td>עד 5 דק׳ חריגה</td><td>45 דק׳ ומעלה</td><td>עד 15 דק׳</td></tr>
+        <tr><td>נחיתה</td><td>40%</td><td>FPM בנגיעה</td><td>עד 120</td><td>450 ומעלה</td><td>—</td></tr>
+      </table>
+    </div>
+    <div><b>למה משך הטיסה ולא שעת ההגעה:</b> מי שיצא באיחור כבר איבד נקודות ביציאה. אם ההגעה הייתה נמדדת מול השעה שב-OFP, אותו איחור היה נספר פעמיים. יציאה מוקדמת או טיסה קצרה מהמתוכנן מקבלות ציון מלא.</div>
+    <div><b>הכסף:</b> הציון לא מוסיף הכנסה או הוצאה לטיסה. ההשפעה היחידה היא דרך הדירוג, שמשנה את מחיר הכרטיס בטיסות הבאות ב-±5% (ADR-037). השינוי בדירוג: עמוד "דיוק" יחושב מממוצע של היציאות בזמן והטיסות שלא חרגו במשך, במקום מהיציאות בלבד.</div>
+    <div><b>מה לא נכנס:</b> התורים בטרמינל (הם נגזרים מגודל השדה ולא ממה שעשית), וטיסות היסטוריות (אין להן זמנים). רכיב שאין לו נתון, למשל טיסה ידנית בלי זמן יציאה, לא נספר, והמשקלים של השאר מתחלקים מחדש.</div>
+  </div>
+</div>
+</div>
+
+<script>
+// Each component is 0–5, linear between "bad" and "good", like the rating pillars (ADR-036).
+const lerp = (v, bad, good) => 5 * Math.min(1, Math.max(0, (v - bad) / (good - bad)));
+const r1 = (x) => Math.round(x * 10) / 10;
+const W = { dep: 0.3, dur: 0.3, land: 0.4 }, ON_TIME = 15;
+
+function scoreOf(f) {        // f: { dep: minutes late at OUT, dur: minutes over planned block, fpm: |FPM| }, null = no data
+  const parts = {
+    dep: f.dep == null ? null : lerp(f.dep, 60, 5),
+    dur: f.dur == null ? null : lerp(f.dur, 45, 5),
+    land: f.fpm == null ? null : lerp(f.fpm, 450, 120),
+  };
+  const have = Object.keys(parts).filter((k) => parts[k] != null);
+  const w = have.reduce((s, k) => s + W[k], 0);
+  return { parts, total: have.length ? r1(have.reduce((s, k) => s + parts[k] * W[k], 0) / w) : null };
+}
+const tone = (v) => (v >= 4 ? '' : v >= 2.5 ? 'mid' : 'low');
+const stars = (v) => { const n = Math.round(v); return '★'.repeat(n) + `<span class="off">${'★'.repeat(5 - n)}</span>`; };
+const verdict = (v) => (v >= 4.5 ? 'טיסה מצוינת' : v >= 4 ? 'טיסה טובה' : v >= 3 ? 'טיסה סבירה' : v >= 2 ? 'הנוסעים לא מרוצים' : 'טיסה גרועה');
+const late = (m, what) => (m <= 0 ? (m === 0 ? `בדיוק לפי ${what}` : `${-m} דק׳ לפני ${what}`) : `${m} דק׳ אחרי ${what}`);
+
+function partsHtml(f) {
+  const { parts } = scoreOf(f);
+  const row = (k, name, weight, why, sub) => `<div class="part">
+    <div class="nm">${name}<small>${weight} מהציון</small></div>
+    <div class="why">${why}<small>${sub}</small><div class="meter"><div class="${parts[k] == null ? '' : tone(parts[k])}" style="width:${parts[k] == null ? 0 : parts[k] / 5 * 100}%"></div></div></div>
+    <div class="pts">${parts[k] == null ? '—' : r1(parts[k]).toFixed(1)}</div></div>`;
+  const flag = (m) => (m <= ON_TIME ? '<span class="chip go">בזמן</span>' : '<span class="chip warn">באיחור</span>');
+  return row('dep', 'יציאה', '30%', f.dep == null ? 'אין זמן יציאה' : `PUSHBACK ${late(f.dep, 'המתוכנן')} ${flag(f.dep)}`, 'מלא עד 5 דק׳ · אפס מ-60 דק׳')
+    + row('dur', 'משך הטיסה', '30%', f.dur == null ? 'אין זמני בלוק' : `הבלוק ${f.dur <= 0 ? (f.dur === 0 ? 'בדיוק כמתוכנן' : `קצר ב-${-f.dur} דק׳ מהמתוכנן`) : `ארוך ב-${f.dur} דק׳ מהמתוכנן`} ${flag(f.dur)}`, 'מלא עד 5 דק׳ · אפס מ-45 דק׳')
+    + row('land', 'נחיתה', '40%', f.fpm == null ? 'לא הוזן FPM' : `<bdi class="l">−${f.fpm} FPM</bdi> ${f.fpm <= 180 ? '<span class="chip go">רכה</span>' : f.fpm > 400 ? '<span class="chip bad">קשה</span>' : '<span class="chip">רגילה</span>'}`, 'מלא עד 120 · אפס מ-450');
+}
+
+// ---- 1. the card, with the sketch-only sliders
+const $ = (id) => document.getElementById(id);
+function card() {
+  const f = { dep: +$('sDep').value, dur: +$('sArr').value, fpm: +$('sFpm').value }, s = scoreOf(f);
+  $('tot').innerHTML = `${s.total.toFixed(1)}<small> / 5</small>`;
+  $('stars').innerHTML = stars(s.total); $('verdict').textContent = verdict(s.total);
+  $('parts').innerHTML = partsHtml(f);
+  $('vDep').textContent = f.dep <= 0 ? `מוקדם ב-${-f.dep} דק׳` : `${f.dep} דק׳`;
+  $('vArr').textContent = f.dur <= 0 ? `קצר ב-${-f.dur} דק׳` : `${f.dur} דק׳`;
+  $('vFpm').textContent = `−${f.fpm} FPM`;
+}
+['sDep', 'sArr', 'sFpm'].forEach((id) => $(id).oninput = card);
+
+// ---- 2. logbook (example flights, newest first)
+const FL = [
+  { d: '02.10', r: 'LLBG → OMDB', out: '10:04', blk: '3:12', dep: 4, dur: 2, fpm: 142, profit: 18420 },
+  { d: '29.09', r: 'LLBG → LHBP', out: '20:48', blk: '3:31', dep: 38, dur: 9, fpm: 388, profit: 9150 },
+  { d: '28.09', r: 'LROP → LLBG', out: '14:02', blk: '2:44', dep: 2, dur: -6, fpm: 96, profit: 13260 },
+  { d: '26.09', r: 'LLBG → LROP', out: '13:11', blk: '2:58', dep: 21, dur: 4, fpm: 171, profit: 13500 },
+  { d: '26.09', r: 'EDDF → LFPG', out: '06:48', blk: '1:08', dep: -3, dur: 18, fpm: 455, profit: -4210 },
+  { d: '23.09', r: 'LGAV → LLBG', out: '—', blk: '1:58', dep: null, dur: null, fpm: 204, profit: 7630, manual: true },
+];
+let sel = 1;
+function logbook() {
+  $('rows').innerHTML = FL.map((f, i) => {
+    const s = scoreOf(f).total;
+    return `<tr class="${i === sel ? 'sel' : ''}" data-i="${i}"><td>${f.d}</td><td><bdi class="l">${f.r}</bdi></td><td class="n">${f.out}${f.dep > ON_TIME ? ` <span class="chip warn">+${f.dep}</span>` : ''}</td><td class="n">${f.blk}</td><td class="n">−${f.fpm}</td>
+      <td><span class="sc ${tone(s)}"><i></i>${s.toFixed(1)}</span>${f.manual ? ' <span class="chip">חלקי</span>' : ''}</td><td class="n">${f.profit < 0 ? '−' : ''}$${Math.abs(f.profit).toLocaleString('en-US')}</td></tr>`;
+  }).join('');
+  const f = FL[sel], s = scoreOf(f);
+  $('detail').innerHTML = `<div class="label">ציון הטיסה · ${f.d} · <bdi class="l">${f.r}</bdi></div>
+    <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:30px;font-weight:700">${s.total.toFixed(1)}</span><span class="stars">${stars(s.total)}</span></div>
+    <div class="small">${verdict(s.total)}${f.manual ? ' · טיסה ידנית: הציון מהנחיתה בלבד' : ''}</div>
+    <div class="parts" style="margin:0 -14px;border-top:1px solid var(--line)">${partsHtml(f).replaceAll('class="part"', 'class="part" style="grid-template-columns:minmax(0,1fr) 44px"').replaceAll('<div class="why">', '<div class="why" style="grid-column:1/-1;grid-row:2">')}</div>`;
+}
+$('rows').onclick = (e) => { const tr = e.target.closest('tr'); if (tr) { sel = +tr.dataset.i; logbook(); } };
+
+// ---- 3. analysis: the punctuality pillar, before and after
+function analysis() {
+  const timed = FL.filter((f) => f.dep != null);
+  const depOk = timed.filter((f) => f.dep <= ON_TIME).length / timed.length, durOk = timed.filter((f) => f.dur <= ON_TIME).length / timed.length;
+  const both = (depOk + durOk) / 2, pct = (x) => `${Math.round(x * 100)}%`;
+  const now = r1(lerp(both, 0.4, 0.9)), was = r1(lerp(depOk, 0.4, 0.9));
+  $('pilV').innerHTML = `${now.toFixed(1)} <span class="stars" style="font-size:15px">${stars(now)}</span>`;
+  $('pilCalc').innerHTML = `<div class="ln"><span>יציאות בזמן (עד 15 דק׳)</span><b>${timed.filter((f) => f.dep <= ON_TIME).length} מתוך ${timed.length} · ${pct(depOk)}</b></div>
+    <div class="ln"><span>טיסות שלא חרגו במשך (עד 15 דק׳) <span class="new">חדש</span></span><b>${timed.filter((f) => f.dur <= ON_TIME).length} מתוך ${timed.length} · ${pct(durOk)}</b></div>
+    <div class="ln sum"><span>ממוצע השניים</span><b>${pct(both)}</b></div>
+    <div class="ln"><span>ציון: 40% ← 0, 90% ← 5</span><b>${now.toFixed(1)}</b></div>`;
+  $('pilWas').textContent = `היום העמוד מחושב מהיציאות בלבד: ${pct(depOk)} ← ${was.toFixed(1)}. עם הנתונים האלה הוא משתנה ב-${(now - was >= 0 ? '+' : '−') + Math.abs(r1(now - was)).toFixed(1)}.`;
+  const scores = FL.map((f) => scoreOf(f).total).reverse();
+  $('avg').textContent = `ממוצע: ${r1(scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)} · ${scores.length} טיסות`;
+  $('bars').innerHTML = scores.map((s) => `<div class="${tone(s)}" style="height:${s / 5 * 100}%"><span>${s.toFixed(1)}</span></div>`).join('');
+}
+
+document.querySelectorAll('[data-th]').forEach((b) => b.onclick = () => {
+  document.documentElement.dataset.theme = b.dataset.th;
+  document.querySelectorAll('[data-th]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+});
+{ const q = new URLSearchParams(location.search); if (q.get('th')) document.querySelector(`[data-th="${q.get('th')}"]`).click(); }
+card(); logbook(); analysis();
+</script>
+</body>
+</html>
