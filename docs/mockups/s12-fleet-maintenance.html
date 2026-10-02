@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 12 · צי ותחזוקה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #eef0f3; --bar: #ffffff; --panel: #ffffff; --line: #d9dde3; --line-2: #eceef2;
+  --ink: #151a21; --muted: #5d6673; --faint: #8b93a0;
+  --accent: #0b4f9c; --accent-bg: #e4edf8;
+  --go: #147a47; --go-bg: #e3f2ea; --warn: #9a5b00; --warn-bg: #fbeed7; --bad: #b3261e; --bad-bg: #fbe7e5;
+  --r: 4px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+bdi.l { direction: ltr; unicode-bidi: isolate; }
+button { font: inherit; }
+
+.switch { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; border-bottom: 1px solid #000; }
+.switch .grp { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.switch button { border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 3px 9px; border-radius: 4px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; }
+.frame { padding: 16px; }
+.note-bar { max-width: 1240px; margin: 0 auto 10px; color: #b9bec7; font-size: 13px; line-height: 1.55; }
+.note-bar b { color: #fff; }
+.app { max-width: 1240px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden; font-size: 14px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.top { display: flex; align-items: center; gap: 24px; padding: 0 20px; height: 52px; background: var(--bar); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; }
+.nav { display: flex; gap: 4px; height: 100%; }
+.nav a { display: flex; align-items: center; gap: 6px; padding: 0 14px; color: var(--muted); font-weight: 500; border-bottom: 2px solid transparent; }
+.nav a.on { color: var(--ink); border-bottom-color: var(--accent); }
+.nav .badge[hidden] { display: none; }
+.nav .badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.main { padding: 16px 20px 20px; display: grid; gap: 16px; }
+.where { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .3px; margin: 4px 0 -8px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.panel-head { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.new { font-size: 10.5px; font-weight: 700; color: var(--go); background: var(--go-bg); border-radius: 3px; padding: 0 5px; }
+.chip { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 1px 7px; border-radius: 3px; background: var(--line-2); color: var(--muted); white-space: nowrap; }
+.chip.go { background: var(--go-bg); color: var(--go); } .chip.warn { background: var(--warn-bg); color: var(--warn); } .chip.bad { background: var(--bad-bg); color: var(--bad); }
+.btn { font-weight: 600; font-size: 13.5px; padding: 7px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; min-height: 36px; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ---------- 1. fleet ---------- */
+.fleet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.ac { background: var(--panel); padding: 14px; display: grid; gap: 10px; align-content: start; }
+.ac .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ac .reg { font-size: 22px; font-weight: 700; }
+.ac .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ac .facts .v { font-size: 19px; font-weight: 700; }
+.due { display: grid; gap: 3px; }
+.due .ln { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.due .ln span { color: var(--muted); }
+.meter { height: 7px; border-radius: 4px; background: var(--line-2); overflow: hidden; }
+.meter div { height: 100%; margin-inline-start: auto; border-radius: 4px; background: var(--accent); }
+.meter div.soon { background: var(--warn); }
+.req { border: 1px solid var(--bad); background: var(--bad-bg); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 8px; }
+.req.done { border-color: var(--line); background: var(--line-2); }
+.req .t { font-weight: 700; }
+.req .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.req .amt { font-size: 20px; font-weight: 700; margin-inline-start: auto; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+.tbl th { font-size: 11.5px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.tbl td.n, .tbl th.n { text-align: left; direction: ltr; white-space: nowrap; }
+.tbl tr:last-child td { border-bottom: none; }
+.neg { color: var(--bad); } .pos { color: var(--go); }
+.tblwrap { overflow-x: auto; }
+
+/* ---------- 2. flight screen ---------- */
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.banner { display: flex; gap: 12px; align-items: center; padding: 12px 14px; font-size: 13.5px; flex-wrap: wrap; }
+.banner.bad { background: var(--bad-bg); } .banner.bad b { color: var(--bad); }
+.banner.warn { background: var(--warn-bg); } .banner.warn b { color: var(--warn); }
+.banner .grow { flex: 1; min-width: 200px; }
+.ledger td { font-size: 13px; }
+.ledger tr.hl td { background: var(--warn-bg); font-weight: 600; }
+.ledger tr.net td { font-weight: 700; border-top: 2px solid var(--ink); }
+.ledger tr.zero td { color: var(--faint); }
+.pb { padding: 12px 14px; }
+
+/* ---------- 3. the money ---------- */
+.calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); }
+.calc > div { background: var(--panel); padding: 12px 14px; }
+.calc h4 { margin: 0 0 6px; font-size: 13px; }
+.f { direction: ltr; text-align: left; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; background: var(--line-2); border-radius: var(--r); padding: 6px 8px; margin: 4px 0; }
+.sum { font-weight: 700; }
+
+.callouts { padding: 12px 20px 16px; background: var(--panel); border-top: 1px solid var(--line); display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
+.callouts b { color: var(--ink); }
+
+@media (max-width: 900px) { .fleet, .two, .calc { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .frame { padding: 0; } .app { border-radius: 0; } .main { padding: 10px; } .brand { display: none; } .top { gap: 10px; padding: 0 10px; } .nav a { padding: 0 9px; }
+  .ac .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .req .amt { margin-inline-start: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="switch">
+  <b>סקיצה 12 · צי ותחזוקה</b>
+  <span class="grp">מצב: <button data-s="normal" aria-pressed="true">רגיל</button><button data-s="check">טיסה שחצתה 100 שעות</button><button data-s="grounded">נחיתה קשה: מושבת</button><button data-s="paid">שילמתי</button><button data-s="auto">לא שילמתי, עברו 4 ימים</button></span>
+  <span class="grp" style="margin-inline-start:auto">ערכה: <button data-th="light" aria-pressed="true">בהיר</button><button data-th="dark" aria-pressed="false">כהה</button></span>
+</div>
+
+<div class="frame">
+<div class="note-bar">
+  <b>מה רואים:</b> שלושה חלקים. מסך "צי" חדש, מה שמשתנה במסך הטיסה, והחשבון של פיצול התחזוקה. כפתורי "מצב" שלמעלה קיימים רק בסקיצה, ומראים את חמשת המצבים האפשריים.
+  <b>הרישום N738PM והמשקל (79 טון) הם מהתוכנית האחרונה שלך. השעות, הטיסות והסכומים הם נתוני דוגמה.</b>
+</div>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">SMARTLOGBOOK</div>
+    <nav class="nav"><a>טיסה</a><a>לוגבוק</a><a>ניתוח</a><a class="on">צי <span class="new">חדש</span><span class="badge" id="navBadge" hidden>1</span></a></nav>
+  </header>
+
+  <div class="main">
+    <div class="where">1 · מסך "צי": כרטיס לכל רישום שטסת בו</div>
+    <section class="panel">
+      <div class="panel-head"><span class="label">המטוסים שלך</span><span class="small" style="margin-inline-start:auto">שעות אוויר מאז המעבר למערכת החדשה · 50 הטיסות ההיסטוריות לא נספרות</span></div>
+      <div class="fleet" id="fleet"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><span class="label">היסטוריית תחזוקה · <bdi class="l">N738PM</bdi></span></div>
+      <div class="tblwrap"><table class="tbl"><thead><tr><th>תאריך</th><th>מה</th><th>הטיסה</th><th>מצב</th><th class="n">סכום</th></tr></thead><tbody id="hist"></tbody></table></div>
+    </section>
+
+    <div class="where">2 · במסך הטיסה</div>
+    <div class="two">
+      <section class="panel">
+        <div class="panel-head"><span class="label">תוכנית מוכנה</span><span class="small" style="margin-inline-start:auto"><bdi class="l">ELY2569 · LLBG → OMDB · N738PM</bdi></span></div>
+        <div id="plan"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><span class="label">טופס ההשלמה · ספר החשבונות של הטיסה</span></div>
+        <table class="tbl ledger"><tbody id="ledger"></tbody></table>
+        <div class="pb small" id="ledgerNote"></div>
+      </section>
+    </div>
+
+    <div class="where">3 · החשבון: התחזוקה מתפצלת, ובממוצע משלמים אותו דבר</div>
+    <section class="panel">
+      <div class="calc">
+        <div>
+          <h4>היום</h4>
+          <div class="small">כל טיסה משלמת תחזוקה לפי שעות האוויר, ועוד סכום לכל המראה ונחיתה:</div>
+          <div class="f">air × (450 + 10.8 × MTOW) + 3 × MTOW</div>
+          <div class="small">ל-737 של 79 טון: <b style="color:var(--ink)">$1,303 לשעת אוויר</b>, ועוד $237 לטיסה.</div>
+        </div>
+        <div>
+          <h4>אחרי השינוי</h4>
+          <div class="small">התעריף השעתי יורד, וההפרש משולם בטיפולים:</div>
+          <div class="f">air × (450 + 7.0 × MTOW) + 3 × MTOW</div>
+          <div class="small">ל-737 של 79 טון: <b style="color:var(--ink)">$1,003 לשעת אוויר</b> (פחות $300), ועוד $237 לטיסה.</div>
+          <div class="f">light check, every 100 h:  190 × MTOW  = $15,010<br>medium check, every 600 h: 1,330 × MTOW = $105,070</div>
+        </div>
+        <div style="grid-column: 1 / -1">
+          <h4>הבדיקה: 600 שעות אוויר ב-737 של 79 טון</h4>
+          <div class="tblwrap"><table class="tbl">
+            <thead><tr><th></th><th class="n">שעתי</th><th class="n">5 טיפולים קלים</th><th class="n">טיפול בינוני</th><th class="n">סה״כ</th></tr></thead>
+            <tbody>
+              <tr><td>היום</td><td class="n">600 × $1,303.2 = $781,920</td><td class="n">—</td><td class="n">—</td><td class="n sum">$781,920</td></tr>
+              <tr><td>אחרי השינוי</td><td class="n">600 × $1,003 = $601,800</td><td class="n">5 × $15,010 = $75,050</td><td class="n">$105,070</td><td class="n sum">$781,920</td></tr>
+            </tbody>
+          </table></div>
+          <div class="small" style="margin-top:6px">בשעה ה-600 נעשה טיפול בינוני, והוא כולל את הקל. לכן בכל 600 שעות יש 5 טיפולים קלים ואחד בינוני. הסכום שווה בדיוק לכל משקל מטוס, כי כל הסכומים נגזרים מה-MTOW.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="callouts">
+    <div><b>טיפול תקופתי:</b> משולם אוטומטית בסגירת הטיסה שחצתה את הסף, כשורה בספר החשבונות של אותה טיסה. המטוס לא מושבת. הטיסה הזאת תיראה כמו הפסד גדול, וזה מכוון: זו ההוצאה שכבר לא נגבית בכל שעה.</div>
+    <div><b>נחיתה קשה:</b> במקום הקנס שיורד היום בסגירה, נפתחת בקשת תשלום על תיקון, באותו סכום (לפי המדרגות הקיימות: $15, $60 או $250 לכל טון MTOW). המטוס מושבת מיד. תשלום משחרר אותו מיד. בלי תשלום הוא משתחרר לבד אחרי 4 ימים, והסכום נרשם אוטומטית.</div>
+    <div><b>איפה הסכום נרשם:</b> בספר החשבונות של הטיסה שגרמה לנזק, ברגע התשלום. עד אז הרווח של אותה טיסה גבוה יותר, ומסומן "תיקון ממתין לתשלום".</div>
+    <div><b>מה נחסם כשמטוס מושבת:</b> תוכנית עם הרישום הזה מוצגת עם אזהרה, ואי אפשר לסגור איתו טיסה חדשה עד התשלום או עד שיעברו 4 הימים.</div>
+    <div><b>תעריפים:</b> השינוי יוצר גרסת תעריפים חדשה (ADR-021). טיסות שכבר נסגרו לא משתנות. כל המספרים החדשים ניתנים לעריכה במסך ההגדרות, כמו שאר התעריפים.</div>
+  </div>
+</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const usd = (n) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString('en-US')}`;
+const MTOW = 79, LIGHT = 190 * MTOW, REPAIR = 60 * MTOW;      // repair: the existing "AMM inspection" tier, 601–900 FPM
+
+// Example fleet. `air` = air hours since the move to the new system.
+const STATES = {
+  normal:   { air: 96.4, flights: 31, hard: 0, req: null, hist: [], badge: false },
+  check:    { air: 100.9, flights: 32, hard: 0, req: null, hist: [['02.10', 'טיפול קל · 100 שעות', 'ELY2569 · LLBG → OMDB', '<span class="chip go">שולם בסגירת הטיסה</span>', -LIGHT]], badge: false },
+  grounded: { air: 100.9, flights: 32, hard: 1, req: 'open', badge: true,
+              hist: [['02.10', 'תיקון אחרי נחיתה קשה · <bdi class="l">−655 FPM</bdi>', 'ELY2570 · OMDB → LLBG', '<span class="chip bad">ממתין לתשלום</span>', -REPAIR], ['02.10', 'טיפול קל · 100 שעות', 'ELY2569 · LLBG → OMDB', '<span class="chip go">שולם בסגירת הטיסה</span>', -LIGHT]] },
+  paid:     { air: 100.9, flights: 32, hard: 1, req: 'paid', badge: false,
+              hist: [['02.10', 'תיקון אחרי נחיתה קשה · <bdi class="l">−655 FPM</bdi>', 'ELY2570 · OMDB → LLBG', '<span class="chip go">שולם 02.10</span>', -REPAIR], ['02.10', 'טיפול קל · 100 שעות', 'ELY2569 · LLBG → OMDB', '<span class="chip go">שולם בסגירת הטיסה</span>', -LIGHT]] },
+  auto:     { air: 100.9, flights: 32, hard: 1, req: 'auto', badge: false,
+              hist: [['06.10', 'תיקון אחרי נחיתה קשה · <bdi class="l">−655 FPM</bdi>', 'ELY2570 · OMDB → LLBG', '<span class="chip warn">נרשם אוטומטית אחרי 4 ימים</span>', -REPAIR], ['02.10', 'טיפול קל · 100 שעות', 'ELY2569 · LLBG → OMDB', '<span class="chip go">שולם בסגירת הטיסה</span>', -LIGHT]] },
+};
+let state = 'normal';
+
+function due(label, every, air, price) {
+  const since = air % every, left = every - since, soon = left <= 5;
+  return `<div class="due"><div class="ln"><span>${label} · כל ${every} שעות · ${usd(price)}</span><b>בעוד ${left.toFixed(1)} שעות${soon ? ' <span class="chip warn">קרוב</span>' : ''}</b></div>
+    <div class="meter"><div class="${soon ? 'soon' : ''}" style="width:${since / every * 100}%"></div></div></div>`;
+}
+
+function render() {
+  const s = STATES[state], grounded = s.req === 'open';
+  $('navBadge').hidden = !s.badge;
+  const req = s.req === 'open' ? `<div class="req">
+      <div class="t">תיקון אחרי נחיתה קשה · המטוס מושבת</div>
+      <div class="small" style="color:var(--ink)">נחיתה של <bdi class="l">−655 FPM</bdi> בטיסה ELY2570 (OMDB ← LLBG): בדיקת נחיתה קשה לפי ספר התחזוקה (AMM), $60 לכל טון MTOW.</div>
+      <div class="row"><button class="btn btn-primary" data-pay>שלם ${usd(REPAIR)} ושחרר את המטוס</button><span class="small">בלי תשלום: משתחרר לבד בעוד <b style="color:var(--ink)">3 ימים ו-21 שעות</b>, והסכום נרשם אז אוטומטית.</span><span class="amt neg">${usd(-REPAIR)}</span></div>
+    </div>`
+    : s.req === 'paid' ? `<div class="req done"><div class="row"><span class="t">התיקון שולם · המטוס שוחרר מיד</span><span class="amt">${usd(-REPAIR)}</span></div><div class="small">הסכום נרשם בספר החשבונות של הטיסה ELY2570.</div></div>`
+    : s.req === 'auto' ? `<div class="req done"><div class="row"><span class="t">עברו 4 ימים · המטוס שוחרר לבד</span><span class="amt">${usd(-REPAIR)}</span></div><div class="small">הסכום נרשם אוטומטית בספר החשבונות של הטיסה ELY2570. המטוס היה מושבת מ-02.10 עד 06.10.</div></div>` : '';
+  $('fleet').innerHTML = `
+    <div class="ac">
+      <div class="hd"><span class="reg"><bdi class="l">N738PM</bdi></span><span class="small"><bdi class="l">B738 · MTOW 79.0 t</bdi></span>${grounded ? '<span class="chip bad">מושבת</span>' : '<span class="chip go">כשיר לטיסה</span>'}</div>
+      <div class="facts">
+        <div><div class="label">שעות אוויר</div><div class="v">${s.air.toFixed(1)}</div></div>
+        <div><div class="label">טיסות</div><div class="v">${s.flights}</div></div>
+        <div><div class="label">נחיתות קשות</div><div class="v">${s.hard}</div></div>
+        <div><div class="label">תחזוקה עד היום</div><div class="v">${usd(s.hist.filter((h) => !h[3].includes('ממתין')).reduce((a, h) => a - h[4], 0))}</div></div>
+      </div>
+      ${req}
+      ${due('טיפול קל', 100, s.air, LIGHT)}
+      ${due('טיפול בינוני', 600, s.air, 1330 * MTOW)}
+    </div>
+    <div class="ac">
+      <div class="hd"><span class="reg"><bdi class="l">4X-EKA</bdi></span><span class="small"><bdi class="l">B738 · MTOW 79.0 t</bdi></span><span class="chip go">כשיר לטיסה</span></div>
+      <div class="facts">
+        <div><div class="label">שעות אוויר</div><div class="v">41.2</div></div>
+        <div><div class="label">טיסות</div><div class="v">14</div></div>
+        <div><div class="label">נחיתות קשות</div><div class="v">0</div></div>
+        <div><div class="label">תחזוקה עד היום</div><div class="v">$0</div></div>
+      </div>
+      ${due('טיפול קל', 100, 41.2, LIGHT)}
+      ${due('טיפול בינוני', 600, 41.2, 1330 * MTOW)}
+    </div>`;
+  $('hist').innerHTML = s.hist.length
+    ? s.hist.map(([d, what, fl, st, amt]) => `<tr><td>${d}</td><td>${what}</td><td><bdi class="l">${fl}</bdi></td><td>${st}</td><td class="n neg">${usd(amt)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="small">עוד אין טיפולים או תיקונים למטוס הזה.</td></tr>';
+
+  $('plan').innerHTML = grounded
+    ? `<div class="banner bad"><span class="grow"><b>המטוס <bdi class="l">N738PM</bdi> מושבת.</b> יש תיקון שלא שולם אחרי נחיתה קשה (${usd(REPAIR)}). אפשר לטוס, אבל אי אפשר לסגור את הטיסה עד שתשלם, או עד 06.10.</span><button class="btn btn-primary" data-pay>שלם ${usd(REPAIR)}</button></div>`
+    : state === 'normal'
+      ? `<div class="banner warn"><span class="grow"><b>טיפול קל בעוד 3.6 שעות אוויר.</b> הטיסה הזאת מתוכננת ל-2:51 באוויר, כך שהיא כנראה לא תחצה את הסף. הטיסה שאחריה כן, ותחויב ב-${usd(LIGHT)}.</span></div>`
+      : `<div class="pb small">המטוס <bdi class="l">N738PM</bdi> כשיר לטיסה. הטיפול הקל הבא בעוד ${(100 - STATES[state].air % 100).toFixed(1)} שעות אוויר.</div>`;
+
+  const row = (name, amt, cls = '') => `<tr class="${cls}"><td>${name}</td><td class="n">${usd(amt)}</td></tr>`;
+  const base = [['כרטיסים', 23040], ['מטען', 4470]], costs = [['דלק', -8568], ['צוות קרקע', -1480], ['קייטרינג', -725], ['טייסים ודיילים', -1536], ['עמלות, ניווט וחכירה', -5912]];
+  const mx = state !== 'check' ? [['תחזוקה · 2.85 שעות × $1,003 + $237', -3096]] : [['תחזוקה · 2.85 שעות × $1,003 + $237', -3096], ['טיפול קל · המטוס חצה 100 שעות אוויר', -LIGHT, 'hl']];
+  const hard = state === 'normal' || state === 'check' ? [] : state === 'grounded' ? [['תיקון אחרי נחיתה קשה · ממתין לתשלום', 0, 'zero']] : [['תיקון אחרי נחיתה קשה', -REPAIR, 'hl']];
+  const all = [...base, ...costs, ...mx, ...hard], net = all.reduce((a, r) => a + r[1], 0);
+  $('ledger').innerHTML = all.map(([n, a, c]) => row(n, a, c)).join('') + `<tr class="net"><td>${net < 0 ? 'הפסד' : 'רווח נקי'}</td><td class="n ${net < 0 ? 'neg' : 'pos'}">${usd(net)}</td></tr>`;
+  $('ledgerNote').textContent = state === 'normal' ? 'טיסה רגילה: התחזוקה השעתית נמוכה ב-$300 לשעה לעומת היום.'
+    : state === 'check' ? 'הטיסה שחצתה את 100 השעות: הטיפול הקל יורד אוטומטית בסגירה, והטיסה מסתיימת בהפסד.'
+    : state === 'grounded' ? 'הטיסה עם הנחיתה הקשה: התיקון עוד לא נרשם, ולכן הוא לא נכלל ברווח. בקשת התשלום נפתחת בסגירת הטיסה.'
+    : 'אחרי התשלום (או אחרי 4 ימים) התיקון נכנס לספר החשבונות של הטיסה, והרווח שלה יורד בהתאם.';
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.matches('[data-pay]')) pick('paid');
+  if (e.target.matches('[data-s]')) pick(e.target.dataset.s);
+  if (e.target.matches('[data-th]')) { document.documentElement.dataset.theme = e.target.dataset.th; document.querySelectorAll('[data-th]').forEach((x) => x.setAttribute('aria-pressed', x === e.target)); }
+});
+function pick(s) { state = s; document.querySelectorAll('[data-s]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.s === s)); render(); }
+{ const q = new URLSearchParams(location.search); if (q.get('s')) state = q.get('s'); if (q.get('th')) document.documentElement.dataset.theme = q.get('th'); }
+pick(state);
+</script>
+</body>
+</html>
