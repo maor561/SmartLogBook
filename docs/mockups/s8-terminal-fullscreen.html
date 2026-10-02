@@ -27,7 +27,10 @@ button { font: inherit; color: inherit; }
 /* sketch note: not part of the product */
 .note { display: flex; gap: 10px; align-items: center; padding: 6px 14px; background: #1d2025; color: #b9bec7; font-size: 12.5px; border-bottom: 1px solid #000; }
 .note b { color: #fff; }
-.note button { margin-inline-start: auto; border: 1px solid #454a53; background: transparent; border-radius: 4px; padding: 2px 9px; cursor: pointer; white-space: nowrap; }
+.note .stages { display: flex; gap: 6px; flex-wrap: wrap; }
+.note .stages button { margin: 0; }
+.note #noteX { margin-inline-start: auto; }
+.note button { border: 1px solid #454a53; background: transparent; border-radius: 4px; padding: 2px 9px; cursor: pointer; white-space: nowrap; }
 
 /* ---------- top bar: the four things a pilot checks ---------- */
 .top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px 28px; padding: 10px 18px; padding-top: max(10px, env(safe-area-inset-top)); background: var(--bar); border-bottom: 1px solid var(--line); }
@@ -50,10 +53,9 @@ button { font: inherit; color: inherit; }
 .tools { display: flex; align-items: center; gap: 8px; }
 .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--go); white-space: nowrap; }
 .pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--go); animation: pulse 1.4s infinite; }
-.pill.rep { color: var(--warn); } .pill.rep i { background: var(--warn); animation: none; }
 @keyframes pulse { 50% { opacity: .3; } }
 .ib { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: #171c23; cursor: pointer; font-size: 18px; }
-.ib:focus-visible, .ctl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ib:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- map: as large as the screen allows ---------- */
 .stage { container-type: size; display: grid; place-items: center; min-height: 0; overflow: hidden; background: var(--bg); }
@@ -72,12 +74,8 @@ circle.p { stroke: #0b0f14; stroke-width: 1.6; }
 .chip .s { display: block; font-size: .88em; color: #c9d1db; }
 .chip.hot { border-inline-start-color: #ffb020; background: rgba(60, 38, 0, .9); }
 
-/* ---------- timeline: where we are, what is next; drag to look back ---------- */
-.time { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 18px 4px; background: var(--bar); border-top: 1px solid var(--line); }
-.ctl { display: flex; align-items: center; gap: 6px; }
-.ctl button { min-width: 44px; height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: #171c23; cursor: pointer; font-size: 13px; font-weight: 600; }
-.ctl button.on { background: #16263d; border-color: var(--accent); color: var(--accent); }
-.ctl [hidden] { display: none; }
+/* ---------- timeline: where we are on the way to PUSHBACK (an indicator, not a control) ---------- */
+.time { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px 18px 4px; background: var(--bar); border-top: 1px solid var(--line); }
 .track { position: relative; height: 40px; direction: ltr; }
 .track .rail { position: absolute; inset: 9px 0 auto 0; height: 6px; border-radius: 3px; background: #222a34; }
 .track .fill { position: absolute; top: 9px; left: 0; height: 6px; border-radius: 3px; background: var(--accent); }
@@ -86,7 +84,6 @@ circle.p { stroke: #0b0f14; stroke-width: 1.6; }
 .track .ml { position: absolute; top: 23px; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; direction: rtl; }
 .track .ml.past { color: var(--faint); }
 .track .ml.end { transform: translateX(-100%); }
-.track input { position: absolute; inset: 0 0 auto 0; width: 100%; height: 24px; margin: 0; opacity: 0; cursor: pointer; }
 .track .knob { position: absolute; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); transform: translateX(-9px); pointer-events: none; }
 
 /* ---------- one line of alerts ---------- */
@@ -121,7 +118,6 @@ circle.p { stroke: #0b0f14; stroke-width: 1.6; }
   .time { padding: 8px 12px 4px; gap: 10px; } .alert { padding-inline: 12px; font-size: 14px; }
   .note { font-size: 11.5px; }
   .track .ml[data-k="1"] { display: none; }   /* no room next to PUSHBACK; boarding is named under "next" */
-  .ctl button { min-width: 40px; padding: 0 6px; }
 }
 @media (prefers-reduced-motion: reduce) { .pill i { animation: none; } .num .bar div { transition: none; } }
 </style>
@@ -129,7 +125,8 @@ circle.p { stroke: #0b0f14; stroke-width: 1.6; }
 <body>
 <div class="fs" id="fs">
   <div class="note" id="note">
-    <span><b>סקיצה 8 · טרמינל במסך מלא.</b> הנתונים: הטיסה שלך ELY2569 ל-LHBP, 165 נוסעים, PUSHBACK ב-20:10Z. הסקיצה נפתחת ב-T−0:36. גרור את ציר הזמן כדי לראות שלבים אחרים.</span>
+    <span><b>סקיצה 8 · טרמינל במסך מלא.</b> הנתונים: הטיסה שלך ELY2569 ל-LHBP, 165 נוסעים, PUSHBACK ב-20:10Z. באפליקציה יש רק מצב חי. הכפתורים כאן קיימים רק בסקיצה, כדי לראות שלבים שונים:</span>
+    <span class="stages"><button data-t="-112">צ'ק-אין</button><button data-t="-36">עלייה</button><button data-t="-17">סוף העלייה</button><button data-t="0.5">אחרי הזמן</button></span>
     <button id="noteX">הסתר הערה</button>
   </div>
 
@@ -162,16 +159,10 @@ circle.p { stroke: #0b0f14; stroke-width: 1.6; }
   </div>
 
   <div class="time">
-    <div class="ctl">
-      <button id="bLive" class="on" aria-pressed="true">חי</button>
-      <button id="bPlay" hidden aria-label="הפעל או עצור">⏸</button>
-      <button id="bSpeed" hidden aria-label="מהירות ההרצה">×60</button>
-    </div>
     <div class="track" id="track">
       <div class="rail"></div><div class="fill" id="fill"></div>
       <div id="marks"></div>
       <div class="knob" id="knob"></div>
-      <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="ציר זמן">
     </div>
   </div>
 
@@ -530,8 +521,7 @@ function alertsAt(S, t, seated, arrived, lateNow, overdue) {
 }
 const ICON = { warn: '▲', bad: '●', go: '✓', '': '·' };
 
-let mode = 'live', playing = true, speed = 60, last = performance.now(), liveT = T0 - 36 * MIN, liveAt = performance.now();
-const SPEEDS = [10, 60, 300];
+let liveT = T0 - 36 * MIN, liveAt = performance.now();   // the sketch pretends "now"; in the app it is the real clock
 
 function render() {
   const { S, pos } = stateAt(T);
@@ -555,33 +545,18 @@ function render() {
   const f = frac(T) * 100;
   $('fill').style.width = `${f}%`; $('knob').style.left = `${f}%`;
   document.querySelectorAll('#marks [data-k]').forEach((e) => e.classList.toggle('past', MILES[+e.dataset.k][0] <= T));
-  if (document.activeElement !== $('scrub')) $('scrub').value = Math.round(f * 10);
 
-  const A = alertsAt(S, T, seated, arrived, lateNow, mode === 'live' && over ? T - T0 : 0);
+  const A = alertsAt(S, T, seated, arrived, lateNow, over ? T - T0 : 0);
   const k = Math.floor(performance.now() / 5000) % A.length, [cls, txt] = A[k];
   $('alert').className = `alert ${cls}`; $('aIc').textContent = ICON[cls]; $('aTxt').textContent = txt;
   $('aMore').textContent = A.length > 1 ? `${k + 1} / ${A.length}` : '';
 }
 
-function setMode(m) {
-  mode = m;
-  $('bLive').classList.toggle('on', m === 'live'); $('bLive').setAttribute('aria-pressed', m === 'live');
-  $('bLive').textContent = m === 'live' ? 'חי' : 'חזרה לחי';
-  $('bPlay').hidden = $('bSpeed').hidden = m === 'live';
-  $('pill').classList.toggle('rep', m !== 'live'); $('pillT').textContent = m === 'live' ? 'חי' : 'הרצה';
-  if (m === 'live') { playing = true; snap = true; }
-  $('bPlay').textContent = playing ? '⏸' : '▶';
-}
 function frame(now) {
-  const dt = Math.min(100, now - last); last = now;
-  if (mode === 'live') T = Math.min(END, liveT + (now - liveAt));           // in the app: the real clock
-  else if (playing) { T += dt * speed; if (T >= END) { T = END; playing = false; $('bPlay').textContent = '▶'; } }
+  T = Math.min(END, liveT + (now - liveAt));
   render(); requestAnimationFrame(frame);
 }
-$('bLive').onclick = () => setMode('live');
-$('bPlay').onclick = () => { if (T >= END) { T = START; snap = true; } playing = !playing; $('bPlay').textContent = playing ? '⏸' : '▶'; };
-$('bSpeed').onclick = () => { speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]; $('bSpeed').textContent = `×${speed}`; playing = true; $('bPlay').textContent = '⏸'; };
-$('scrub').oninput = (e) => { if (mode === 'live') { playing = false; setMode('replay'); } T = START + (+e.target.value / 1000) * (END - START); snap = true; };
+document.querySelectorAll('.stages button').forEach((b) => b.onclick = () => { liveT = T0 + +b.dataset.t * MIN; liveAt = performance.now(); snap = true; });
 $('noteX').onclick = () => { $('note').remove(); };
 $('bExit').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); alert('באפליקציה: חזרה ללשונית "טרמינל" הרגילה.'); };
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.fullscreenElement) $('bExit').click(); });
@@ -596,7 +571,7 @@ $('bFull').onclick = async () => {
 document.addEventListener('visibilitychange', () => { if (!document.hidden && wake) keepAwake(); });
 
 { const q = new URLSearchParams(location.search).get('t'); if (q != null) liveT = T0 + +q * MIN; }
-T = liveT; setMode('live'); requestAnimationFrame(frame);
+T = liveT; requestAnimationFrame(frame);
 </script>
 </body>
 </html>

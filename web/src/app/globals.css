@@ -432,11 +432,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .tm-tminus { font-weight: 700; color: var(--accent); }
 .tm-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--go); }
 .tm-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--go); animation: tm-pulse 1.4s infinite; }
-.tm-live.off { color: var(--faint); } .tm-live.off i { background: var(--faint); animation: none; }
 @keyframes tm-pulse { 50% { opacity: .3; } }
-.tm-scrub { flex: 1; min-width: 220px; display: grid; gap: 2px; }
-.tm-scrub input { width: 100%; accent-color: var(--accent); direction: rtl; }
-.tm-marks { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); }
 .tm-kpis { border-top: none; border-bottom: 1px solid var(--line); }
 .tm-bar { height: 5px; background: var(--line-2); border-radius: 3px; margin-top: 6px; overflow: hidden; }
 .tm-bar div { height: 100%; background: var(--go); margin-inline-start: auto; }

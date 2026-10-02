@@ -5,16 +5,15 @@ import { expWait, MIN, SI, simulate, stateAt, STATIONS, summary, type QueueId, t
 import { CHIP_AT, layout, MAP_H, MAP_W, place, type DotClass, type Layout } from '@/lib/terminal/map';
 
 // Terminal tab (sketch s7, ADR-053): the departure terminal from the curb to the
-// seat, derived from the OFP. Display only. The dots are drawn straight into the
-// SVG every frame; the panels re-render a few times a second.
+// seat, derived from the OFP. Display only, and always live: the clock is the real
+// one (ADR-055). The dots are drawn straight into the SVG every frame; the panels
+// re-render a few times a second.
 
 const hhmm = (ms: number) => new Date(ms).toISOString().slice(11, 16);
 const mmss = (ms: number) => { const m = Math.round(Math.abs(ms) / MIN); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
-const SPEEDS = [1, 10, 60, 300];
 const R_DOT = 5.5, R_SEAT = 2.6;
 const HOT = 10;                                    // minutes of queue that count as congestion
 
-type Mode = 'live' | 'replay';
 type Rings = Partial<Record<QueueId, (SVGCircleElement | null)[]>>;
 
 // One frame of the map: every dot glides toward where the simulation says it is.
@@ -30,7 +29,7 @@ function drawDots(sim: Sim, L: Layout, time: number, dots: (SVGCircleElement | n
     const { xy: [x, y], cls } = place(L, p, w, qIdx.get(p.i) ?? 0);
     if (w.kind === 'serve') (busy[STATIONS[w.st].id as QueueId] ??= new Set()).add(w.server);
     let cx = xy[p.i * 2], cy = xy[p.i * 2 + 1];
-    // glide, so a queue moving up looks like steps; jump on scrubbing or a new appearance
+    // glide, so a queue moving up looks like steps; jump on a new appearance or after a long pause
     if (snap || Number.isNaN(cx) || Math.hypot(x - cx, y - cy) > 160) { cx = x; cy = y; }
     else { cx += (x - cx) * 0.3; cy += (y - cy) * 0.3; }
     xy[p.i * 2] = cx; xy[p.i * 2 + 1] = cy;
@@ -48,49 +47,27 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
   const sim = useMemo(() => simulate(input), [input]);
   const L = useMemo(() => layout(sim), [sim]);
 
-  const [mode, setMode] = useState<Mode>('live');
-  const [playing, setPlaying] = useState(true);
-  const [speed, setSpeed] = useState(60);
-  // Published by the frame loop: simulated time and wall-clock time (set after mount: the clock is the browser's).
+  // Published by the timer: simulated time (the real clock, held inside the simulated window) and the real time.
   const [clock, setClock] = useState<{ t: number; wall: number } | null>(null);
 
-  const tRef = useRef(0), snap = useRef(true);
-  const dots = useRef<(SVGCircleElement | null)[]>([]), rings = useRef<Partial<Record<QueueId, (SVGCircleElement | null)[]>>>({});
+  const snap = useRef(true);
+  const dots = useRef<(SVGCircleElement | null)[]>([]), rings = useRef<Rings>({});
   const xy = useRef<Float32Array>(new Float32Array(0));
 
-  // The frame loop: advance the clock, move the dots, publish the time to the panels.
   useEffect(() => {
-    const clampLive = (now: number) => Math.min(sim.end, Math.max(sim.start, now));
+    const simNow = () => Math.min(sim.end, Math.max(sim.start, Date.now()));
     if (xy.current.length !== sim.pax.length * 2) { xy.current = new Float32Array(sim.pax.length * 2).fill(NaN); snap.current = true; }
-    if (mode === 'live') tRef.current = clampLive(Date.now());
-    let raf = 0, last = performance.now();
-    const frame = (now: number) => {
-      const dt = Math.min(100, now - last); last = now;
-      if (mode === 'live') tRef.current = clampLive(Date.now());
-      else if (playing) {
-        tRef.current += dt * speed;
-        if (tRef.current >= sim.end) { tRef.current = sim.end; setPlaying(false); }
-      }
-      drawDots(sim, L, tRef.current, dots.current, rings.current, xy.current, snap.current); snap.current = false;
+    let raf = 0;
+    const frame = () => {
+      drawDots(sim, L, simNow(), dots.current, rings.current, xy.current, snap.current); snap.current = false;
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     // Panels on their own timer: animation frames stop in a background tab, the clock shouldn't.
-    const publish = () => {
-      if (mode === 'live') tRef.current = clampLive(Date.now());
-      setClock({ t: tRef.current, wall: Date.now() });
-    };
+    const publish = () => setClock({ t: simNow(), wall: Date.now() });
     const first = setTimeout(publish, 0), id = setInterval(publish, 250);
     return () => { cancelAnimationFrame(raf); clearTimeout(first); clearInterval(id); };
-  }, [sim, L, mode, playing, speed]);
-
-  function goReplay() { if (mode === 'live') { setMode('replay'); } }
-  function scrub(v: number) { goReplay(); setPlaying(false); tRef.current = sim.start + (v / 1000) * (sim.end - sim.start); snap.current = true; setClock({ t: tRef.current, wall: Date.now() }); }
-  function setLive() { setMode('live'); setPlaying(true); snap.current = true; }
-  function togglePlay() {
-    if (tRef.current >= sim.end) { tRef.current = sim.start; snap.current = true; }
-    if (mode === 'live') { setMode('replay'); setPlaying(true); } else setPlaying((p) => !p);
-  }
+  }, [sim, L]);
 
   if (!clock) return <div className="pb small">מכין את הטרמינל…</div>;
   const { t, wall } = clock;
@@ -102,8 +79,8 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
   const lateNow = sim.pax.filter((p) => p.late && p.steps.find((s) => s.st === SI.gate)!.ready <= t).length;
   const boarding = t >= sim.boardOpen;
 
-  const overdue = mode === 'live' && wall > T0 ? wall - T0 : 0;
-  const shown = mode === 'live' ? wall : t;                 // live: the real time, also before and after the simulated window
+  const overdue = wall > T0 ? wall - T0 : 0;
+  const shown = wall;                                       // the real time, also before and after the simulated window
   const local = utcOffset != null ? hhmm(shown + utcOffset * 3600e3) : null;
   const hot = (st: number) => { const w = expWait(sim, st, S[st]); return w != null && w >= HOT; };
 
@@ -112,19 +89,7 @@ export function Terminal({ input, utcOffset }: { input: SimInput; utcOffset: num
       <div className="tm-ctrl">
         <div className="tm-clock"><b><bdi>{hhmm(shown)}</bdi></b><span className="small">Z{local && ` · ${local} מקומי`}</span></div>
         <span className="tm-tminus">{shown < T0 ? `T−${mmss(T0 - shown)} ל-PUSHBACK` : 'PUSHBACK'}</span>
-        <span className={`tm-live${mode === 'live' ? '' : ' off'}`}><i />חי</span>
-        <div className="seg" role="group" aria-label="מצב">
-          <button type="button" aria-pressed={mode === 'live'} onClick={setLive}>חי</button>
-          <button type="button" aria-pressed={mode === 'replay'} onClick={() => { goReplay(); setPlaying(true); }}>הרצה</button>
-        </div>
-        <button type="button" className="btn btn-sm" onClick={togglePlay} aria-label={playing && mode === 'replay' ? 'עצור' : 'הפעל'}>{playing && mode === 'replay' ? '⏸' : '▶'}</button>
-        <div className="seg" role="group" aria-label="מהירות">
-          {SPEEDS.map((s) => <button key={s} type="button" aria-pressed={mode === 'replay' && speed === s} onClick={() => { setSpeed(s); goReplay(); setPlaying(true); }}>×{s}</button>)}
-        </div>
-        <div className="tm-scrub">
-          <input type="range" min={0} max={1000} value={Math.round(((t - sim.start) / (sim.end - sim.start)) * 1000)} aria-label="ציר זמן" onChange={(e) => scrub(+e.target.value)} />
-          <div className="tm-marks"><span>T−3:20</span><span>T−2:00</span><span>T−1:00</span><span>עלייה T−0:40</span><span>PUSHBACK</span></div>
-        </div>
+        <span className="tm-live"><i />חי</span>
       </div>
 
       <div className="metrics tm-kpis">
