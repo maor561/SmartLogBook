@@ -9,7 +9,8 @@ import { saveRateVersion } from './actions';
 type Props = { versions: RateVersion[]; currentId: number };
 type Values = Record<string, string>;
 
-const toValues = (p: RateParams): Values => Object.fromEntries(FIELDS.map((f) => [f.path, String(getAt(p, f.path))]));
+// A version from before ADR-060 has no periodic checks: its missing fields load as 0, which is how it behaves.
+const toValues = (p: RateParams): Values => Object.fromEntries(FIELDS.map((f) => [f.path, String(getAt(p, f.path) ?? 0)]));
 const date = (iso: string) => new Date(iso).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 // Sketch s6: grouped editor; saving creates a new immutable version (ADR-021, 041).

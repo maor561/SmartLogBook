@@ -9,7 +9,7 @@
   "fuel": { "sensitivity": 0.35, "refUsdPerKg": 1.51, "minPct": -10, "maxPct": 15 },
   "cargo": { "a": 0.8, "b": 0.05, "c": 0.55 },
   "crew": { "captain": 200, "firstOfficer": 120, "relief": 120, "attendant": 40, "seatsPerAttendant": 50, "minHours": 2, "relief3AboveHours": 8, "relief4AboveHours": 12 },
-  "maintenance": { "perAirHour": 450, "perAirHourPerMtowT": 10.8, "perCyclePerMtowT": 3 },
+  "maintenance": { "perAirHour": 450, "perAirHourPerMtowT": 7, "perCyclePerMtowT": 3, "lightEveryHours": 100, "lightPerMtowT": 190, "mediumEveryHours": 600, "mediumPerMtowT": 1330 },
   "fees": { "landingPerMtowT": 7, "airportPerPax": 12 },
   "nav": { "per100km": 70, "refMtowT": 50 },
   "lease": { "perBlockHourPerMtowT": 10.5 },

@@ -16,6 +16,7 @@ export type Draft = {
   rating: number | null;
   positioningNm: number | null;
   diversionNm: number | null;
+  airframeHoursBefore?: number | null;      // air hours of this registration before the flight (ADR-060)
 };
 
 // Names shown to the user for OUT / OFF / ON / IN (user's choice, 2026-09-25).
@@ -66,6 +67,7 @@ export function toEngineInput(d: Draft): FlightInput | null {
     manual: d.manual,
     positioningNm: d.positioningNm,
     diversionNm: d.diversionNm,
+    airframeHoursBefore: d.airframeHoursBefore ?? null,
   };
 }
 

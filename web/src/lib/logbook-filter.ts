@@ -29,6 +29,7 @@ export type LogFlight = {
   editedAt: string | null;
   crewFrom: string | null;
   editable: boolean;                  // ADR-021: closed flights with an OFP snapshot
+  repair?: { cents: number; dueAt: string } | null;   // an unpaid repair after a hard landing: not in the ledger yet (ADR-060)
 };
 
 export type Tag = 'div' | 'pos' | 'hard' | 'loss' | 'edited';

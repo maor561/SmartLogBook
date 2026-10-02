@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import type { Base } from '@/lib/flight-view';
+import type { AircraftStatus } from '@/lib/fleet';
+import { CHECK_LABEL } from '@/lib/maintenance';
+import { PayRepairButton } from '@/components/PayRepair';
 import type { OfpSummary } from '@/lib/ofp';
 import { ddmm, hm, minsBetween, nf, usd, z } from '@/lib/format';
 import { FlightTabs, Head, LogbookLink, MilestoneAside, MonthAside, RecentTable } from './Parts';
@@ -50,7 +53,12 @@ export function IdleView({ base, justClosed = false }: { base: Base; justClosed?
 }
 
 // State 2 · plan ready, waiting for VATSIM.
-export function PlanView({ base, ofp, expiresInMin, positioningNm }: { base: Base; ofp: OfpSummary; expiresInMin: number; positioningNm: number | null }) {
+export function PlanView({ base, ofp, expiresInMin, positioningNm, aircraft = null }: {
+  base: Base; ofp: OfpSummary; expiresInMin: number; positioningNm: number | null; aircraft?: AircraftStatus | null;
+}) {
+  // A check counts as close when this flight, or the next one of the same length, will cross it.
+  const plannedAirH = (minsBetween(ofp.sched.off, ofp.sched.on) ?? 0) / 60;
+  const soon = aircraft?.checks.find((c) => c.leftHours <= Math.max(5, plannedAirH * 2));
   const left = expiresInMin;
   const blockPlan = minsBetween(ofp.sched.out, ofp.sched.in);
   const w = ofp.weights;
@@ -62,6 +70,18 @@ export function PlanView({ base, ofp, expiresInMin, positioningNm }: { base: Bas
             נוצרה ב-SimBrief ב-<bdi>{z(ofp.generated_at)}Z</bdi>{left != null && <> · פגה בעוד <b>{hm(left)}</b></>}
           </Head>
           <FlightTabs active="flight" />
+          {aircraft?.grounded ? (
+            <div className="banner bad">
+              <span className="grow"><b>המטוס <bdi>{aircraft.reg}</bdi> מושבת.</b> יש תיקון שלא שולם אחרי נחיתה קשה (<bdi>{usd(aircraft.grounded.cents, false)}</bdi>). אפשר לטוס, אבל אי אפשר לסגור את הטיסה עד שתשלם, או עד <bdi>{ddmm(aircraft.grounded.dueAt)}</bdi>.</span>
+              <PayRepairButton id={aircraft.grounded.id} cents={aircraft.grounded.cents} />
+            </div>
+          ) : soon && (
+            <div className="banner warn">
+              <span className="grow"><b>{CHECK_LABEL[soon.kind]} בעוד {soon.leftHours.toFixed(1)} שעות אוויר.</b> {soon.leftHours <= plannedAirH
+                ? <>הטיסה הזאת מתוכננת ל-{hm(Math.round(plannedAirH * 60))} באוויר, ולכן היא תחצה את הסף ותחויב ב-<bdi>{usd(soon.cents, false)}</bdi>.</>
+                : <>הטיסה שתחצה את הסף תחויב ב-<bdi>{usd(soon.cents, false)}</bdi>.</>}</span>
+            </div>
+          )}
           <div className="idle" style={{ padding: 14 }}>
             <div className="ring" aria-hidden>…</div>
             <div>

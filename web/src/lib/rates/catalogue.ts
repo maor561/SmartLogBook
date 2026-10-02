@@ -55,6 +55,11 @@ export const GROUPS: Group[] = [
     { path: 'maintenance.perAirHour', name: 'בסיס לשעת אוויר', unit: '$' },
     { path: 'maintenance.perAirHourPerMtowT', name: 'לטון MTOW לשעה', unit: '$' },
     { path: 'maintenance.perCyclePerMtowT', name: 'לכל מחזור, לטון', unit: '$' },
+    { heading: 'טיפולים תקופתיים, לפי שעות האוויר של המטוס (0 = בלי טיפול)' },
+    { path: 'maintenance.lightEveryHours', name: 'טיפול קל כל', unit: 'שעות' },
+    { path: 'maintenance.lightPerMtowT', name: 'טיפול קל, לטון MTOW', unit: '$' },
+    { path: 'maintenance.mediumEveryHours', name: 'טיפול בינוני כל', unit: 'שעות' },
+    { path: 'maintenance.mediumPerMtowT', name: 'טיפול בינוני, לטון MTOW', unit: '$' },
   ] },
   { title: 'עמלות שדה וניווט', formula: 'a × MTOW + b × pax · nav × km/100 × √(MTOW/ref)', items: [
     { path: 'fees.landingPerMtowT', name: 'נחיתה לטון MTOW', unit: '$' },
@@ -65,12 +70,12 @@ export const GROUPS: Group[] = [
   { title: 'חכירת מטוס', formula: 'block × a × MTOW', items: [
     { path: 'lease.perBlockHourPerMtowT', name: 'לשעת בלוק לטון MTOW', unit: '$' },
   ] },
-  { title: 'קנס נחיתה קשה', formula: 'לפי FPM · $ × MTOW', items: [
+  { title: 'תיקון אחרי נחיתה קשה', formula: 'לפי FPM · $ × MTOW · בקשת תשלום, והמטוס מושבת עד 4 ימים', items: [
     { heading: 'ספים (FPM)' },
-    { path: 'hardLanding.freeUpToFpm', name: 'ללא קנס עד', unit: 'FPM' },
+    { path: 'hardLanding.freeUpToFpm', name: 'ללא תיקון עד', unit: 'FPM' },
     { path: 'hardLanding.visualUpToFpm', name: 'בדיקה ויזואלית עד', unit: 'FPM' },
     { path: 'hardLanding.ammUpToFpm', name: 'בדיקת AMM עד', unit: 'FPM' },
-    { heading: 'קנס לטון MTOW' },
+    { heading: 'עלות התיקון לטון MTOW' },
     { path: 'hardLanding.visualPerMtowT', name: 'בדיקה ויזואלית', unit: '$' },
     { path: 'hardLanding.ammPerMtowT', name: 'בדיקת AMM', unit: '$' },
     { path: 'hardLanding.structuralPerMtowT', name: 'בדיקה מבנית', unit: '$' },

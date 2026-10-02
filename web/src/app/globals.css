@@ -600,3 +600,29 @@ dialog.card-dlg { width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh
 .banner.go { background: var(--go-bg); align-items: center; }
 .banner.go b { color: var(--go); }
 @media (max-width: 560px) { .card-bar .end { margin-inline-start: 0; width: 100%; } .card-bar .end .btn { flex: 1; } }
+
+/* ---------- fleet and maintenance (sketch s12, ADR-060) ---------- */
+.nav a { gap: 6px; }
+.nav-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.fl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+.fl-ac { background: var(--panel); padding: 14px; display: grid; gap: 10px; align-content: start; }
+.fl-ac:only-child { grid-column: 1 / -1; }
+.fl-ac .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fl-ac .reg { font-size: 22px; font-weight: 700; }
+.fl-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.fl-facts .v { font-size: 19px; font-weight: 700; }
+.fl-due { display: grid; gap: 3px; }
+.fl-due .ln { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; flex-wrap: wrap; }
+.fl-due .ln span { color: var(--muted); }
+.fl-meter { height: 7px; border-radius: 4px; background: var(--line-2); overflow: hidden; }
+.fl-meter div { height: 100%; margin-inline-start: auto; border-radius: 4px; background: var(--accent); }
+.fl-meter div.soon { background: var(--warn); }
+.fl-req { border: 1px solid var(--bad); background: var(--bad-bg); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 8px; }
+.fl-req .t { font-weight: 700; }
+.fl-req .small { color: var(--ink); }
+.fl-req .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fl-req .amt { font-size: 20px; font-weight: 700; margin-inline-start: auto; }
+.banner.bad, .banner.warn { align-items: center; flex-wrap: wrap; }
+.ledger tr.hl td { background: var(--warn-bg); font-weight: 600; }
+@media (max-width: 900px) { .fl-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .fl-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fl-req .amt { margin-inline-start: 0; width: 100%; } }

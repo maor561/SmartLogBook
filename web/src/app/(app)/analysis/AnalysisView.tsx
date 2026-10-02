@@ -14,7 +14,7 @@ const LINES: [string, string, 'rev' | 'exp', string?][] = [
   ['tickets', 'כרטיסים', 'rev'], ['cargo', 'מטען', 'rev'],
   ['fuel', 'דלק', 'exp', 'GSX'], ['ground_handling', 'צוות קרקע', 'exp', 'GSX'], ['catering', 'קייטרינג', 'exp', 'GSX'],
   ['crew', 'טייסים ודיילים', 'exp'], ['maintenance', 'תחזוקה', 'exp'], ['airport_fees', 'עמלות נחיתה ושדה', 'exp'],
-  ['nav_charges', 'דמי ניווט', 'exp'], ['lease', 'חכירת מטוס', 'exp'], ['hard_landing', 'קנסות נחיתה', 'exp'],
+  ['nav_charges', 'דמי ניווט', 'exp'], ['lease', 'חכירת מטוס', 'exp'], ['hard_landing', 'תיקונים אחרי נחיתה קשה', 'exp'], ['maintenance_check', 'טיפולים תקופתיים', 'exp'],
   ['positioning', 'הקפצות צוות', 'exp'], ['diversion', 'הסטות', 'exp'],
 ];
 const pct = (x: number | null, d = 0) => (x == null ? '—' : `${(x * 100).toFixed(d)}%`);

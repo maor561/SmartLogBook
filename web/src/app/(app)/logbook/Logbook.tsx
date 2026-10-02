@@ -23,7 +23,7 @@ const TAG_CHIP: Record<Tag, string> = { div: 'warn', pos: 'warn', hard: 'bad', l
 const LINE_LABEL: Record<string, string> = {
   tickets: 'כרטיסים', cargo: 'מטען', fuel: 'דלק', ground_handling: 'צוות קרקע', catering: 'קייטרינג',
   crew: 'טייסים ודיילים', maintenance: 'תחזוקה', airport_fees: 'עמלות נחיתה ושדה', nav_charges: 'דמי ניווט',
-  lease: 'חכירת מטוס', hard_landing: 'קנס נחיתה קשה', positioning: 'הקפצת צוות', diversion: 'הסטה', legacy_profit: 'רווח (מערכת ישנה)',
+  lease: 'חכירת מטוס', hard_landing: 'תיקון אחרי נחיתה קשה', positioning: 'הקפצת צוות', diversion: 'הסטה', legacy_profit: 'רווח (מערכת ישנה)', maintenance_check: 'טיפול תקופתי',
 };
 const SRCS: Record<string, [string, string]> = { manual: ['ידני', 'm'], auto: ['אוטו׳', 'a'], simbrief: ['SimBrief', ''], legacy: ['ישן', ''] };
 const KEYS = ['out', 'off', 'on', 'in'] as const;
@@ -239,6 +239,7 @@ function Detail({ f, airports, onClose, onDeleted, onSaved, onCard }: {
                 {exp.length > 0 && <tr className="grp"><td colSpan={2}>הוצאות</td></tr>}
                 {exp.map((l, i) => <LineRow key={`e${i}`} code={l.code} cents={l.cents} source={l.source} />)}
                 {exp.length > 0 && <tr className="sub"><td>סה״כ הוצאות</td><td className="n neg">{usd(total(exp))}</td></tr>}
+                {f.repair && <tr className="zero"><td>תיקון אחרי נחיתה קשה · ממתין לתשלום (<bdi>{usd(f.repair.cents, false)}</bdi>), במסך הצי</td><td className="n">$0</td></tr>}
                 <tr className="net"><td>{f.profitCents < 0 ? 'הפסד' : 'רווח נקי'}</td><td className={`n ${f.profitCents < 0 ? 'neg' : 'pos'}`}>{usd(f.profitCents)}</td></tr>
               </tbody>
             </table>

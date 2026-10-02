@@ -10,11 +10,13 @@ import { closeFlight, discardFlight } from '../flight-actions';
 import { Head } from './Parts';
 import { flightScore, scoreInput } from '@/lib/flight-score';
 import { ScoreCard } from '@/components/FlightScore';
+import { CHECK_LABEL, GROUND_DAYS, settle } from '@/lib/maintenance';
+import { PayRepairButton } from '@/components/PayRepair';
 
 const LABEL: Record<LedgerCode, string> = {
   tickets: 'כרטיסים', cargo: 'מטען', fuel: 'דלק', ground_handling: 'צוות קרקע', catering: 'קייטרינג',
   crew: 'טייסים ודיילים', maintenance: 'תחזוקה', airport_fees: 'עמלות נחיתה ושדה', nav_charges: 'דמי ניווט',
-  lease: 'חכירת מטוס', hard_landing: 'קנס נחיתה קשה', positioning: 'הקפצת צוות', diversion: 'הסטה',
+  lease: 'חכירת מטוס', hard_landing: 'תיקון אחרי נחיתה קשה', positioning: 'הקפצת צוות', diversion: 'הסטה', maintenance_check: 'טיפול תקופתי',
 };
 const SRC = { manual: ['ידני', 'm'], auto: ['אוטו׳', 'a'], simbrief: ['SimBrief', ''] } as const;
 const KEYS = ['out', 'off', 'on', 'in'] as const;
@@ -70,10 +72,14 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
     manual: { fuel: num(money.fuel), ground: num(money.ground), catering: num(money.catering) },
     fuelUsdPerKg: form.fuel?.usdPerKg ?? null, rating: form.rating,
     positioningNm: form.positioningNm, diversionNm: form.diverted ? form.diversionNm : null,
+    airframeHoursBefore: form.aircraft?.airHours ?? null,
   };
   const gaps = missing(draft);
   const input = toEngineInput(draft);
-  const result = input ? compute(params, input) : null;
+  // With a registration to ground, a hard landing is a repair request, not a line of this flight (ADR-060).
+  const result = input ? settle(compute(params, input), Boolean(ofp.aircraft.reg)) : null;
+  const fare = input ? compute(params, input).fare : null;
+  const grounded = form.aircraft?.grounded ?? null;
   const revenue = result?.lines.filter((l) => l.amountCents > 0) ?? [];
   const costs = result?.lines.filter((l) => l.amountCents < 0) ?? [];
   const sum = (ls: typeof revenue) => ls.reduce((s, l) => s + l.amountCents, 0);
@@ -117,6 +123,12 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
           {form.diverted && form.actual && (
             <div className="banner warn">
               <div className="grow"><b>נחתת ב-<bdi>{form.actual.icao}</bdi> במקום <bdi>{ofp.dest.icao}</bdi>.</b> הטיסה תירשם ל-<bdi>{form.actual.icao}</bdi>, ותתווסף הוצאת הסטה: העברת {ofp.weights.pax} נוסעים ל-<bdi>{ofp.dest.icao}</bdi>. הטיסה הבאה ממשיכה מ-<bdi>{form.actual.icao}</bdi>.</div>
+            </div>
+          )}
+          {grounded && (
+            <div className="banner bad">
+              <div className="grow"><b>המטוס <bdi>{grounded.registration}</bdi> מושבת.</b> יש תיקון שלא שולם אחרי נחיתה קשה בטיסה <bdi>{grounded.callsign ?? ''}</bdi>. אי אפשר לסגור טיסה חדשה איתו עד התשלום.</div>
+              <PayRepairButton id={grounded.id} cents={grounded.cents} long />
             </div>
           )}
           {interrupted && (
@@ -172,10 +184,10 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
           </div>
 
           <div className="actions">
-            <button type="button" className="btn btn-primary" disabled={pending || gaps.length > 0} onClick={submit}>
+            <button type="button" className="btn btn-primary" disabled={pending || gaps.length > 0 || Boolean(grounded)} onClick={submit}>
               {pending ? 'שומר…' : 'סגור טיסה ורשום ללוגבוק'}
             </button>
-            <span className="small">{gaps.length ? `חסרים: ${gaps.join(', ')}` : 'אחרי הסגירה הסכומים ננעלים (ADR-007)'}</span>
+            <span className="small">{grounded ? 'המטוס מושבת: שלם את התיקון כדי לסגור' : gaps.length ? `חסרים: ${gaps.join(', ')}` : 'אחרי הסגירה הסכומים ננעלים (ADR-007)'}</span>
             {interrupted && <button type="button" className="btn btn-ghost-bad end" disabled={pending} onClick={discard}>מחק טיסה</button>}
           </div>
           {errors.length > 0 && <div className="pb err" role="alert">{errors.join(' · ')}</div>}
@@ -194,9 +206,11 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
                 {revenue.map((l) => <Row key={l.code} code={l.code} cents={l.amountCents} source={l.source} />)}
                 <tr className="sub"><td>סה״כ הכנסות</td><td className="n pos">{usd(sum(revenue))}</td></tr>
                 <tr className="grp"><td colSpan={2}>הוצאות</td></tr>
-                {costs.map((l) => <Row key={l.code} code={l.code} cents={l.amountCents} source={l.source} />)}
-                {!costs.some((l) => l.code === 'hard_landing') && draft.fpm != null && (
-                  <tr className="zero"><td>קנס נחיתה קשה · FPM <bdi>{draft.fpm}</bdi></td><td className="n">$0</td></tr>
+                {costs.map((l) => <Row key={l.code} code={l.code} cents={l.amountCents} source={l.source} calc={l.calc} />)}
+                {result.repair ? (
+                  <tr className="zero"><td>תיקון אחרי נחיתה קשה · FPM <bdi>{draft.fpm}</bdi> · בקשת תשלום של <bdi>{usd(result.repair.cents, false)}</bdi> תיפתח בסגירה, והמטוס יושבת עד {GROUND_DAYS} ימים</td><td className="n">$0</td></tr>
+                ) : !costs.some((l) => l.code === 'hard_landing') && draft.fpm != null && (
+                  <tr className="zero"><td>נחיתה קשה · FPM <bdi>{draft.fpm}</bdi> · אין נזק</td><td className="n">$0</td></tr>
                 )}
                 {!costs.some((l) => l.code === 'positioning') && (
                   <tr className="zero"><td>הקפצת צוות · {form.positioningNm ? `פחות מ-${params.positioning.freeUnderNm} NM` : <>המוצא = מיקום הצוות (<bdi>{crewIcao}</bdi>)</>}</td><td className="n">$0</td></tr>
@@ -207,7 +221,7 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
             </table>
           )}
           <div className="pb small" style={{ borderTop: '1px solid var(--line)' }}>
-            מחיר כרטיס <b style={{ color: 'var(--ink)' }}>{result ? `$${result.fare}` : '—'}</b> · תעריפים גרסה {form.rateSetId}
+            מחיר כרטיס <b style={{ color: 'var(--ink)' }}>{fare != null ? `$${fare}` : '—'}</b> · תעריפים גרסה {form.rateSetId}
             {form.fuel ? <> · דלק EIA <bdi>${form.fuel.usdPerKg.toFixed(2)}</bdi>/ק״ג</> : ' · בלי מחיר EIA (תוספת 0%)'}
             {form.rating != null ? <> · דירוג <bdi>{form.rating.toFixed(1)}</bdi>★</> : ' · דירוג בבנייה (נייטרלי)'}
           </div>
@@ -222,11 +236,13 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   );
 }
 
-function Row({ code, cents, source }: { code: LedgerCode; cents: number; source: keyof typeof SRC }) {
+function Row({ code, cents, source, calc }: { code: LedgerCode; cents: number; source: keyof typeof SRC; calc?: Record<string, unknown> }) {
   const [txt, cls] = SRC[source];
+  // a periodic check names itself: which one, and at how many air hours
+  const name = code === 'maintenance_check' && calc ? `${CHECK_LABEL[calc.kind as 'light' | 'medium'] ?? LABEL[code]} · המטוס חצה ${calc.atHours} שעות אוויר` : LABEL[code];
   return (
-    <tr>
-      <td>{LABEL[code]}<span className={`srcs ${cls}`}>{txt}</span></td>
+    <tr className={code === 'maintenance_check' ? 'hl' : undefined}>
+      <td>{name}<span className={`srcs ${cls}`}>{txt}</span></td>
       <td className="n">{usd(cents)}</td>
     </tr>
   );

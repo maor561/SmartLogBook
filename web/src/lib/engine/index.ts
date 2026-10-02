@@ -5,7 +5,7 @@ import type { RateParams } from '../rates/params';
 
 export type LedgerCode =
   | 'tickets' | 'cargo' | 'fuel' | 'ground_handling' | 'catering' | 'crew' | 'maintenance'
-  | 'airport_fees' | 'nav_charges' | 'lease' | 'hard_landing' | 'positioning' | 'diversion';
+  | 'airport_fees' | 'nav_charges' | 'lease' | 'hard_landing' | 'positioning' | 'diversion' | 'maintenance_check';
 
 export type LedgerLine = {
   code: LedgerCode;
@@ -30,6 +30,8 @@ export type FlightInput = {
   manual: { fuel: number | null; ground: number | null; catering: number | null };   // USD from GSX
   positioningNm: number | null;      // crew location → origin; null/0 = crew already here (ADR-026)
   diversionNm: number | null;        // actual → planned destination; null = no diversion (ADR-027)
+  // Air hours this registration had flown before this flight (ADR-060). null / absent = unknown: no periodic check.
+  airframeHoursBefore?: number | null;
 };
 
 export type EngineResult = { lines: LedgerLine[]; fare: number; profitCents: number };
@@ -38,6 +40,19 @@ export type EngineResult = { lines: LedgerLine[]; fare: number; profitCents: num
 const cents = (usd: number) => Math.sign(usd) * Math.round(Math.abs(usd) * 100);
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const r4 = (x: number) => Math.round(x * 1e4) / 1e4;
+
+// Periodic checks (ADR-060): due on the flight during which the airframe crosses a multiple of the interval.
+// The medium check includes the light one. Rate versions from before ADR-060 have no intervals: no checks.
+export type CheckDue = { kind: 'light' | 'medium'; atHours: number; perMtowT: number };
+export function checkDue(p: RateParams, hoursBefore: number | null | undefined, airMin: number): CheckDue | null {
+  if (hoursBefore == null) return null;
+  const m = p.maintenance, after = hoursBefore + airMin / 60;
+  const crossed = (every: number | undefined) => (every && every > 0 && Math.floor(after / every) > Math.floor(hoursBefore / every) ? Math.floor(after / every) * every : null);
+  const medium = crossed(m.mediumEveryHours), light = crossed(m.lightEveryHours);
+  if (medium != null) return { kind: 'medium', atHours: medium, perMtowT: m.mediumPerMtowT };
+  if (light != null) return { kind: 'light', atHours: light, perMtowT: m.lightPerMtowT };
+  return null;
+}
 
 export function baseFare(p: RateParams, nm: number): number {
   return p.fare.f0 + p.fare.k * Math.pow(nm, p.fare.exp);
@@ -117,6 +132,9 @@ export function compute(p: RateParams, f: FlightInput): EngineResult {
   const mx = p.maintenance;
   const mxHourly = mx.perAirHour + mx.perAirHourPerMtowT * mtowT;
   add('maintenance', -(ah * mxHourly + mx.perCyclePerMtowT * mtowT), 'auto', { airHours: r4(ah), hourly: r4(mxHourly), cycle: r4(mx.perCyclePerMtowT * mtowT) });
+
+  const due = checkDue(p, f.airframeHoursBefore, f.airMin);
+  if (due) add('maintenance_check', -(due.perMtowT * mtowT), 'auto', { kind: due.kind, atHours: due.atHours, perMtowT: due.perMtowT, mtowT, hoursBefore: r4(f.airframeHoursBefore!) });
 
   add('airport_fees', -(p.fees.landingPerMtowT * mtowT + p.fees.airportPerPax * f.pax), 'auto', { mtowT, pax: f.pax });
 

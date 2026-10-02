@@ -43,5 +43,7 @@ export function validate(p: RateParams): string[] {
   if (p.crew.relief3AboveHours >= p.crew.relief4AboveHours) errs.push('צוות: סף טייס רביעי חייב להיות מעל סף טייס שלישי');
   if (p.crew.seatsPerAttendant < 1) errs.push('צוות: מושבים לדייל ≥ 1');
   if (p.fuel.refUsdPerKg <= 0 || p.nav.refMtowT <= 0) errs.push('מחירי ייחוס חייבים להיות חיוביים');
+  const mx = p.maintenance;
+  if (mx.lightEveryHours > 0 && mx.mediumEveryHours > 0 && mx.mediumEveryHours % mx.lightEveryHours !== 0) errs.push('תחזוקה: המרווח של הטיפול הבינוני חייב להיות כפולה של הטיפול הקל');
   return errs;
 }

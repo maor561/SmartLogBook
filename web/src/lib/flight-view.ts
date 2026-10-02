@@ -11,6 +11,7 @@ import { milestoneCrossings, nextMilestones } from './rating';
 import type { OfpSummary } from './ofp';
 import type { Times } from './flight-input';
 import type { RateParams } from './rates/params';
+import { aircraftStatus, settleOverdueRepairs, type AircraftStatus } from './fleet';
 
 // Everything the flight screen needs, derived on the server from the tracker
 // (Worker), the latest SimBrief OFP and Neon (sketch s1a, six states).
@@ -61,11 +62,12 @@ export type FormView = {
   trackerState: TrackerDoc['state'] | null;
   disconnectedAt: string | null;
   draft: DraftCosts | null;        // GSX costs already entered during the flight
+  aircraft: AircraftStatus | null; // hours, checks and an open repair for this registration (ADR-060)
 };
 
 export type FlightView =
   | { kind: 'idle'; base: Base }
-  | { kind: 'plan'; base: Base; ofp: OfpSummary; expiresInMin: number; positioningNm: number | null }
+  | { kind: 'plan'; base: Base; ofp: OfpSummary; expiresInMin: number; positioningNm: number | null; aircraft: AircraftStatus | null }
   | { kind: 'live' | 'disc'; base: Base; t: TrackerDoc; ofp: OfpSummary; draft: DraftCosts | null }
   | { kind: 'done' | 'manual'; base: Base; form: FormView };
 
@@ -158,15 +160,17 @@ export async function buildForm(ofp: OfpSummary, t: TrackerDoc | null, crew: str
   }
   const at = tracked.out ?? tracked.off;
   const [rs, fuel, positioningNm, rating, draft] = await Promise.all([rateSetAt(at), fuelAt(at), nmBetween(crew, ofp.origin.icao), currentRating(), getDraft(ofp.id)]);
+  const aircraft = await aircraftStatus(ofp.aircraft.reg, ofp.weights.mtow_kg, rs.params);
   const mode = t && t.ofp?.id === ofp.id && t.state === 'arrived' && !t.joined && tracked.out && tracked.off && tracked.on && tracked.in ? 'tracked' : 'manual';
   return {
     mode, ofp, tracked, actual, diverted, diversionNm, positioningNm,
     params: rs.params, rateSetId: rs.id, fuel, rating,
-    trackerState: t?.state ?? null, disconnectedAt: t?.disconnected_at ?? null, draft,
+    trackerState: t?.state ?? null, disconnectedAt: t?.disconnected_at ?? null, draft, aircraft,
   };
 }
 
 export async function getFlightView(opts: { manual?: boolean } = {}): Promise<FlightView> {
+  await settleOverdueRepairs().catch(() => {});      // a repair unpaid for 4 days is charged before anything is shown
   const settings = await getSettings();
   const [crew, recent, month, nextMilestone] = await Promise.all([
     crewLocation(settings.homeBaseIcao), recentFlights(), monthSummary(), closestMilestone().catch(() => null),
@@ -197,5 +201,6 @@ export async function getFlightView(opts: { manual?: boolean } = {}): Promise<Fl
   if (!usable) return { kind: 'idle', base };
   if (opts.manual) return { kind: 'manual', base, form: await buildForm(ofp, null, crew.icao) };
   const expiresInMin = Math.max(0, Math.round((OFP_MAX_AGE_H - age) * 60));
-  return { kind: 'plan', base, ofp, expiresInMin, positioningNm: await nmBetween(crew.icao, ofp.origin.icao) };
+  const aircraft = await aircraftStatus(ofp.aircraft.reg, ofp.weights.mtow_kg, (await rateSetAt(null)).params);
+  return { kind: 'plan', base, ofp, expiresInMin, positioningNm: await nmBetween(crew.icao, ofp.origin.icao), aircraft };
 }

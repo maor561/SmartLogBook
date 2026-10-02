@@ -9,9 +9,11 @@ const NAV = [
   { href: '/', label: 'טיסה' },
   { href: '/logbook', label: 'לוגבוק' },
   { href: '/analysis', label: 'ניתוח' },
+  { href: '/fleet', label: 'צי' },
 ] as const;
 
-export function TopBar() {
+// `openRepairs`: repair requests waiting for payment (an aircraft is grounded), shown on the fleet link.
+export function TopBar({ openRepairs = 0 }: { openRepairs?: number }) {
   const pathname = usePathname();
   const { tracker } = useTracker();
   const conn = connection(tracker);
@@ -22,7 +24,9 @@ export function TopBar() {
       <div className="brand">SMARTLOGBOOK</div>
       <nav className="nav" aria-label="ניווט ראשי">
         {NAV.map(({ href, label }) => (
-          <Link key={href} href={href} aria-current={isActive(href) ? 'page' : undefined}>{label}</Link>
+          <Link key={href} href={href} aria-current={isActive(href) ? 'page' : undefined}>
+            {label}{href === '/fleet' && openRepairs > 0 && <span className="nav-badge" aria-label={`${openRepairs} בקשות תשלום פתוחות`}>{openRepairs}</span>}
+          </Link>
         ))}
       </nav>
       <div className="topbar-end">

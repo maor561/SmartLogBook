@@ -6,7 +6,9 @@ import { readFileSync } from 'node:fs';
 import { compute, price, baseFare } from '../src/lib/engine/index.ts';
 import { DEFAULTS, withChanges } from '../src/lib/rates/params.ts';
 
-const P = DEFAULTS;
+// Sketches 2 and 3 and the calibration were approved with one hourly maintenance rate ($10.8 per MTOW ton).
+// ADR-060 split it into a lower hourly rate plus periodic checks, the same on average (tested below).
+const P = withChanges(DEFAULTS, { 'maintenance.perAirHourPerMtowT': 10.8, 'maintenance.lightEveryHours': 0, 'maintenance.mediumEveryHours': 0 });
 // Sketch 2 was approved with a $0.75/kg fuel reference; ADR-043 moved the default to $1.51.
 const P_S2 = withChanges(DEFAULTS, { 'fuel.refUsdPerKg': 0.75 });
 const flight = (o = {}) => ({

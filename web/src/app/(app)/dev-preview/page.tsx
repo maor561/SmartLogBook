@@ -6,6 +6,9 @@ import { IdleView, PlanView } from '../flight/IdlePlan';
 import { LiveView } from '../flight/LiveView';
 import { CompletionForm } from '../flight/CompletionForm';
 import { TerminalScreen } from '../flight/TerminalScreen';
+import { FleetView } from '../fleet/FleetView';
+import { nextChecks } from '@/lib/maintenance';
+import type { FleetAircraft, Repair } from '@/lib/fleet';
 import { Logbook } from '../logbook/Logbook';
 import { AnalysisView } from '../analysis/AnalysisView';
 import { inRange, rangeOf } from '@/lib/analysis';
@@ -74,8 +77,26 @@ const form = (o: Partial<FormView> = {}): FormView => ({
   mode: 'tracked', ofp: OFP,
   tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: '2026-09-25T15:49:00.000Z', in: '2026-09-25T15:58:00.000Z' },
   actual: { icao: 'LGAV', name: 'Athens' }, diverted: false, diversionNm: null, positioningNm: 0,
-  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, ...o,
+  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, aircraft: null, ...o,
 });
+
+// Fleet fixtures (ADR-060). `REPAIR` is an open request: N738PM is grounded for another 3 days and 21 hours.
+const serverNow = () => Date.now();
+const repairFixture = (): Repair => ({
+  id: 1, flightId: 6, registration: '4X-EKA', tier: 'amm', fpm: -655, cents: 474000, createdAt: new Date(serverNow() - 3 * 3600e3).toISOString(),
+  dueAt: new Date(serverNow() + (3 * 24 + 21) * 3600e3).toISOString(), paidAt: null, paidHow: null, callsign: 'ELY352', origin: 'LGAV', dest: 'LLBG',
+});
+const fleetFixture = (grounded: boolean): FleetAircraft[] => {
+  const r = repairFixture(), at = new Date(serverNow() - 3 * 3600e3).toISOString();
+  return [
+    { reg: '4X-EKA', type: 'B738', mtowT: 79, airHours: 100.9, flights: 32, hardLandings: 1, spentCents: 1501000, open: grounded ? r : null, checks: nextChecks(DEFAULTS, 100.9, 79),
+      history: [
+        { what: 'repair', kind: 'amm', fpm: -655, cents: 474000, at, state: grounded ? 'open' : 'manual', dueAt: r.dueAt, flightId: 6, callsign: 'ELY352', origin: 'LGAV', dest: 'LLBG' },
+        { what: 'check', kind: 'light', fpm: null, cents: 1501000, at, state: 'closing', dueAt: null, flightId: 5, callsign: 'ELY351', origin: 'LLBG', dest: 'LGAV' },
+      ] },
+    { reg: '4X-EKB', type: 'B738', mtowT: 79, airHours: 41.2, flights: 14, hardLandings: 0, spentCents: 0, open: null, checks: nextChecks(DEFAULTS, 41.2, 79), history: [] },
+  ];
+};
 
 // Server-side clock for the terminal fixture (a whole minute, so reloads agree).
 const minutesFromNow = (min: number) => new Date(Math.round((Date.now() + min * 60e3) / 60e3) * 60e3).toISOString();
@@ -107,6 +128,12 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
       return <TerminalScreen ofp={{ ...OFP, sched: { ...OFP.sched, out } }} tag={<span className="tag plan">תוכנית מוכנה</span>} airportType={type} />;
     }
     case 'closed': return <IdleView base={base} justClosed />;     // right after closing a flight
+    case 'fleet': return <FleetView fleet={fleetFixture((await searchParams).g !== '0')} now={serverNow()} />;
+    // the flight that crosses 100 air hours: the light check is charged at closing
+    case 'check': return <CompletionForm form={form({ aircraft: { reg: '4X-EKA', airHours: 99.2, grounded: null, checks: nextChecks(DEFAULTS, 99.2, 79) } })} crewIcao="LLBG" />;
+    case 'grounded': return <CompletionForm form={form({ aircraft: { reg: '4X-EKA', airHours: 100.9, grounded: repairFixture(), checks: nextChecks(DEFAULTS, 100.9, 79) } })} crewIcao="LLBG" />;
+    case 'plan-grounded': return <PlanView base={base} ofp={OFP} expiresInMin={702} positioningNm={0} aircraft={{ reg: '4X-EKA', airHours: 100.9, grounded: repairFixture(), checks: nextChecks(DEFAULTS, 100.9, 79) }} />;
+    case 'plan-check': return <PlanView base={base} ofp={OFP} expiresInMin={702} positioningNm={0} aircraft={{ reg: '4X-EKA', airHours: 99.2, grounded: null, checks: nextChecks(DEFAULTS, 99.2, 79) }} />;
     default: return <IdleView base={base} />;
   }
 }

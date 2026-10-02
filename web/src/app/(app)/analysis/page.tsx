@@ -4,6 +4,7 @@ import { hasDb } from '@/lib/db';
 import { loadLogbook } from '@/lib/logbook';
 import { milestonesAchieved, pnlByCode, syncMilestones } from '@/lib/analysis-data';
 import { rangeOf } from '@/lib/analysis';
+import { settleOverdueRepairs } from '@/lib/fleet';
 import { AnalysisView } from './AnalysisView';
 
 export const metadata: Metadata = { title: 'ניתוח · SmartLogBook' };
@@ -19,6 +20,7 @@ export default async function AnalysisPage({ searchParams }: PageProps<'/analysi
   const anchor = /^\d{4}-\d{2}-\d{2}$/.test(str('d')) ? str('d') : new Date().toISOString().slice(0, 10);
   const hist = str('hist') === '1';
 
+  await settleOverdueRepairs().catch(() => {});      // before the P&L is summed (ADR-060)
   await syncMilestones().catch(() => {});
   const [{ flights }, pnl, achieved] = await Promise.all([
     loadLogbook(), pnlByCode(rangeOf(kind, anchor, str('from'), str('to')), hist), milestonesAchieved(),
