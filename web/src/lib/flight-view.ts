@@ -13,6 +13,8 @@ import type { Times } from './flight-input';
 import type { RateParams } from './rates/params';
 import { aircraftStatus, settleOverdueRepairs, type AircraftStatus } from './fleet';
 import type { AirDoc } from './cabin/sim';
+import type { FuelStart } from './fuel-onboard';
+import { FUEL_CHAIN_SQL } from './fuel-sql';
 
 // Everything the flight screen needs, derived on the server from the tracker
 // (Worker), the latest SimBrief OFP and Neon (sketch s1a, six states).
@@ -41,12 +43,20 @@ export type Base = {
   trackerError: string | null;
   nextMilestone: { name: string; unit: string; current: number; next: number } | null;
 };
-export type DraftCosts = { fuel: number | null; ground: number | null; catering: number | null };
+export type DraftCosts = { fuel: number | null; ground: number | null; catering: number | null; fuelKg?: number | null };
 
 export async function getDraft(ofpId: string): Promise<DraftCosts | null> {
-  const [r] = await db()`SELECT fuel, ground, catering FROM flight_drafts WHERE ofp_id = ${ofpId}`;
+  const [r] = await db()`SELECT fuel, ground, catering, fuel_kg FROM flight_drafts WHERE ofp_id = ${ofpId}`;
   const n = (v: unknown) => (v == null ? null : Number(v));
-  return r ? { fuel: n(r.fuel), ground: n(r.ground), catering: n(r.catering) } : null;
+  return r ? { fuel: n(r.fuel), ground: n(r.ground), catering: n(r.catering), fuelKg: n(r.fuel_kg) } : null;
+}
+
+// What the previous flight of this registration left in the tanks (ADR-062). null: the pilot types it in.
+export async function fuelStart(reg: string | null): Promise<FuelStart | null> {
+  if (!reg) return null;
+  const [r] = (await db().query(FUEL_CHAIN_SQL, [reg])) as { id: number; callsign: string | null; origin_icao: string; dest: string; fuel_state: { remain_kg: number; remain_usd: number } | null }[];
+  if (!r?.fuel_state) return null;
+  return { kg: Number(r.fuel_state.remain_kg), usd: Number(r.fuel_state.remain_usd), from: { id: r.id, label: `${r.callsign ?? ''} ${r.origin_icao.trim()}–${r.dest.trim()}`.trim() } };
 }
 
 export type FormView = {
@@ -66,6 +76,7 @@ export type FormView = {
   draft: DraftCosts | null;        // GSX costs already entered during the flight
   aircraft: AircraftStatus | null; // hours, checks and an open repair for this registration (ADR-060)
   air: AirDoc | null;              // what the tracker measured in the air: the passenger mood of a tracked flight (ADR-061)
+  fuelStart: FuelStart | null;     // fuel left by this registration's previous flight (ADR-062); null: entered in the form
 };
 
 export type FlightView =
@@ -163,13 +174,14 @@ export async function buildForm(ofp: OfpSummary, t: TrackerDoc | null, crew: str
   }
   const at = tracked.out ?? tracked.off;
   const [rs, fuel, positioningNm, rating, draft] = await Promise.all([rateSetAt(at), fuelAt(at), nmBetween(crew, ofp.origin.icao), currentRating(), getDraft(ofp.id)]);
-  const aircraft = await aircraftStatus(ofp.aircraft.reg, ofp.weights.mtow_kg, rs.params);
+  const [aircraft, start] = await Promise.all([aircraftStatus(ofp.aircraft.reg, ofp.weights.mtow_kg, rs.params), fuelStart(ofp.aircraft.reg)]);
   const mode = t && t.ofp?.id === ofp.id && t.state === 'arrived' && !t.joined && tracked.out && tracked.off && tracked.on && tracked.in ? 'tracked' : 'manual';
   return {
     mode, ofp, tracked, actual, diverted, diversionNm, positioningNm,
     params: rs.params, rateSetId: rs.id, fuel, rating,
     trackerState: t?.state ?? null, disconnectedAt: t?.disconnected_at ?? null, draft, aircraft,
     air: mode === 'tracked' ? t?.air ?? null : null,
+    fuelStart: start,
   };
 }
 

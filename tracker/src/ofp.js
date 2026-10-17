@@ -10,6 +10,7 @@ export function summarizeOfp(j) {
   if (!j?.params?.request_id || !j.origin?.icao_code) return null;
   const k = j.params.units === 'lbs' ? LB : 1;
   const w = (key) => (num(j.weights?.[key]) == null ? null : Math.round(num(j.weights[key]) * k));
+  const f = (key) => (num(j.fuel?.[key]) == null ? null : Math.round(num(j.fuel[key]) * k));
   return {
     id: String(j.params.request_id),
     generated_at: iso(j.params.time_generated),
@@ -28,6 +29,7 @@ export function summarizeOfp(j) {
     sched: { out: iso(j.times?.sched_out), off: iso(j.times?.sched_off), on: iso(j.times?.sched_on), in: iso(j.times?.sched_in) },
     orig_utc_offset: num(j.times?.orig_timezone),
     dest_utc_offset: num(j.times?.dest_timezone),
+    fuel: { taxi_kg: f('taxi'), enroute_burn_kg: f('enroute_burn'), plan_ramp_kg: f('plan_ramp'), plan_landing_kg: f('plan_landing') },
   };
 }
 

@@ -8,6 +8,7 @@ import type { RateParams } from './rates/params';
 import type { LogFlight } from './logbook-filter';
 import { settleOverdueRepairs } from './fleet';
 import { GROUND_DAYS, settle } from './maintenance';
+import { fuelBurn, fuelCalc, type FuelState } from './fuel-onboard';
 import { DELETE_REPAIR_SQL, INSERT_REPAIR_SQL, REPAIR_OF_FLIGHT_SQL, UPDATE_REPAIR_SQL } from './maintenance-sql';
 
 // Logbook data (WP6). A single user logs a few hundred flights at most, so the
@@ -57,6 +58,7 @@ export async function loadLogbook(): Promise<{ flights: LogFlight[]; airports: R
     editedAt: iso(r.edited_at),
     crewFrom: trim(r.crew_location_icao),
     editable: r.status === 'closed' && Boolean(r.ofp_doc),
+    fuel: (r.fuel_state as FuelState | null) ?? null,
     cabin: r.cabin ? { served_share: r.cabin.served_share ?? null, climb_fpm: r.cabin.climb_fpm ?? null, descent_fpm: r.cabin.descent_fpm ?? null } : null,
     repair: r.repair ? { cents: Number(r.repair.cents), dueAt: iso(r.repair.dueAt)! } : null,
   }));
@@ -69,7 +71,11 @@ export async function loadLogbook(): Promise<{ flights: LogFlight[]; airports: R
 
 // ---------- editing a closed flight (ADR-021)
 
-export type EditInput = { times: Times; fpm: number | null; fuel: number | null; ground: number | null; catering: number | null };
+// fuel: the GSX bill. On a flight with fuel on board (ADR-062) the kg come too, and the fuel line is recomputed from them.
+export type EditInput = {
+  times: Times; fpm: number | null; fuel: number | null; ground: number | null; catering: number | null;
+  fuelKg?: { start: number | null; bought: number | null; remain: number | null };
+};
 
 // Rebuilds the engine input exactly as at closing: the flight's own OFP
 // snapshot, rate version, EIA price and rating. Only manual fields change.
@@ -96,13 +102,14 @@ async function draftFor(id: number) {
     positioningNm, diversionNm,
     airframeHoursBefore: r.airframe_hours_before == null ? null : Number(r.airframe_hours_before),
   };
-  return { draft, params: r.params as RateParams, timesSource: trim(r.times_source) ?? 'mmmm', registration: (r.registration as string | null) ?? null };
+  return { draft, params: r.params as RateParams, timesSource: trim(r.times_source) ?? 'mmmm', registration: (r.registration as string | null) ?? null,
+    fuelState: (r.fuel_state as FuelState | null) ?? null };
 }
 
 export async function editFlight(id: number, e: EditInput): Promise<{ ok: true } | { ok: false; errors: string[] }> {
   const got = await draftFor(id);
   if (!got) return { ok: false, errors: ['אפשר לערוך רק טיסה סגורה שנרשמה במערכת החדשה'] };
-  const { draft, params, timesSource, registration } = got;
+  const { draft, params, timesSource, registration, fuelState } = got;
 
   // Times measured by VATSIM stay locked; only manual ones ('m') may change.
   const keys = ['out', 'off', 'on', 'in'] as const;
@@ -111,6 +118,18 @@ export async function editFlight(id: number, e: EditInput): Promise<{ ok: true }
   });
   const money = (v: number | null) => (v != null && Number.isFinite(v) && v >= 0 && v < 10_000_000 ? Math.round(v * 100) / 100 : null);
   draft.manual = { fuel: money(e.fuel), ground: money(e.ground), catering: money(e.catering) };
+  // Fuel on board (ADR-062): only this flight is recomputed. The flights after it keep what they started with.
+  let newFuel: FuelState | null = null;
+  if (fuelState) {
+    const kg = (v: number | null | undefined) => (v != null && Number.isFinite(v) && v >= 0 && v < 1_000_000 ? Math.round(v * 10) / 10 : null);
+    const start = fuelState.start_from != null ? { kg: fuelState.start_kg, usd: fuelState.start_usd, from: { id: fuelState.start_from, label: '' } } : null;
+    const r = fuelBurn(start, { startKg: kg(e.fuelKg?.start), boughtKg: kg(e.fuelKg?.bought), boughtUsd: draft.manual.fuel, remainKg: kg(e.fuelKg?.remain) },
+      draft.fuelUsdPerKg ?? params.fuel.refUsdPerKg, fuelState.plan_kg);
+    if (!r.ok) return { ok: false, errors: r.errors };
+    newFuel = r.state;
+    draft.manual.fuel = r.state.cost_usd;
+    draft.fuelCalc = fuelCalc(r.state);
+  }
   draft.fpm = e.fpm != null && Number.isInteger(e.fpm) && Math.abs(e.fpm) <= 5000 ? -Math.abs(e.fpm) : null;   // always a descent
 
   const input = toEngineInput(draft);
@@ -138,7 +157,7 @@ export async function editFlight(id: number, e: EditInput): Promise<{ ok: true }
   await db()`
     WITH u AS (
       UPDATE flights SET out_at = ${t.out}, off_at = ${t.off}, on_at = ${t.on}, in_at = ${t.in},
-        fpm = ${draft.fpm}, local_out_hour = ${input.out.hour}, edited_at = now()
+        fpm = ${draft.fpm}, local_out_hour = ${input.out.hour}, fuel_state = coalesce(${newFuel ? JSON.stringify(newFuel) : null}::jsonb, fuel_state), edited_at = now()
       WHERE id = ${id} AND status = 'closed' RETURNING id),
     d AS (DELETE FROM ledger_lines WHERE flight_id IN (SELECT id FROM u))
     INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc)

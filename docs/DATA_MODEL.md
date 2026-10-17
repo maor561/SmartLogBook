@@ -54,6 +54,8 @@
 - התשלום, או מעבר של `due_at` (4 ימים), כותב שורת `hard_landing` ל-`ledger_lines` של אותה טיסה. עד אז הסכום לא נמצא בספר החשבונות.
 - נמחקת עם הטיסה (`ON DELETE CASCADE`).
 
+**ב-`flights`:** `fuel_state` (jsonb, ADR-062). הדלק של הטיסה: `start_kg`, `start_usd`, `start_from` (הטיסה שהשאירה אותו, או ריק אם הוזן), `bought_kg`, `bought_usd`, `remain_kg`, `remain_usd`, `burned_kg`, `cost_usd`, `avg_usd_per_kg`, `plan_kg`. הטיסה הבאה של אותו רישום מתחילה מ-`remain_kg` ו-`remain_usd`. ריק בטיסות שנסגרו לפני WP9. ב-`flight_drafts` נוסף `fuel_kg`.
+
 **ב-`flights`:** `cabin` (jsonb, ADR-061). מה שה-Worker מדד באוויר ומה שזה אמר לשירות: `tier`, `served_share`, `climb_fpm`, `descent_fpm`, `belt_off_at`, `toc_at`, `tod_at`, `belt_on_at`, `top_alt_ft`. ריק בטיסות שנסגרו לפני WP16, בטיסות ידניות וחלקיות, ובמטוס בלי תמונת תא. ממנו מחושב מצב הרוח של הנוסעים.
 
 **ב-`flights`:** `airframe_hours_before`, שעות האוויר של הרישום לפני הטיסה. לפיו נקבע אם הטיסה חצתה טיפול תקופתי (שורת `maintenance_check`).

@@ -27,7 +27,8 @@ const L = (o: Partial<LogFlight> & Pick<LogFlight, 'id' | 'date' | 'origin' | 'd
   rateSetId: 2, closedAt: '2026-09-23T15:10:00Z', editedAt: null, crewFrom: 'LGAV', editable: true, ...o,
 });
 const LOG: LogFlight[] = [
-  L({ id: 6, date: '2026-09-23T15:02:00Z', origin: 'LGAV', dest: 'LLBG' }),
+  L({ id: 6, date: '2026-09-23T15:02:00Z', origin: 'LGAV', dest: 'LLBG',          // with fuel on board (ADR-062)
+      fuel: { start_kg: 4200, start_usd: 6300, start_from: 5, bought_kg: 3700, bought_usd: 5610, remain_kg: 3000, remain_usd: 4545.82, burned_kg: 4900, cost_usd: 7364.18, avg_usd_per_kg: 1.5029, plan_kg: 4700 } }),
   L({ id: 5, date: '2026-09-21T15:51:00Z', origin: 'LLBG', dest: 'LGAV', callsign: 'ELY350', profitCents: 2950000 }),
   L({ id: 4, date: '2026-09-20T10:32:00Z', origin: 'LCLK', dest: 'LLBG', source: 'manual', timesSource: 'mmmm', callsign: 'ELY212', fpm: -388, profitCents: 1712000 }),
   L({ id: 3, date: '2026-09-14T13:04:00Z', origin: 'LTFM', dest: 'LLBG', source: 'partial', timesSource: 'vvmm', fpm: -455, profitCents: -421000,
@@ -77,7 +78,7 @@ const form = (o: Partial<FormView> = {}): FormView => ({
   mode: 'tracked', ofp: OFP,
   tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: '2026-09-25T15:49:00.000Z', in: '2026-09-25T15:58:00.000Z' },
   actual: { icao: 'LGAV', name: 'Athens' }, diverted: false, diversionNm: null, positioningNm: 0,
-  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, aircraft: null, air: null, ...o,
+  params: DEFAULTS, rateSetId: 2, fuel: { usdPerKg: 1.5137, week: '2026-09-18' }, rating: 3.8, trackerState: 'arrived', disconnectedAt: null, draft: { fuel: 6120, ground: 1480, catering: 2050 }, aircraft: null, air: null, fuelStart: { kg: 4200, usd: 6300, from: { id: 5, label: 'ELY350 LLBG–LGAV' } }, ...o,
 });
 
 // Fleet fixtures (ADR-060). `REPAIR` is an open request: N738PM is grounded for another 3 days and 21 hours.
@@ -126,6 +127,8 @@ export default async function DevPreview({ searchParams }: PageProps<'/dev-previ
     case 'live': return <LiveView initial={T0} ofp={OFP} draft={{ fuel: 8568, ground: null, catering: 725 }} />;
     case 'disc': return <LiveView initial={{ ...T0, state: 'disconnected', prev_state: 'airborne', disconnected_at: lostAt }} ofp={OFP} draft={null} />;
     case 'done': return <CompletionForm form={form()} crewIcao="LLBG" />;
+    // the first flight of a registration with fuel on board: the tanks are typed in (ADR-062)
+    case 'fuel-first': return <CompletionForm form={form({ fuelStart: null, draft: { fuel: 1383, ground: 2355, catering: 294, fuelKg: 914 } })} crewIcao="LLBG" />;
     case 'divert': return <CompletionForm form={form({ actual: { icao: 'LGTS', name: 'Thessaloniki' }, diverted: true, diversionNm: 160 })} crewIcao="LLBG" />;
     case 'manual': return <CompletionForm form={form({ mode: 'manual', trackerState: 'interrupted', disconnectedAt: '2026-09-25T15:13:00.000Z', tracked: { out: '2026-09-25T14:02:00.000Z', off: '2026-09-25T14:15:00.000Z', on: null, in: null }, actual: null })} crewIcao="LLBG" />;
     case 'analysis': {

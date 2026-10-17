@@ -28,6 +28,7 @@ export type FlightInput = {
   fuelUsdPerKg: number | null;       // EIA at OUT; null = neutral surcharge
   rating: number | null;             // company rating before this flight; null = "building" = neutral (ADR-037)
   manual: { fuel: number | null; ground: number | null; catering: number | null };   // USD from GSX
+  fuelCalc?: Record<string, unknown>; // fuel on board (ADR-062): how the fuel line was reached
   positioningNm: number | null;      // crew location → origin; null/0 = crew already here (ADR-026)
   diversionNm: number | null;        // actual → planned destination; null = no diversion (ADR-027)
   // Air hours this registration had flown before this flight (ADR-060). null / absent = unknown: no periodic check.
@@ -120,7 +121,7 @@ export function compute(p: RateParams, f: FlightInput): EngineResult {
   if (f.cargoKg > 0) add('cargo', pr.cargoRate * f.cargoKg, 'auto', { kg: f.cargoKg, ratePerKg: r4(pr.cargoRate), surcharge: r4(pr.surcharge) });
 
   // Manual GSX costs (ADR-011): only once entered.
-  if (f.manual.fuel != null) add('fuel', -f.manual.fuel, 'manual', {});
+  if (f.manual.fuel != null) add('fuel', -f.manual.fuel, 'manual', f.fuelCalc ?? {});
   if (f.manual.ground != null) add('ground_handling', -f.manual.ground, 'manual', {});
   if (f.manual.catering != null) add('catering', -f.manual.catering, 'manual', {});
 

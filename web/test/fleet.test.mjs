@@ -226,6 +226,7 @@ test('the closing statement: flight, ledger lines and the repair request in one 
     if (e === 'fpm') return hard ? -655 : -150;
     if (e.startsWith('draft.airframeHoursBefore')) return 98.25;
     if (e.startsWith('cabin ?')) return hard ? null : JSON.stringify({ tier: 'meal', served_share: 0.875 });     // ADR-061
+    if (e === 'JSON.stringify(fuel.state)') return JSON.stringify({ burned_kg: 2164, cost_usd: 3251.08 });            // ADR-062
     return 1;                                                                    // every other value is a number
   };
   const run = async (db, hard) => {
@@ -239,6 +240,7 @@ test('the closing statement: flight, ledger lines and the repair request in one 
   assert.equal((await run(db, true)).length, 2);
   assert.deepEqual((await db.query(`SELECT ofp_id, cabin FROM flights ORDER BY id`)).rows,
     [{ ofp_id: 'ofp-soft', cabin: { tier: 'meal', served_share: 0.875 } }, { ofp_id: 'ofp-hard', cabin: null }]);
+  assert.deepEqual((await db.query(`SELECT DISTINCT fuel_state FROM flights`)).rows, [{ fuel_state: { burned_kg: 2164, cost_usd: 3251.08 } }]);
   const rep = (await db.query('SELECT r.registration, r.tier, r.amount_cents::int AS c, r.due_at, r.created_at, f.ofp_id, f.airframe_hours_before::float8 AS h FROM repairs r JOIN flights f ON f.id = r.flight_id')).rows;
   assert.equal(rep.length, 1);
   assert.deepEqual([rep[0].registration, rep[0].tier, rep[0].c, rep[0].ofp_id, rep[0].h], ['N1', 'amm', 474000, 'ofp-hard', 98.25]);

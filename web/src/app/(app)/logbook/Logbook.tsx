@@ -11,6 +11,8 @@ import { TIME_LABEL } from '@/lib/flight-input';
 import { scoreOf } from '@/lib/flight-score';
 import { ScoreCard, ScoreDot } from '@/components/FlightScore';
 import { FlightCardDialog } from './FlightCard';
+import { FuelOnboard, type FuelKgText } from '../flight/FuelOnboard';
+import { fuelBurn, type FuelStart } from '@/lib/fuel-onboard';
 import type { ApPoint } from '@/lib/logbook';
 import { ddmm, hm, nf, usd, z } from '@/lib/format';
 import { deleteFlightAction, editFlightAction, importBackupAction } from './actions';
@@ -285,13 +287,19 @@ function withTime(iso: string, hhmm: string): string | null {
 
 function EditForm({ f, onCancel, onSaved }: { f: LogFlight; onCancel: () => void; onSaved: () => void }) {
   const manualOf = (code: string) => { const l = f.lines.find((x) => x.code === code && x.source === 'manual'); return l ? String(-l.cents / 100) : ''; };
-  const [money, setMoney] = useState({ fuel: manualOf('fuel'), ground: manualOf('ground_handling'), catering: manualOf('catering') });
+  const num = (s: string) => (s.trim() === '' || Number.isNaN(Number(s)) ? null : Number(s));
+  // On a flight with fuel on board the fuel line is what was burned; the field edits the bill (ADR-062).
+  const fs0 = f.fuel ?? null;
+  const [money, setMoney] = useState({ fuel: fs0 ? String(fs0.bought_usd) : manualOf('fuel'), ground: manualOf('ground_handling'), catering: manualOf('catering') });
+  const [fuelKg, setFuelKg] = useState<FuelKgText>({ bought: fs0 ? String(fs0.bought_kg) : '', remain: fs0 ? String(fs0.remain_kg) : '', start: fs0 ? String(fs0.start_kg) : '' });
+  const fuelStartOf: FuelStart | null = fs0 && fs0.start_from != null ? { kg: fs0.start_kg, usd: fs0.start_usd, from: { id: fs0.start_from, label: 'הטיסה הקודמת' } } : null;
+  const fuelPreview = fs0 ? fuelBurn(fuelStartOf, { startKg: num(fuelKg.start), boughtKg: num(fuelKg.bought), boughtUsd: num(money.fuel), remainKg: num(fuelKg.remain) },
+    fs0.start_kg > 0 && fs0.start_usd > 0 ? fs0.start_usd / fs0.start_kg : 1.51, fs0.plan_kg) : null;
   const [fpm, setFpm] = useState(f.fpm == null ? '' : String(f.fpm));
   const [times, setTimes] = useState<Record<string, string>>(Object.fromEntries(KEYS.map((k) => [k, hhmmOf(f.times[k])])));
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, start] = useTransition();
   const ts = f.timesSource ?? 'vvvv';
-  const num = (s: string) => (s.trim() === '' || Number.isNaN(Number(s)) ? null : Number(s));
 
   function save() {
     // Same calendar day as stored; editing moves the clock time only.
@@ -301,6 +309,7 @@ function EditForm({ f, onCancel, onSaved }: { f: LogFlight; onCancel: () => void
         times: { out: t.out, off: t.off, on: t.on, in: t.in },
         fpm: num(fpm) == null ? null : Math.round(num(fpm)!),
         fuel: num(money.fuel), ground: num(money.ground), catering: num(money.catering),
+        fuelKg: fs0 ? { start: num(fuelKg.start), bought: num(fuelKg.bought), remain: num(fuelKg.remain) } : undefined,
       });
       if (r.ok) onSaved(); else setErrors(r.errors);
     });
@@ -327,10 +336,15 @@ function EditForm({ f, onCancel, onSaved }: { f: LogFlight; onCancel: () => void
         )}
         <div className="fgroup-title">מ-GSX Pro</div>
         <div className="fields f3">
-          {([['fuel', 'דלק'], ['ground', 'צוות קרקע'], ['catering', 'קייטרינג']] as const).map(([k, label]) => (
-            <div key={k} className="ff"><label>{label}</label><div className="in"><span className="u">$</span><input inputMode="decimal" value={money[k]} onChange={(e) => setMoney({ ...money, [k]: e.target.value })} /></div></div>
+          {([['fuel', fs0 ? 'דלק שתודלק' : 'דלק'], ['ground', 'צוות קרקע'], ['catering', 'קייטרינג']] as const).map(([k, label]) => (
+            <div key={k} className="ff"><label>{label}</label>
+              {k === 'fuel' && fs0 && <div className="in" style={{ marginBottom: 6 }}><span className="u">ק״ג</span><input inputMode="decimal" aria-label="דלק שתודלק בק״ג" value={fuelKg.bought} onChange={(e) => setFuelKg({ ...fuelKg, bought: e.target.value })} /></div>}
+              <div className="in"><span className="u">$</span><input inputMode="decimal" value={money[k]} onChange={(e) => setMoney({ ...money, [k]: e.target.value })} /></div></div>
           ))}
         </div>
+        {fs0 && fuelPreview && (
+          <FuelOnboard start={fuelStartOf} reg={f.reg} value={fuelKg} onChange={setFuelKg} result={fuelPreview} startEditable={fs0.start_from == null} />
+        )}
         <div className="fields"><div className="ff"><label>FPM בנגיעה</label><div className="in"><input inputMode="numeric" value={fpm} onChange={(e) => setFpm(e.target.value)} /></div></div></div>
       </div>
       <div className="d-actions">

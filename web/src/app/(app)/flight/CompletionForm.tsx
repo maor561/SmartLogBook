@@ -15,6 +15,8 @@ import { cabinFits } from '@/lib/cabin/sim';
 import { Cabin } from './Cabin';
 import { CHECK_LABEL, GROUND_DAYS, settle } from '@/lib/maintenance';
 import { PayRepairButton } from '@/components/PayRepair';
+import { fuelBurn, fuelCalc, plannedBurn } from '@/lib/fuel-onboard';
+import { FuelOnboard } from './FuelOnboard';
 
 const LABEL: Record<LedgerCode, string> = {
   tickets: 'כרטיסים', cargo: 'מטען', fuel: 'דלק', ground_handling: 'צוות קרקע', catering: 'קייטרינג',
@@ -53,6 +55,9 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   // Start from the GSX costs entered during the flight, if any.
   const str = (v: number | null | undefined) => (v == null ? '' : String(v));
   const [money, setMoney] = useState({ fuel: str(form.draft?.fuel), ground: str(form.draft?.ground), catering: str(form.draft?.catering) });
+  // Fuel on board (sketch s15): the amount bought (often entered during the flight), what is left at GATE,
+  // and the tanks before refuelling when the previous flight of this registration did not record it.
+  const [fuelKg, setFuelKg] = useState({ bought: str(form.draft?.fuelKg), remain: '', start: '' });
   const [fpmText, setFpmText] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [pending, start] = useTransition();
@@ -70,14 +75,18 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   }, [hhmm, tracked, ofp.sched.out]);
 
   const fpm = num(fpmText);
+  // The fuel line is what this flight burned (ADR-062); the server runs the same function at closing.
+  const fuel = fuelBurn(form.fuelStart, { startKg: num(fuelKg.start), boughtKg: num(fuelKg.bought), boughtUsd: num(money.fuel), remainKg: num(fuelKg.remain) },
+    form.fuel?.usdPerKg ?? params.fuel.refUsdPerKg, plannedBurn(ofp.fuel));
   const draft: Draft = {
     ofp, times, fpm: fpm == null ? null : Math.round(fpm),
-    manual: { fuel: num(money.fuel), ground: num(money.ground), catering: num(money.catering) },
+    manual: { fuel: fuel.ok ? fuel.state.cost_usd : null, ground: num(money.ground), catering: num(money.catering) },
+    fuelCalc: fuel.ok ? fuelCalc(fuel.state) : undefined,
     fuelUsdPerKg: form.fuel?.usdPerKg ?? null, rating: form.rating,
     positioningNm: form.positioningNm, diversionNm: form.diverted ? form.diversionNm : null,
     airframeHoursBefore: form.aircraft?.airHours ?? null,
   };
-  const gaps = missing(draft);
+  const gaps = fuel.ok ? missing(draft) : [...missing({ ...draft, manual: { ...draft.manual, fuel: 0 } }), ...fuel.errors];
   const input = toEngineInput(draft);
   // With a registration to ground, a hard landing is a repair request, not a line of this flight (ADR-060).
   const result = input ? settle(compute(params, input), Boolean(ofp.aircraft.reg)) : null;
@@ -99,7 +108,11 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
   function submit() {
     setErrors([]);
     start(async () => {
-      const r = await closeFlight({ ofpId: ofp.id, manualMode: form.mode === 'manual', times, manual: draft.manual, fpm: draft.fpm });
+      const r = await closeFlight({
+        ofpId: ofp.id, manualMode: form.mode === 'manual', times, fpm: draft.fpm,
+        manual: { ...draft.manual, fuel: num(money.fuel) },                  // the bill; the server works out what was burned
+        fuel: { startKg: num(fuelKg.start), boughtKg: num(fuelKg.bought), remainKg: num(fuelKg.remain) },
+      });
       if (!r.ok) setErrors(r.errors);
       else router.replace('/?closed=1');            // the flight screen confirms it and links to the picture
     });
@@ -175,13 +188,18 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
 
             <div className="fgroup-title">מ-GSX Pro</div>
             <div className="fields f3">
-              {([['fuel', 'דלק'], ['ground', 'צוות קרקע'], ['catering', 'קייטרינג']] as const).map(([k, label]) => (
+              {([['fuel', 'דלק שתודלק'], ['ground', 'צוות קרקע'], ['catering', 'קייטרינג']] as const).map(([k, label]) => (
                 <div key={k} className="ff">
                   <label htmlFor={`m-${k}`}>{label}</label>
+                  {k === 'fuel' && (
+                    <div className="in" style={{ marginBottom: 6 }}><span className="u">ק״ג</span><input id="m-fuelKg" inputMode="decimal" placeholder="0" aria-label="דלק שתודלק בק״ג" value={fuelKg.bought} onChange={(e) => setFuelKg({ ...fuelKg, bought: e.target.value })} /></div>
+                  )}
                   <div className="in"><span className="u">$</span><input id={`m-${k}`} inputMode="decimal" placeholder="0" value={money[k]} onChange={(e) => setMoney({ ...money, [k]: e.target.value })} /></div>
                 </div>
               ))}
             </div>
+
+            <FuelOnboard start={form.fuelStart} reg={ofp.aircraft.reg} value={fuelKg} onChange={setFuelKg} result={fuel} />
 
             <div className="fgroup-title">נחיתה</div>
             <div className="fields">

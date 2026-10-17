@@ -19,6 +19,7 @@ export type OfpSummary = {
   sched: { out: string | null; off: string | null; on: string | null; in: string | null };
   orig_utc_offset: number | null;
   dest_utc_offset?: number | null;       // plans stored before ADR-061 do not have it
+  fuel?: { taxi_kg: number | null; enroute_burn_kg: number | null; plan_ramp_kg: number | null; plan_landing_kg: number | null };   // ADR-062
 };
 
 type Raw = Record<string, Record<string, unknown> | undefined>;
@@ -31,6 +32,8 @@ export function summarizeOfp(j: Raw | null | undefined): OfpSummary | null {
   const k = j.params.units === 'lbs' ? LB : 1;
   const W = j.weights ?? {};
   const w = (key: string) => (num(W[key]) == null ? null : Math.round(num(W[key])! * k));
+  const FU = j.fuel ?? {};
+  const f = (key: string) => (num(FU[key]) == null ? null : Math.round(num(FU[key])! * k));
   return {
     id: String(j.params.request_id),
     generated_at: iso(j.params.time_generated),
@@ -49,5 +52,6 @@ export function summarizeOfp(j: Raw | null | undefined): OfpSummary | null {
     sched: { out: iso(j.times?.sched_out), off: iso(j.times?.sched_off), on: iso(j.times?.sched_on), in: iso(j.times?.sched_in) },
     orig_utc_offset: num(j.times?.orig_timezone),
     dest_utc_offset: num(j.times?.dest_timezone),
+    fuel: { taxi_kg: f('taxi'), enroute_burn_kg: f('enroute_burn'), plan_ramp_kg: f('plan_ramp'), plan_landing_kg: f('plan_landing') },
   };
 }

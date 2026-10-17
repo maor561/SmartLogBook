@@ -11,11 +11,14 @@ import { syncMilestones } from '@/lib/analysis-data';
 import { GROUND_DAYS, settle } from '@/lib/maintenance';
 import { payRepair } from '@/lib/fleet';
 import { cabinRecord } from '@/lib/cabin/mood';
+import { fuelBurn, fuelCalc, plannedBurn } from '@/lib/fuel-onboard';
 import { cabinFits } from '@/lib/cabin/sim';
 
 export type CloseResult = { ok: true } | { ok: false; errors: string[] };
 
-type Payload = { ofpId: string; manualMode: boolean; times: Times; manual: Manual; fpm: number | null };
+// fuel: the fuel on board (ADR-062). manual.fuel is the GSX bill for the fuel bought at the gate.
+type FuelPayload = { startKg: number | null; boughtKg: number | null; remainKg: number | null };
+type Payload = { ofpId: string; manualMode: boolean; times: Times; manual: Manual; fpm: number | null; fuel: FuelPayload };
 
 const money = (v: number | null) => (v != null && Number.isFinite(v) && v >= 0 && v < 10_000_000 ? Math.round(v * 100) / 100 : null);
 
@@ -39,9 +42,15 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
   }
   // Touchdown rate is a descent: stored negative whatever sign was typed (the engine uses |fpm|).
   const fpm = p.fpm != null && Number.isInteger(p.fpm) && Math.abs(p.fpm) <= 5000 ? -Math.abs(p.fpm) : null;
+  // The fuel line is what this flight burned (ADR-062), from the fuel left by the previous flight of this registration.
+  const kg = (v: number | null) => (v != null && Number.isFinite(v) && v >= 0 && v < 1_000_000 ? Math.round(v * 10) / 10 : null);
+  const fuel = fuelBurn(f.fuelStart, { startKg: kg(p.fuel.startKg), boughtKg: kg(p.fuel.boughtKg), boughtUsd: money(p.manual.fuel), remainKg: kg(p.fuel.remainKg) },
+    f.fuel?.usdPerKg ?? f.params.fuel.refUsdPerKg, plannedBurn(f.ofp.fuel));
+  if (!fuel.ok) return { ok: false, errors: [`חסרים: ${fuel.errors.join(', ')}`] };
   const draft: Draft = {
     ofp: f.ofp, times, fpm,
-    manual: { fuel: money(p.manual.fuel), ground: money(p.manual.ground), catering: money(p.manual.catering) },
+    manual: { fuel: fuel.state.cost_usd, ground: money(p.manual.ground), catering: money(p.manual.catering) },
+    fuelCalc: fuelCalc(fuel.state),
     fuelUsdPerKg: f.fuel?.usdPerKg ?? null, rating: f.rating,     // rating before this flight (ADR-037)
     positioningNm: f.positioningNm, diversionNm: f.diverted ? f.diversionNm : null,
     airframeHoursBefore: f.aircraft?.airHours ?? null,
@@ -68,7 +77,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
         route_distance_nm, gc_distance_nm, aircraft_type, registration, seats, mtow_kg, mlw_kg, oew_kg,
         pax, cargo_kg, payload_kg, sched_out, sched_off, sched_on, sched_in, out_at, off_at, on_at, in_at, times_source,
         fpm, crew_location_icao, rate_set_id, eia_fuel_price_per_kg, local_out_hour, orig_utc_offset, rating_at_out,
-        airframe_hours_before, cabin, closed_at, ofp_doc)
+        airframe_hours_before, cabin, fuel_state, closed_at, ofp_doc)
       VALUES (
         ${o.callsign}, ${o.id}, ${o.generated_at}, 'closed', ${sourceOf(ts)}, ${o.origin.icao}, ${o.dest.icao},
         ${f.actual?.icao ?? o.dest.icao}, ${o.alternate},
@@ -78,7 +87,7 @@ export async function closeFlight(p: Payload): Promise<CloseResult> {
         ${o.sched.out}, ${o.sched.off}, ${o.sched.on}, ${o.sched.in},
         ${times.out}, ${times.off}, ${times.on}, ${times.in}, ${ts},
         ${fpm}, ${view.base.crew.icao}, ${f.rateSetId}, ${draft.fuelUsdPerKg}, ${input.out.hour}, ${o.orig_utc_offset}, ${f.rating},
-        ${draft.airframeHoursBefore ?? null}, ${cabin ? JSON.stringify(cabin) : null}::jsonb, now(), ${JSON.stringify(o)}::jsonb)
+        ${draft.airframeHoursBefore ?? null}, ${cabin ? JSON.stringify(cabin) : null}::jsonb, ${JSON.stringify(fuel.state)}::jsonb, now(), ${JSON.stringify(o)}::jsonb)
       ON CONFLICT (ofp_id) DO NOTHING
       RETURNING id),
     r AS (
@@ -134,14 +143,15 @@ export async function payRepairAction(id: number): Promise<CloseResult> {
 
 // GSX costs entered while the flight is still in progress (at the gate, taxiing,
 // airborne…). Saved per OFP; the completion form starts from them.
-export async function saveDraftCosts(ofpId: string, c: Manual): Promise<CloseResult> {
+export async function saveDraftCosts(ofpId: string, c: Manual & { fuelKg?: number | null }): Promise<CloseResult> {
   await verifySession();
   const view = await getFlightView();
   const active = view.kind === 'live' || view.kind === 'disc' ? view.ofp.id : view.kind === 'done' || view.kind === 'manual' ? view.form.ofp.id : null;
   if (active !== ofpId) return { ok: false, errors: ['אין טיסה פעילה עם התוכנית הזו'] };
   const fuel = money(c.fuel), ground = money(c.ground), catering = money(c.catering);
+  const fuelKg = c.fuelKg != null && Number.isFinite(c.fuelKg) && c.fuelKg >= 0 && c.fuelKg < 1_000_000 ? Math.round(c.fuelKg * 10) / 10 : null;
   await db()`
-    INSERT INTO flight_drafts (ofp_id, fuel, ground, catering, updated_at) VALUES (${ofpId}, ${fuel}, ${ground}, ${catering}, now())
-    ON CONFLICT (ofp_id) DO UPDATE SET fuel = EXCLUDED.fuel, ground = EXCLUDED.ground, catering = EXCLUDED.catering, updated_at = now()`;
+    INSERT INTO flight_drafts (ofp_id, fuel, ground, catering, fuel_kg, updated_at) VALUES (${ofpId}, ${fuel}, ${ground}, ${catering}, ${fuelKg}, now())
+    ON CONFLICT (ofp_id) DO UPDATE SET fuel = EXCLUDED.fuel, ground = EXCLUDED.ground, catering = EXCLUDED.catering, fuel_kg = EXCLUDED.fuel_kg, updated_at = now()`;
   return { ok: true };
 }

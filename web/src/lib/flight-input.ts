@@ -17,6 +17,7 @@ export type Draft = {
   positioningNm: number | null;
   diversionNm: number | null;
   airframeHoursBefore?: number | null;      // air hours of this registration before the flight (ADR-060)
+  fuelCalc?: Record<string, unknown>;       // fuel on board (ADR-062): manual.fuel is then the fuel burned, not the bill
 };
 
 // Names shown to the user for OUT / OFF / ON / IN (user's choice, 2026-09-25).
@@ -68,6 +69,7 @@ export function toEngineInput(d: Draft): FlightInput | null {
     positioningNm: d.positioningNm,
     diversionNm: d.diversionNm,
     airframeHoursBefore: d.airframeHoursBefore ?? null,
+    fuelCalc: d.fuelCalc,
   };
 }
 
