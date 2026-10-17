@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>סקיצה 15 · דלק במטוס</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #eef0f3; --bar: #ffffff; --panel: #ffffff; --line: #d9dde3; --line-2: #eceef2;
+  --ink: #151a21; --muted: #5d6673; --faint: #8b93a0;
+  --accent: #0b4f9c; --accent-bg: #e4edf8; --go: #147a47; --go-bg: #e3f2ea; --warn: #9a5b00; --warn-bg: #fbeed7; --bad: #b3261e; --bad-bg: #fbe7e5;
+  --r: 4px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1216; --bar: #151920; --panel: #171b21; --line: #29303a; --line-2: #20262e; --ink: #e6e9ee; --muted: #8e97a4; --faint: #6b7380;
+  --accent: #5b9df0; --accent-bg: #16263d; --go: #43c083; --go-bg: #173323; --warn: #e2a33a; --warn-bg: #3a2c12; --bad: #f07167; --bad-bg: #3b1d1b; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2d33; font-family: "Heebo", "Segoe UI", Arial, sans-serif; }
+bdi.l, .ltr { direction: ltr; unicode-bidi: isolate; }
+.switch { position: sticky; top: 0; z-index: 5; display: flex; gap: 10px; align-items: center; padding: 8px 16px; background: #1d2025; color: #cfd3da; font-size: 13px; }
+.switch button { border: 1px solid #454a53; background: transparent; color: #cfd3da; padding: 3px 8px; border-radius: 4px; cursor: pointer; font: inherit; }
+.switch button[aria-pressed="true"] { background: #cfd3da; color: #1d2025; }
+.frame { padding: 16px; }
+.app { max-width: 1240px; margin: 0 auto; background: var(--bg); color: var(--ink); border-radius: 6px; overflow: hidden; font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.intro { padding: 16px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.intro h1 { margin: 0 0 6px; font-size: 19px; }
+.intro p { margin: 4px 0; color: var(--muted); }
+.main { padding: 16px 20px 20px; display: grid; gap: 16px; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+.panel-head { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); }
+.num { font-size: 11px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 50%; width: 20px; height: 20px; display: inline-grid; place-items: center; }
+.new { font-size: 10.5px; font-weight: 700; color: var(--go); background: var(--go-bg); border-radius: 3px; padding: 0 5px; }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 3px; background: var(--line-2); color: var(--muted); }
+.chip.go { background: var(--go-bg); color: var(--go); } .chip.warn { background: var(--warn-bg); color: var(--warn); }
+.pb { padding: 12px 14px; }
+.form { display: grid; gap: 12px; padding: 12px 14px; }
+.ff label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
+.ff .hint { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.in { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
+.in input { flex: 1; min-width: 0; border: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 7px 10px; direction: ltr; text-align: left; outline: none; }
+.in .u { padding: 0 10px; color: var(--muted); font-size: 12.5px; border-inline-start: 1px solid var(--line); align-self: stretch; display: flex; align-items: center; }
+.in.new-field { border-color: var(--go); box-shadow: 0 0 0 2px var(--go-bg); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.calc { margin: 0 14px 14px; border: 1px solid var(--line); border-radius: var(--r); }
+.calc div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+.calc div:last-child { border-bottom: none; }
+.calc .n { direction: ltr; text-align: left; font-weight: 600; white-space: nowrap; }
+.calc .tot { background: var(--accent-bg); font-weight: 700; }
+.calc .muted { color: var(--muted); font-weight: 400; }
+.banner { margin: 0 14px 12px; padding: 8px 12px; border-radius: var(--r); font-size: 12.5px; }
+.banner.go { background: var(--go-bg); } .banner.warn { background: var(--warn-bg); }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td { padding: 7px 12px; text-align: right; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+.tbl th { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.tbl td.n, .tbl th.n { text-align: left; direction: ltr; white-space: nowrap; }
+.tbl tr.hl td { background: var(--accent-bg); }
+.tbl .pos { color: var(--go); } .tbl .neg { color: var(--bad); }
+.chain { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.chain > div { padding: 12px 14px; border-inline-start: 1px solid var(--line); }
+.chain > div:first-child { border-inline-start: none; }
+.chain .v { font-size: 20px; font-weight: 700; direction: ltr; text-align: right; }
+.chain .arrow { color: var(--accent); font-weight: 700; }
+.q { display: grid; gap: 10px; padding: 12px 14px; }
+.q > div { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.q b { display: block; margin-bottom: 3px; }
+.q .rec { color: var(--go); font-weight: 600; }
+.q .alt { color: var(--muted); font-size: 12.5px; }
+@media (max-width: 860px) { .two, .chain { grid-template-columns: minmax(0, 1fr); } .chain > div { border-inline-start: none; border-top: 1px solid var(--line); } .chain > div:first-child { border-top: none; } }
+@media (max-width: 640px) { .frame { padding: 0; } .app { border-radius: 0; } .main { padding: 10px; } .row2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="switch"><b>סקיצה 15 · דלק במטוס (WP9, אפשרות ג')</b><span style="margin-inline-start:auto">ערכה:</span><button data-th="light" aria-pressed="true">בהיר</button><button data-th="dark">כהה</button></div>
+<div class="frame"><div class="app">
+
+<div class="intro">
+  <h1>כל טיסה משלמת על הדלק שהיא שרפה</h1>
+  <p>היום שורת הדלק היא חשבון התדלוק ב-GSX. דלק שלקחת מראש לטיסה הבאה נרשם על הטיסה הנוכחית, ולכן לרנקה–תל אביב "עלתה" פי 3 מתל אביב–לרנקה.</p>
+  <p><b style="color:var(--ink)">מה משתנה:</b> המערכת זוכרת כמה דלק נשאר בכל מטוס (לפי רישום) ובכמה הוא נקנה. בסוף כל טיסה אתה מזין שדה אחד חדש: כמה דלק נשאר במכלים ב-GATE. בתדלוק אתה מזין גם ק"ג, לא רק דולרים.</p>
+  <p class="small">הנתונים בדוגמה: חשבונות התדלוק האמיתיים שלך בטיסות לרנקה (29.09). כמויות הדלק שנשארו לא נרשמו אז, ולכן הן דוגמה.</p>
+</div>
+
+<div class="main">
+  <div class="two">
+    <!-- 1 · the GSX panel during the flight -->
+    <section class="panel">
+      <div class="panel-head"><span class="num">1</span><span class="label">עלויות GSX · במהלך הטיסה</span><span class="small">כמו היום, עם שדה ק"ג לדלק</span></div>
+      <div class="form">
+        <div class="ff">
+          <label>דלק שתודלק בגייט</label>
+          <div class="row2">
+            <div class="in new-field"><input value="914" data-k="kgB"><span class="u">ק"ג</span></div>
+            <div class="in"><input value="1383" data-k="paid"><span class="u">$</span></div>
+          </div>
+          <div class="hint"><span class="new">חדש</span> הכמות מ-GSX. בלי תדלוק: 0 ק"ג ו-0$.</div>
+        </div>
+        <div class="row2">
+          <div class="ff"><label>צוות קרקע</label><div class="in"><input value="2355"><span class="u">$</span></div></div>
+          <div class="ff"><label>קייטרינג</label><div class="in"><input value="294"><span class="u">$</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · the completion form -->
+    <section class="panel">
+      <div class="panel-head"><span class="num">2</span><span class="label">טופס ההשלמה · דלק</span><span class="small"><bdi class="l">ELY2569 LLBG–LCLK · 4X-EKA</bdi></span></div>
+      <div class="form">
+        <div class="ff">
+          <label>דלק שנשאר במכלים ב-GATE</label>
+          <div class="in new-field"><input value="2950" data-k="kgR"><span class="u">ק"ג</span></div>
+          <div class="hint"><span class="new">חדש · חובה</span> מה-FMC או ממד הדלק, אחרי שעצרת בחניה.</div>
+        </div>
+      </div>
+      <div class="calc" id="calc"></div>
+      <div class="banner go" id="check"></div>
+    </section>
+  </div>
+
+  <!-- 3 · the ledger line -->
+  <section class="panel">
+    <div class="panel-head"><span class="num">3</span><span class="label">ספר החשבונות של הטיסה · שורת הדלק</span></div>
+    <table class="tbl">
+      <thead><tr><th>סעיף</th><th>איך חושב</th><th class="n">סכום</th></tr></thead>
+      <tbody>
+        <tr><td>דלק · היום</td><td class="small">חשבון התדלוק ב-GSX</td><td class="n neg" style="text-decoration:line-through">−$1,383.00</td></tr>
+        <tr class="hl"><td><b>דלק · מוצע</b></td><td id="lineHow"></td><td class="n neg" id="lineAmt"></td></tr>
+        <tr><td class="small">עובר לטיסה הבאה של 4X-EKA</td><td class="small" id="carryHow"></td><td class="n small" id="carryAmt"></td></tr>
+      </tbody>
+    </table>
+    <div class="pb small">המחיר הממוצע של הדלק במכלים נשמר עם המטוס, ולא נכנס לספר החשבונות. רק מה שנשרף נכנס, בטיסה שבה הוא נשרף (ADR-007 נשמר: הרווח הוא עדיין סכום השורות).</div>
+  </section>
+
+  <!-- 4 · the chain -->
+  <section class="panel">
+    <div class="panel-head"><span class="num">4</span><span class="label">הרצף של מטוס אחד</span><span class="small">הדלק שנשאר עובר עם העלות שלו לטיסה הבאה של אותו רישום</span></div>
+    <div class="chain">
+      <div><div class="label">לפני תל אביב–לרנקה</div><div class="v">4,200 <small class="small">ק"ג</small></div><div class="small">נשאר מבוקרשט–תל אביב · $1.50 לק"ג</div></div>
+      <div><div class="label"><span class="arrow">←</span> אחרי תל אביב–לרנקה</div><div class="v">2,950 <small class="small">ק"ג</small></div><div class="small">תודלקו 914 · נשרפו 2,164</div></div>
+      <div><div class="label"><span class="arrow">←</span> אחרי לרנקה–תל אביב</div><div class="v">3,600 <small class="small">ק"ג</small></div><div class="small">תודלקו 2,832 · נשרפו 2,182</div></div>
+    </div>
+  </section>
+
+  <!-- 5 · before and after -->
+  <section class="panel">
+    <div class="panel-head"><span class="num">5</span><span class="label">מה זה עושה לרווח · שתי הטיסות לקפריסין</span></div>
+    <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr><th>טיסה</th><th class="n">תודלק</th><th class="n">נשרף</th><th class="n">דלק היום</th><th class="n">דלק מוצע</th><th class="n">רווח היום</th><th class="n">רווח מוצע</th></tr></thead>
+      <tbody>
+        <tr><td>תל אביב–לרנקה · 219 NM</td><td class="n">914 kg</td><td class="n">2,164 kg</td><td class="n">$1,383</td><td class="n">$3,251</td><td class="n pos">48%</td><td class="n pos">38%</td></tr>
+        <tr><td>לרנקה–תל אביב · 199 NM</td><td class="n">2,832 kg</td><td class="n">2,182 kg</td><td class="n">$4,287</td><td class="n">$3,290</td><td class="n pos">6%</td><td class="n pos">13%</td></tr>
+        <tr class="hl"><td><b>שתיהן יחד</b></td><td class="n">3,746 kg</td><td class="n">4,346 kg</td><td class="n">$5,670</td><td class="n">$6,541</td><td class="n pos">29%</td><td class="n pos">27%</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="pb small">כל טיסה נושאת עכשיו את הדלק שלה: שתי טיסות דומות עולות כמעט אותו דבר. ההבדל שנשאר ברווח בא מצוות הקרקע ($4,480 מול $2,355) ומהתפוסה (163 מול 185 נוסעים). על הסכום הכולל זה כמעט לא משפיע: מה שלא נשרף נשאר במטוס, ויחויב בטיסה הבאה.</div>
+  </section>
+
+  <!-- 6 · decisions -->
+  <section class="panel">
+    <div class="panel-head"><span class="num">6</span><span class="label">החלטות פתוחות · ההמלצה שלי בירוק</span></div>
+    <div class="q">
+      <div><b>הטיסה הראשונה של כל מטוס</b>
+        <span class="rec">בטיסה הראשונה של רישום (גם עכשיו, בכל מטוס שכבר טס) הטופס מבקש גם "דלק במכלים לפני התדלוק". הוא מתומחר במחיר התדלוק של אותה טיסה.</span>
+        <div class="alt">חלופה: להתחיל כל מטוס ב-0 ק"ג (לא נכון אם לא תדלקת מאפס).</div></div>
+      <div><b>מה מזינים בתדלוק</b>
+        <span class="rec">ק"ג וגם דולרים, כמו בסקיצה.</span>
+        <div class="alt">חלופה: ק"ג בלבד, והמחיר לפי EIA של אותו שבוע. פחות הזנה, אבל העלות לא תהיה מה שכתוב ב-GSX.</div></div>
+      <div><b>עריכה של טיסה ישנה</b>
+        <span class="rec">משנה רק את הטיסה שנערכה. הטיסות שאחריה שמרו את מה שקיבלו כשנסגרו (כמו כל צילום ב-ADR-021).</span>
+        <div class="alt">חלופה: לחשב מחדש את כל הרצף אחריה. מדויק יותר, אבל עריכה אחת משנה טיסות סגורות אחרות.</div></div>
+      <div><b>שכחת להזין את הדלק שנשאר</b>
+        <span class="rec">השדה חובה, והטיסה לא נסגרת בלעדיו.</span>
+        <div class="alt">חלופה: אם ריק, לחייב לפי מה שתודלק (כמו היום) ולסמן את המטוס כ"רצף נשבר" עד הטיסה הבאה.</div></div>
+      <div><b>בדיקת שפיות</b>
+        <span class="rec">אזהרה (לא חסימה) כשמה שנשרף שונה ביותר מ-30% מהתכנון ב-OFP, או כשנשאר יותר ממה שהיה. בשביל זה ה-Worker ישמור גם את הדלק המתוכנן מה-OFP (שריפה, דלק בהמראה ובנחיתה).</span></div>
+      <div><b>הכיול</b>
+        <span class="rec">יעד 20%, ‏K נשאר 1.51 עד 20 טיסות. הכיול הבא ירוץ כבר על הדלק שנשרף.</span></div>
+    </div>
+  </section>
+</div>
+</div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const usd = (v) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const kg = (v) => Math.round(v).toLocaleString('en-US') + ' kg';
+const kgHe = (v) => Math.round(v).toLocaleString('en-US') + ' ק"ג';
+const START = { kg: 4200, value: 6300, from: 'ELY2569 LROP–LLBG' }, PLAN = 2100;
+function run() {
+  const val = (k) => Number(document.querySelector(`[data-k="${k}"]`).value.replace(/,/g, '')) || 0;
+  const kgB = val('kgB'), paid = val('paid'), kgR = val('kgR');
+  const kgT = START.kg + kgB, valT = START.value + paid, avg = valT / kgT, burned = kgT - kgR, cost = burned * avg;
+  $('calc').innerHTML = `
+    <div><span>במכלים לפני התדלוק <span class="muted">· נשאר מ-<bdi class="l">${START.from}</bdi></span></span><span class="n">${kg(START.kg)} · ${usd(START.value)}</span></div>
+    <div><span>תודלק בגייט</span><span class="n">${kg(kgB)} · ${usd(paid)}</span></div>
+    <div><span>במכלים ב-PUSHBACK <span class="muted">· השווה ל-FMC</span></span><span class="n">${kg(kgT)}</span></div>
+    <div><span>מחיר ממוצע לק"ג במכלים</span><span class="n">$${avg.toFixed(3)}</span></div>
+    <div><span>נשאר ב-GATE</span><span class="n">${kg(kgR)}</span></div>
+    <div class="tot"><span>נשרף בטיסה</span><span class="n">${kg(burned)} × $${avg.toFixed(3)} = ${usd(cost)}</span></div>`;
+  const off = (burned - PLAN) / PLAN, bad = burned < 0 || Math.abs(off) > 0.3;
+  $('check').className = `banner ${bad ? 'warn' : 'go'}`;
+  $('check').innerHTML = burned < 0 ? '<b>נשאר יותר ממה שהיה.</b> בדוק את הכמויות.'
+    : `${bad ? '<b>לבדיקה:</b> ' : ''}נשרפו ${kgHe(burned)}, והתכנון ב-OFP היה ${kgHe(PLAN)} (${off >= 0 ? '+' : '−'}${Math.abs(Math.round(off * 100))}%).`;
+  $('lineHow').textContent = `נשרפו ${kgHe(burned)} × מחיר ממוצע $${avg.toFixed(3)} לק"ג`;
+  $('lineAmt').textContent = '−' + usd(Math.max(0, cost));
+  $('carryHow').textContent = `${kgHe(kgR)} במחיר ממוצע $${avg.toFixed(3)}`;
+  $('carryAmt').textContent = usd(kgR * avg);
+}
+document.querySelectorAll('[data-k]').forEach((i) => i.addEventListener('input', run));
+document.querySelectorAll('[data-th]').forEach((b) => b.addEventListener('click', () => {
+  document.documentElement.dataset.theme = b.dataset.th;
+  document.querySelectorAll('[data-th]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+}));
+run();
+</script>
+</body>
+</html>
