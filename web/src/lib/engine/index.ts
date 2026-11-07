@@ -26,6 +26,8 @@ export type FlightInput = {
   // Local time at the origin at OUT (ADR-025). null hour = neutral (historical data).
   out: { month: number; dow: number; hour: number | null };
   fuelUsdPerKg: number | null;       // EIA at OUT; null = neutral surcharge
+  // The price of the fuel in the tanks (GSX, ADR-063). When known, the fare's fuel surcharge follows it instead of EIA.
+  fareFuelUsdPerKg?: number | null;
   rating: number | null;             // company rating before this flight; null = "building" = neutral (ADR-037)
   manual: { fuel: number | null; ground: number | null; catering: number | null };   // USD from GSX
   fuelCalc?: Record<string, unknown>; // fuel on board (ADR-062): how the fuel line was reached
@@ -92,12 +94,13 @@ export function price(p: RateParams, f: FlightInput) {
   const clamped = clamp(product, p.clamp.min, p.clamp.max);
   const rating = f.rating == null ? null : clamp(f.rating, 1, 5);
   const reputation = rating == null ? 0 : (p.reputation.maxPct / 100) * (rating - 3) / 2;
-  const surcharge = fuelSurcharge(p, f.fuelUsdPerKg);
+  const fuelPrice = f.fareFuelUsdPerKg ?? f.fuelUsdPerKg;
+  const surcharge = fuelSurcharge(p, fuelPrice);
   const fare = Math.round(base * clamped * (1 + reputation) * (1 + surcharge));
   const cargoRate = (p.cargo.a + p.cargo.b * Math.pow(f.distanceNm, p.cargo.c)) * (1 + surcharge);
   return {
     fare, base, lf, multipliers: m, product, clamped, clampHit: clamped !== product,
-    rating, reputation, fuelUsdPerKg: f.fuelUsdPerKg, surcharge, cargoRate,
+    rating, reputation, fuelUsdPerKg: fuelPrice, fuelSource: f.fareFuelUsdPerKg != null ? 'gsx' as const : 'eia' as const, eiaUsdPerKg: f.fuelUsdPerKg, surcharge, cargoRate,
   };
 }
 
@@ -115,7 +118,7 @@ export function compute(p: RateParams, f: FlightInput): EngineResult {
   add('tickets', pr.fare * f.pax, 'auto', {
     distanceNm: f.distanceNm, base: r4(pr.base), lf: r4(pr.lf), multipliers: pr.multipliers,
     product: r4(pr.product), clamped: r4(pr.clamped), clampHit: pr.clampHit,
-    rating: pr.rating, reputation: r4(pr.reputation), fuelUsdPerKg: pr.fuelUsdPerKg, surcharge: r4(pr.surcharge),
+    rating: pr.rating, reputation: r4(pr.reputation), fuelUsdPerKg: pr.fuelUsdPerKg, fuelSource: pr.fuelSource, eiaUsdPerKg: pr.eiaUsdPerKg, surcharge: r4(pr.surcharge),
     fare: pr.fare, pax: f.pax,
   });
   if (f.cargoKg > 0) add('cargo', pr.cargoRate * f.cargoKg, 'auto', { kg: f.cargoKg, ratePerKg: r4(pr.cargoRate), surcharge: r4(pr.surcharge) });

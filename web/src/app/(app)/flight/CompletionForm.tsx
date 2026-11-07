@@ -250,7 +250,8 @@ export function CompletionForm({ form, crewIcao }: { form: FormView; crewIcao: s
           )}
           <div className="pb small" style={{ borderTop: '1px solid var(--line)' }}>
             מחיר כרטיס <b style={{ color: 'var(--ink)' }}>{fare != null ? `$${fare}` : '—'}</b> · תעריפים גרסה {form.rateSetId}
-            {form.fuel ? <> · דלק EIA <bdi>${form.fuel.usdPerKg.toFixed(2)}</bdi>/ק״ג</> : ' · בלי מחיר EIA (תוספת 0%)'}
+            {fuel.ok && fuel.state.avg_usd_per_kg > 0 ? <> · דלק לפי GSX <bdi>${fuel.state.avg_usd_per_kg.toFixed(2)}</bdi>/ק״ג</>
+              : form.fuel ? <> · דלק EIA <bdi>${form.fuel.usdPerKg.toFixed(2)}</bdi>/ק״ג</> : ' · בלי מחיר EIA (תוספת 0%)'}
             {form.rating != null ? <> · דירוג <bdi>{form.rating.toFixed(1)}</bdi>★</> : ' · דירוג בבנייה (נייטרלי)'}
           </div>
         </section>

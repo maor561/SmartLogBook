@@ -115,3 +115,41 @@ test('migration 006, and the chain: the latest closed flight of the registration
   await db.query(`INSERT INTO flight_drafts (ofp_id, fuel, fuel_kg) VALUES ('x', 1383, 914)`);
   assert.equal(Number((await db.query(`SELECT fuel_kg FROM flight_drafts`)).rows[0].fuel_kg), 914);
 });
+
+// ---------- ADR-063: the fare follows the GSX price; the flights closed before it are priced again once
+import { FARE_FUEL_TODO_SQL, RATE_WITH_CAP_SQL } from '../src/lib/fare-fuel-sql.ts';
+
+test('migration 007: a new rate version with the 30% cap, once; and which flights are priced again', async () => {
+  const MIG = new URL('../db/migrations/', import.meta.url);
+  const files = readdirSync(MIG).filter((x) => x.endsWith('.sql')).sort();
+  const db = new PGlite();
+  for (const f of files.filter((x) => x < '007')) await db.exec(readFileSync(new URL(f, MIG), 'utf8'));
+  const old = JSON.parse(readFileSync(new URL('../db/rate-set-v1.json', import.meta.url), 'utf8'));
+  old.fuel.maxPct = 15;
+  await db.query('INSERT INTO rate_sets (note, params) VALUES ($1, $2)', ['v', JSON.stringify(old)]);
+  await db.query(`INSERT INTO settings (simbrief_id, vatsim_cid, current_rate_set_id) VALUES ('X', 1, 1)`);
+  const mig = readFileSync(new URL('007_fare_fuel.sql', MIG), 'utf8');
+  await db.exec(mig);
+  await db.exec(mig);                                                    // a second run changes nothing
+  const sets = (await db.query(`SELECT id, (params->'fuel'->>'maxPct')::int AS cap FROM rate_sets ORDER BY id`)).rows;
+  assert.deepEqual(sets, [{ id: 1, cap: 15 }, { id: 2, cap: 30 }]);
+  assert.equal((await db.query('SELECT current_rate_set_id AS c FROM settings')).rows[0].c, 2);
+  const cap = (await db.query(RATE_WITH_CAP_SQL)).rows[0];
+  assert.equal(cap.id, 2);
+  const { fuel: f2, ...rest2 } = cap.params, { fuel: f1, ...rest1 } = old;
+  assert.deepEqual(rest2, rest1);                                       // only the cap changed
+  assert.deepEqual({ ...f2, maxPct: 15 }, f1);
+
+  const flight = async (fuel, ticketsCalc, extra = '') => {
+    const id = (await db.query(`INSERT INTO flights (status, source, origin_icao, dest_planned_icao, rate_set_id, ofp_doc, fuel_state, in_at)
+      VALUES ('closed', 'tracked', 'SBRF', 'SBSV', 1, '{}'::jsonb, $1::jsonb, now()) RETURNING id`, [fuel ? JSON.stringify(fuel) : null])).rows[0].id;
+    await db.query(`INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc) VALUES ($1, 'tickets', 100, 'auto', $2::jsonb)`, [id, JSON.stringify(ticketsCalc)]);
+    if (extra) await db.query(extra.replace('$ID', id));
+    return id;
+  };
+  const a = await flight({ cost_usd: 1 }, { fare: 137 });                                       // to do
+  await flight({ cost_usd: 1 }, { fare: 159, fuelSource: 'gsx' });                             // already priced by the new rule
+  await flight(null, { fare: 120 });                                                             // no fuel on board
+  await flight({ cost_usd: 1 }, { fare: 99 }, `INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc) VALUES ($ID, 'hard_landing', -5, 'auto', '{}')`);
+  assert.deepEqual((await db.query(FARE_FUEL_TODO_SQL)).rows.map((r) => r.id), [a]);
+});

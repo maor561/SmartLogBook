@@ -9,6 +9,7 @@ import type { LogFlight } from './logbook-filter';
 import { settleOverdueRepairs } from './fleet';
 import { GROUND_DAYS, settle } from './maintenance';
 import { fuelBurn, fuelCalc, type FuelState } from './fuel-onboard';
+import { FARE_FUEL_TODO_SQL, RATE_WITH_CAP_SQL } from './fare-fuel-sql';
 import { DELETE_REPAIR_SQL, INSERT_REPAIR_SQL, REPAIR_OF_FLIGHT_SQL, UPDATE_REPAIR_SQL } from './maintenance-sql';
 
 // Logbook data (WP6). A single user logs a few hundred flights at most, so the
@@ -21,6 +22,7 @@ const trim = (v: unknown) => (typeof v === 'string' ? v.trim() : null);
 
 export async function loadLogbook(): Promise<{ flights: LogFlight[]; airports: Record<string, ApPoint> }> {
   await settleOverdueRepairs().catch(() => {});      // overdue repairs enter the ledger before it is summed (ADR-060)
+  await recomputeFareFuel().catch(() => {});         // ADR-063, once
   const rows = await db()`
     SELECT f.*, coalesce(sum(l.amount_cents), 0)::bigint AS profit,
            (SELECT json_build_object('cents', r.amount_cents, 'dueAt', r.due_at) FROM repairs r WHERE r.flight_id = f.id AND r.paid_at IS NULL) AS repair,
@@ -168,6 +170,39 @@ export async function editFlight(id: number, e: EditInput): Promise<{ ok: true }
   else if (existing && !hard) await db().query(DELETE_REPAIR_SQL, [existing.id]);
   else if (!direct && hard && registration) await db().query(INSERT_REPAIR_SQL, [id, registration, hard.tier, hard.fpm, hard.cents, JSON.stringify(hard.calc), GROUND_DAYS]);
   return { ok: true };
+}
+
+// ADR-063, the user's decision (07.11.2026): the flights closed with fuel on board before the fare
+// followed the GSX price are priced again by the new rule. They move to the rate version with the 30% cap
+// when it is the same as theirs apart from the cap; otherwise they keep their own version, with the cap
+// raised. Every other input stays as it was at closing. Runs once: afterwards their tickets line says
+// where its fuel price came from, and the query finds nothing.
+export async function recomputeFareFuel() {
+  const todo = (await db().query(FARE_FUEL_TODO_SQL, [])) as { id: number }[];
+  if (!todo.length) return 0;
+  const [cap] = (await db().query(RATE_WITH_CAP_SQL, [])) as { id: number; params: RateParams }[];
+  let done = 0;
+  for (const { id } of todo) {
+    const got = await draftFor(id);
+    if (!got?.fuelState) continue;
+    const [row] = await db()`SELECT rate_set_id FROM flights WHERE id = ${id}`;
+    const withCap: RateParams = { ...got.params, fuel: { ...got.params.fuel, maxPct: Math.max(30, got.params.fuel.maxPct) } };
+    const same = cap && JSON.stringify(cap.params) === JSON.stringify(withCap);
+    const params = same ? cap.params : withCap, rateSetId = same ? cap.id : row.rate_set_id;
+    const draft = { ...got.draft, manual: { ...got.draft.manual, fuel: got.fuelState.cost_usd }, fuelCalc: fuelCalc(got.fuelState) };
+    const input = toEngineInput(draft);
+    if (!input) continue;
+    const lines = compute(params, input).lines.map((l) => ({ code: l.code, amount_cents: l.amountCents, source: l.source, calc: l.calc }));
+    await db()`
+      WITH u AS (UPDATE flights SET rate_set_id = ${rateSetId}, edited_at = now() WHERE id = ${id} AND status = 'closed' RETURNING id),
+      d AS (DELETE FROM ledger_lines WHERE flight_id IN (SELECT id FROM u))
+      INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc)
+      SELECT u.id, x.code, x.amount_cents, x.source, x.calc
+      FROM u, jsonb_to_recordset(${JSON.stringify(lines)}::jsonb)
+        AS x(code ledger_code, amount_cents bigint, source ledger_source, calc jsonb)`;
+    done++;
+  }
+  return done;
 }
 
 export async function deleteFlight(id: number) {

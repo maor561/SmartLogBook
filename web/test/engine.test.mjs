@@ -8,9 +8,10 @@ import { DEFAULTS, withChanges } from '../src/lib/rates/params.ts';
 
 // Sketches 2 and 3 and the calibration were approved with one hourly maintenance rate ($10.8 per MTOW ton).
 // ADR-060 split it into a lower hourly rate plus periodic checks, the same on average (tested below).
-const P = withChanges(DEFAULTS, { 'maintenance.perAirHourPerMtowT': 10.8, 'maintenance.lightEveryHours': 0, 'maintenance.mediumEveryHours': 0 });
+// Pinned to the parameters the golden examples were approved with: the hourly maintenance before ADR-060 and the 15% fuel cap before ADR-063.
+const P = withChanges(DEFAULTS, { 'maintenance.perAirHourPerMtowT': 10.8, 'maintenance.lightEveryHours': 0, 'maintenance.mediumEveryHours': 0, 'fuel.maxPct': 15 });
 // Sketch 2 was approved with a $0.75/kg fuel reference; ADR-043 moved the default to $1.51.
-const P_S2 = withChanges(DEFAULTS, { 'fuel.refUsdPerKg': 0.75 });
+const P_S2 = withChanges(DEFAULTS, { 'fuel.refUsdPerKg': 0.75, 'fuel.maxPct': 15 });
 const flight = (o = {}) => ({
   distanceNm: 1108, seats: 189, pax: 185, cargoKg: 0, mtowKg: 79000, blockMin: 193, airMin: 171, fpm: -170,
   out: { month: 8, dow: 4, hour: 8 }, fuelUsdPerKg: null, rating: null,
@@ -124,6 +125,11 @@ test('clamp, reputation and fuel surcharge (ADR-025, 037)', () => {
   assert.equal(price(P, flight({ ...full, fuelUsdPerKg: 0.1 })).surcharge, -0.10);
   assert.equal(price(P, flight({ ...full, fuelUsdPerKg: 1.51 })).surcharge, 0);   // ADR-043: today's price is neutral
   assert.equal(price(P, flight({ ...full, fuelUsdPerKg: null })).surcharge, 0);
+  // ADR-063: the GSX price of the fuel in the tanks wins over EIA, up to the new 30% cap
+  const gsx = price(DEFAULTS, flight({ ...full, fuelUsdPerKg: 1.49, fareFuelUsdPerKg: 2.6667 }));
+  assert.deepEqual([gsx.fuelSource, gsx.fuelUsdPerKg, gsx.eiaUsdPerKg, Math.round(gsx.surcharge * 1000)], ['gsx', 2.6667, 1.49, 268]);
+  assert.equal(price(DEFAULTS, flight({ ...full, fuelUsdPerKg: 1.49, fareFuelUsdPerKg: 5 })).surcharge, 0.30);
+  assert.equal(price(DEFAULTS, flight({ ...full, fuelUsdPerKg: 1.49 })).fuelSource, 'eia');
 });
 
 test('relief pilots above 8h and 12h block', () => {

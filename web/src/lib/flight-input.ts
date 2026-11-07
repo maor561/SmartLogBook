@@ -70,6 +70,8 @@ export function toEngineInput(d: Draft): FlightInput | null {
     diversionNm: d.diversionNm,
     airframeHoursBefore: d.airframeHoursBefore ?? null,
     fuelCalc: d.fuelCalc,
+    // the fare's fuel surcharge follows the average price in the tanks (ADR-063)
+    fareFuelUsdPerKg: typeof d.fuelCalc?.avg_usd_per_kg === 'number' && d.fuelCalc.avg_usd_per_kg > 0 ? d.fuelCalc.avg_usd_per_kg : null,
   };
 }
 

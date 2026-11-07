@@ -6,7 +6,7 @@ import { currentFuelPrice } from './eia';
 import { getSettings, type Settings } from './settings';
 import { hasTracker, trackerState } from './tracker';
 import { currentRating } from './analysis-data';
-import { loadLogbook } from './logbook';
+import { loadLogbook, recomputeFareFuel } from './logbook';
 import { milestoneCrossings, nextMilestones } from './rating';
 import type { OfpSummary } from './ofp';
 import type { Times } from './flight-input';
@@ -187,6 +187,7 @@ export async function buildForm(ofp: OfpSummary, t: TrackerDoc | null, crew: str
 
 export async function getFlightView(opts: { manual?: boolean } = {}): Promise<FlightView> {
   await settleOverdueRepairs().catch(() => {});      // a repair unpaid for 4 days is charged before anything is shown
+  await recomputeFareFuel().catch(() => {});         // ADR-063, once
   const settings = await getSettings();
   const [crew, recent, month, nextMilestone] = await Promise.all([
     crewLocation(settings.homeBaseIcao), recentFlights(), monthSummary(), closestMilestone().catch(() => null),
