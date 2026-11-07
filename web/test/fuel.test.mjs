@@ -153,3 +153,45 @@ test('migration 007: a new rate version with the 30% cap, once; and which flight
   await flight({ cost_usd: 1 }, { fare: 99 }, `INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc) VALUES ($ID, 'hard_landing', -5, 'auto', '{}')`);
   assert.deepEqual((await db.query(FARE_FUEL_TODO_SQL)).rows.map((r) => r.id), [a]);
 });
+
+// ---------- ADR-064: the new fare curve, and every closed flight priced again once
+import { CURVE_SINCE_SQL, CURVE_TODO_SQL, CURVE_VERSION_SQL, withCurve } from '../src/lib/fare-curve-sql.ts';
+
+test('migration 008: a version with the new curve for each version closed flights used, then the new current one', async () => {
+  const MIG = new URL('../db/migrations/', import.meta.url);
+  const files = readdirSync(MIG).filter((x) => x.endsWith('.sql')).sort();
+  const db = new PGlite();
+  for (const f of files.filter((x) => x < '008')) await db.exec(readFileSync(new URL(f, MIG), 'utf8'));
+  const base = JSON.parse(readFileSync(new URL('../db/rate-set-v1.json', import.meta.url), 'utf8'));
+  const old = { ...base, fare: { ...base.fare, f0: 40, k: 1.51 }, loadFactor: { a: 0.85, b: 0.3 } };
+  const v2 = { ...old, maintenance: { ...old.maintenance, perAirHourPerMtowT: 10.8 } };
+  await db.query('INSERT INTO rate_sets (note, params) VALUES ($1, $2), ($3, $4)', ['v1', JSON.stringify(v2), 'v2', JSON.stringify(old)]);
+  await db.query(`INSERT INTO settings (simbrief_id, vatsim_cid, current_rate_set_id) VALUES ('X', 1, 2)`);
+  const fl = async (rs, extra = '') => {
+    const id = (await db.query(`INSERT INTO flights (status, source, origin_icao, dest_planned_icao, rate_set_id, ofp_doc, closed_at, in_at)
+      VALUES ('closed', 'tracked', 'LLBG', 'LCLK', $1, '{}'::jsonb, now() - interval '1 day', now() - interval '1 day') RETURNING id`, [rs])).rows[0].id;
+    if (extra) await db.query(extra.replace('$ID', id));
+    return id;
+  };
+  const a = await fl(1), b = await fl(2), c = await fl(2);
+  await fl(2, `INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc) VALUES ($ID, 'hard_landing', -5, 'auto', '{}')`);
+  const mig = readFileSync(new URL('008_fare_curve.sql', MIG), 'utf8');
+  await db.exec(mig);
+  const sets = (await db.query(`SELECT id, note, params FROM rate_sets ORDER BY id`)).rows;
+  assert.equal(sets.length, 5);                                          // 2 old, 2 with the curve, 1 new current
+  assert.equal((await db.query('SELECT current_rate_set_id AS c FROM settings')).rows[0].c, 5);
+  assert.match(sets[4].note, /\(ADR-064\)$/);
+  assert.deepEqual(sets[2].params, withCurve(v2));                       // each keeps everything else
+  assert.deepEqual(sets[3].params, withCurve(old));
+  assert.deepEqual(sets[4].params, withCurve(old));
+  // flights still on an old curve, apart from the one with a hard landing
+  const since = (await db.query(CURVE_SINCE_SQL)).rows[0].created_at;
+  assert.deepEqual((await db.query(CURVE_TODO_SQL, [since])).rows.map((r) => r.id), [a, b, c]);
+  // each finds the version written for its own one
+  assert.equal((await db.query(CURVE_VERSION_SQL, [JSON.stringify(withCurve(v2))])).rows[0].id, 3);
+  assert.equal((await db.query(CURVE_VERSION_SQL, [JSON.stringify(withCurve(old))])).rows[0].id, 4);
+  // once moved, a flight is done; a flight closed after the curve is never touched
+  await db.query('UPDATE flights SET rate_set_id = 3 WHERE id = $1', [a]);
+  await db.query(`INSERT INTO flights (status, source, origin_icao, dest_planned_icao, rate_set_id, ofp_doc, closed_at) VALUES ('closed', 'tracked', 'LLBG', 'LCLK', 2, '{}'::jsonb, now() + interval '1 hour')`);
+  assert.deepEqual((await db.query(CURVE_TODO_SQL, [since])).rows.map((r) => r.id), [b, c]);
+});

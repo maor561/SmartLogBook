@@ -10,6 +10,7 @@ import { settleOverdueRepairs } from './fleet';
 import { GROUND_DAYS, settle } from './maintenance';
 import { fuelBurn, fuelCalc, type FuelState } from './fuel-onboard';
 import { FARE_FUEL_TODO_SQL, RATE_WITH_CAP_SQL } from './fare-fuel-sql';
+import { CURVE_SINCE_SQL, CURVE_TODO_SQL, CURVE_VERSION_SQL, withCurve } from './fare-curve-sql';
 import { DELETE_REPAIR_SQL, INSERT_REPAIR_SQL, REPAIR_OF_FLIGHT_SQL, UPDATE_REPAIR_SQL } from './maintenance-sql';
 
 // Logbook data (WP6). A single user logs a few hundred flights at most, so the
@@ -23,6 +24,7 @@ const trim = (v: unknown) => (typeof v === 'string' ? v.trim() : null);
 export async function loadLogbook(): Promise<{ flights: LogFlight[]; airports: Record<string, ApPoint> }> {
   await settleOverdueRepairs().catch(() => {});      // overdue repairs enter the ledger before it is summed (ADR-060)
   await recomputeFareFuel().catch(() => {});         // ADR-063, once
+  await recomputeFareCurve().catch(() => {});        // ADR-064, once
   const rows = await db()`
     SELECT f.*, coalesce(sum(l.amount_cents), 0)::bigint AS profit,
            (SELECT json_build_object('cents', r.amount_cents, 'dueAt', r.due_at) FROM repairs r WHERE r.flight_id = f.id AND r.paid_at IS NULL) AS repair,
@@ -195,6 +197,39 @@ export async function recomputeFareFuel() {
     const lines = compute(params, input).lines.map((l) => ({ code: l.code, amount_cents: l.amountCents, source: l.source, calc: l.calc }));
     await db()`
       WITH u AS (UPDATE flights SET rate_set_id = ${rateSetId}, edited_at = now() WHERE id = ${id} AND status = 'closed' RETURNING id),
+      d AS (DELETE FROM ledger_lines WHERE flight_id IN (SELECT id FROM u))
+      INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc)
+      SELECT u.id, x.code, x.amount_cents, x.source, x.calc
+      FROM u, jsonb_to_recordset(${JSON.stringify(lines)}::jsonb)
+        AS x(code ledger_code, amount_cents bigint, source ledger_source, calc jsonb)`;
+    done++;
+  }
+  return done;
+}
+
+// ADR-064, the user's decision (07.11.2026): every flight closed before the new fare curve is priced
+// again with it. Each moves to the version migration 008 wrote for its own version (the same parameters
+// with the new curve), so nothing else about it changes; a flight with fuel on board keeps its fuel line
+// and its GSX fuel price (ADR-062, 063). Runs once: afterwards none of them is on an old curve.
+export async function recomputeFareCurve() {
+  const [since] = (await db().query(CURVE_SINCE_SQL, [])) as { created_at: string }[];
+  if (!since) return 0;
+  const todo = (await db().query(CURVE_TODO_SQL, [since.created_at])) as { id: number }[];
+  let done = 0;
+  for (const { id } of todo) {
+    const got = await draftFor(id);
+    if (!got) continue;
+    const params = withCurve(got.params);
+    const [v] = (await db().query(CURVE_VERSION_SQL, [JSON.stringify(params)])) as { id: number }[];
+    if (!v) continue;                                   // no matching version: leave the flight as it is
+    const draft = got.fuelState
+      ? { ...got.draft, manual: { ...got.draft.manual, fuel: got.fuelState.cost_usd }, fuelCalc: fuelCalc(got.fuelState) }
+      : got.draft;
+    const input = toEngineInput(draft);
+    if (!input) continue;
+    const lines = compute(params, input).lines.map((l) => ({ code: l.code, amount_cents: l.amountCents, source: l.source, calc: l.calc }));
+    await db()`
+      WITH u AS (UPDATE flights SET rate_set_id = ${v.id}, edited_at = now() WHERE id = ${id} AND status = 'closed' RETURNING id),
       d AS (DELETE FROM ledger_lines WHERE flight_id IN (SELECT id FROM u))
       INSERT INTO ledger_lines (flight_id, code, amount_cents, source, calc)
       SELECT u.id, x.code, x.amount_cents, x.source, x.calc

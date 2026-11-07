@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { verifySession } from '@/lib/dal';
 import { hasDb } from '@/lib/db';
-import { loadLogbook, recomputeFareFuel } from '@/lib/logbook';
+import { loadLogbook, recomputeFareCurve, recomputeFareFuel } from '@/lib/logbook';
 import { milestonesAchieved, pnlByCode, syncMilestones } from '@/lib/analysis-data';
 import { rangeOf } from '@/lib/analysis';
 import { settleOverdueRepairs } from '@/lib/fleet';
@@ -22,6 +22,7 @@ export default async function AnalysisPage({ searchParams }: PageProps<'/analysi
 
   await settleOverdueRepairs().catch(() => {});      // before the P&L is summed (ADR-060)
   await recomputeFareFuel().catch(() => {});         // ADR-063, once
+  await recomputeFareCurve().catch(() => {});        // ADR-064, once
   await syncMilestones().catch(() => {});
   const [{ flights }, pnl, achieved] = await Promise.all([
     loadLogbook(), pnlByCode(rangeOf(kind, anchor, str('from'), str('to')), hist), milestonesAchieved(),

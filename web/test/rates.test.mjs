@@ -13,9 +13,9 @@ test('catalogue covers every rate parameter exactly once', () => {
   assert.deepEqual([...paths].sort(), leafPaths().sort());
 });
 
-test('v1 defaults are valid and calibrated (ADR-034)', () => {
+test('the defaults are valid and calibrated (ADR-064)', () => {
   assert.deepEqual(validate(DEFAULTS), []);
-  assert.equal(DEFAULTS.fare.k, 1.51);
+  assert.deepEqual([DEFAULTS.fare.f0, DEFAULTS.fare.k, DEFAULTS.loadFactor.a, DEFAULTS.loadFactor.b], [66, 1.39, 1, 0]);
   assert.equal(DEFAULTS.lease.perBlockHourPerMtowT, 10.5);
 });
 
@@ -23,7 +23,7 @@ test('withChanges never mutates the source version', () => {
   const next = withChanges(DEFAULTS, { 'fare.k': 1.6, 'season.6': 1.3 });
   assert.equal(next.fare.k, 1.6);
   assert.equal(getAt(next, 'season.6'), 1.3);
-  assert.equal(DEFAULTS.fare.k, 1.51);
+  assert.equal(DEFAULTS.fare.k, 1.39);
   assert.throws(() => withChanges(DEFAULTS, { 'fare.nope': 1 }));
 });
 
